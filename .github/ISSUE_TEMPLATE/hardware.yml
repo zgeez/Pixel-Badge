@@ -1,0 +1,45 @@
+name: Hardware issue
+description: Schematic, layout, footprint, assembly, or bring-up problem.
+labels: [hardware]
+body:
+  - type: input
+    id: revision
+    attributes:
+      label: Board revision
+      description: Hardware revision and, if applicable, board serial or assembly batch.
+    validations:
+      required: true
+  - type: textarea
+    id: observed
+    attributes:
+      label: Observed behavior
+      description: What was measured or seen, and how (instrument, setup).
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: Include the reference (datasheet section, schematic sheet, design intent).
+    validations:
+      required: true
+  - type: input
+    id: location
+    attributes:
+      label: Affected nets / reference designators
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: Measurements, scope captures, photos.
+  - type: dropdown
+    id: impact
+    attributes:
+      label: Impact
+      options:
+        - Blocks bring-up
+        - Workaround available
+        - Next revision fix
+        - Cosmetic / documentation
+    validations:
+      required: true

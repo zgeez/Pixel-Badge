@@ -1,0 +1,11 @@
+# SPDX-License-Identifier: MIT
+
+menu "Smart LED Badge application"
+
+module = APP
+module-str = Application
+source "subsys/logging/Kconfig.template.log_config"
+
+endmenu
+
+source "Kconfig.zephyr"
