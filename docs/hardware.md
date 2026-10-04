@@ -1,27 +1,27 @@
 # Hardware
 
-Status: **pre-design**. No schematic or layout exists yet. Every item below is
-provisional unless stated otherwise. Electrical values will be taken from
-primary datasheets and recorded in [references.md](references.md) when the
-design begins.
+Status: **pre-schematic**. Rev A architecture is defined; no schematic or layout
+exists yet. Items marked provisional may change. Electrical values come from
+primary datasheets and are recorded in [references.md](references.md) as parts
+are confirmed.
 
 ## Development vs final hardware
 
-| | Development | Final (Rev A) |
+| | Development | Rev A badge |
 |---|---|---|
-| MCU | nRF5340 DK | nRF5340 radio module on custom PCB (module TBD) |
-| Debug | On-board debugger (SWD, RTT) | SWD connector/pads, UART test pads |
-| Display | Off-the-shelf prototype panel (below) | 32×32 LED matrix on the badge PCB |
-| Power | USB / bench supply | 1-cell LiPo (power architecture TBD) |
+| MCU | nRF5340 DK | Raytac MDBT53-P1M module (nRF5340) |
+| Debug | On-board debugger (SWD, RTT) | SWD header, UART test pads, test points |
+| Display | Off-the-shelf HUB75 panel (below) | 32×32 white SMD LED matrix on the badge PCB |
+| NFC | NFC tag breakout (planned) | NFC tag (NTAG I²C plus family) with PCB coil |
+| Power | USB / bench supply | 1-cell LiPo with USB-C charging |
 
-Firmware written for the DK must not assume DK-specific pins or peripherals
-remain available on the final board; board differences belong in devicetree
-overlays or a custom board definition.
+Firmware written for the DK must not assume DK-specific pins or peripherals;
+board differences belong in devicetree overlays or a custom board definition.
 
 ## Optical prototype
 
 Before freezing matrix geometry, QR readability at 32×32 and 2.0 mm pitch is
-being evaluated on a prototype built from:
+evaluated on a prototype built from:
 
 - nRF5340 DK
 - 64×64 RGB HUB75 panel, 2.0 mm pitch, 1/32 scan (Waveshare)
@@ -31,26 +31,40 @@ being evaluated on a prototype built from:
 - Bench power supply
 
 The prototype panel is used only for optical and firmware evaluation; its drive
-scheme is not the planned badge design.
+scheme is not the badge design.
 
-## Provisional target architecture
+## Rev A architecture
 
-- **Matrix:** 32×32 monochrome white LEDs, 2.0 mm pitch (provisional, pending
-  QR validation). LED part, drive circuit, and scan scheme TBD.
-- **Sensors:** IMU and PDM microphone. Final parts TBD.
-- **Wireless:** BLE (2.4 GHz antenna per selected module), NFC (antenna design
-  TBD).
-- **Power:** 1-cell LiPo; charger, regulation, protection, and fuel gauging
-  TBD.
-- **PCB:** 4-layer provisional, exposed-PCB aesthetic, designed for JLCPCB
-  fabrication and assembly where practical (provisional manufacturer).
-- **Mechanical:** magnetic wearable mounting (TBD).
+- **Size:** 108 × 72 mm nominal, **112 × 74 mm maximum**; rounded corners;
+  4-layer PCB; black soldermask; LEDs on the front, most components on the rear.
+- **Matrix:** 32×32 white SMD LEDs, 2.0 mm pitch (provisional, pending QR
+  validation), 1:32 multiplexing. Two TI TLC59283 constant-current column
+  drivers and high-side row switches (provisional); refresh timed by nRF5340
+  peripherals; drive current adjustable on Rev A.
+- **NFC:** external passive tag (NTAG I²C plus family) so the link works with the
+  badge off or the battery empty; PCB coil with adjustable tuning.
+- **USB-C:** charging and USB 2.0 data (5 V sink, no USB Power Delivery), ESD
+  protected, on an edge.
+- **Power:** 1-cell LiPo (≈ 1200 mAh target) with a power-path charger; charging
+  works with the power switch off; regulated logic rail; firmware-switchable LED
+  rail. Specific parts provisional.
+- **Sensors:** 6-axis IMU on I²C (LSM6DSO family, provisional); PDM microphone
+  (provisional).
+- **User interface:** two edge-accessible buttons, edge-accessible power switch,
+  one status LED.
+- **RF:** module-integrated antenna at a board edge/corner with the keep-out the
+  module vendor specifies; NFC coil in a separate region; battery and magnets
+  kept clear of both.
+- **Mechanical:** rear 3D-printed carrier for the battery and attachment magnets,
+  mounted to the PCB; target total thickness ≈ 12 mm.
 
 ## Rev A requirements
 
-- SWD access and power test points.
+- SWD access, reset access, and power test points (VBAT, VBUS, logic rail, LED
+  rail, charger/system rail).
 - UART test pads for fallback logging.
-- Recovery paths preserved; a major second revision may not fit the schedule.
+- Matrix timing test points (clock, latch, blank, row select).
+- Removable links for current measurement where useful.
 
 ## Design tools and rules
 

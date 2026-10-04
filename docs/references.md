@@ -11,7 +11,8 @@ on a specific document, cite the document revision and section.
 - [nRF Connect SDK toolchain Docker image](https://nrfconnectdocs.nordicsemi.com/ncs/3.4.1/nrf/scripts/docker/README.html)
 - [nRF5340 Product Specification](https://docs.nordicsemi.com/bundle/ps_nrf5340/page/keyfeatures_html5.html)
 - [nRF5340 DK Hardware user guide](https://docs.nordicsemi.com/bundle/ug_nrf5340_dk/page/ug/dk/intro.html)
-- nRF5340 module datasheet: TBD when the module is selected
+- Raytac MDBT53-1M / MDBT53-P1M module specification: available from
+  [Raytac](https://www.raytac.com/) (badge module: MDBT53-P1M)
 
 ## Zephyr RTOS
 

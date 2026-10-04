@@ -49,7 +49,7 @@ Board: ____  Serial/batch: ____  Firmware commit: ____  Date: ____
 ## Wireless
 
 - [ ] BLE advertising and connection
-- [ ] NFC tag read
+- [ ] NFC tag read (badge on and switched off)
 
 ## Mechanical
 
