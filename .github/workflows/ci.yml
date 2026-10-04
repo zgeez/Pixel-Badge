@@ -1,0 +1,132 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  repo-lint:
+    name: repo-lint
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      # Versions match the nRF Connect SDK v3.4.1 toolchain so local and CI
+      # formatting results agree.
+      - name: Install lint tools
+        run: python -m pip install clang-format==21.1.8 yamllint==1.38.0
+
+      - name: Check C/C++ formatting
+        run: bash scripts/ci/check-format.sh
+
+      - name: Lint YAML
+        run: yamllint --strict .
+
+      - name: Check repository hygiene
+        run: python scripts/ci/check_hygiene.py
+
+  firmware-build:
+    name: firmware-build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    container:
+      # Official nRF Connect SDK v3.4.1 toolchain image, pinned by digest.
+      # Keep in sync with scripts/dev.ps1.
+      image: ghcr.io/nrfconnect/sdk-nrf-toolchain:v3.4.1@sha256:45b97cad97a9967c52d77d1d1a0f7dd8fe027edd17c05c3eda2eeadc23729418
+    defaults:
+      run:
+        # bash is required to load the toolchain environment in this image.
+        shell: bash
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          path: smart-led-badge
+
+      - name: Restore nRF Connect SDK workspace cache
+        uses: actions/cache@v6
+        with:
+          path: ncs
+          key: ncs-v3.4.1-${{ hashFiles('smart-led-badge/scripts/ci/setup-ncs-workspace.sh') }}
+
+      - name: Set up nRF Connect SDK workspace
+        run: bash smart-led-badge/scripts/ci/setup-ncs-workspace.sh ncs
+
+      - name: Build nrf5340dk/nrf5340/cpuapp
+        run: |
+          export ZEPHYR_BASE="${GITHUB_WORKSPACE}/ncs/zephyr"
+          bash smart-led-badge/scripts/ci/build-firmware.sh
+
+      - name: Upload build outputs
+        uses: actions/upload-artifact@v7
+        with:
+          name: firmware-nrf5340dk
+          path: |
+            smart-led-badge/build/nrf5340dk/firmware/zephyr/zephyr.elf
+            smart-led-badge/build/nrf5340dk/firmware/zephyr/zephyr.hex
+            smart-led-badge/build/nrf5340dk/firmware/zephyr/zephyr.map
+            smart-led-badge/build/nrf5340dk/firmware/zephyr/.config
+          # Needed for .config; only the paths listed above are uploaded.
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
+
+  unit-tests:
+    name: unit-tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    container:
+      image: ghcr.io/nrfconnect/sdk-nrf-toolchain:v3.4.1@sha256:45b97cad97a9967c52d77d1d1a0f7dd8fe027edd17c05c3eda2eeadc23729418
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          path: smart-led-badge
+
+      - name: Restore nRF Connect SDK workspace cache
+        uses: actions/cache@v6
+        with:
+          path: ncs
+          key: ncs-v3.4.1-${{ hashFiles('smart-led-badge/scripts/ci/setup-ncs-workspace.sh') }}
+
+      - name: Set up nRF Connect SDK workspace
+        run: bash smart-led-badge/scripts/ci/setup-ncs-workspace.sh ncs
+
+      - name: Install host build dependencies
+        run: bash smart-led-badge/scripts/ci/install-host-deps.sh
+
+      - name: Run Twister host tests
+        run: |
+          export ZEPHYR_BASE="${GITHUB_WORKSPACE}/ncs/zephyr"
+          bash smart-led-badge/scripts/ci/run-tests.sh
+
+      - name: Upload test reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: twister-reports
+          path: |
+            smart-led-badge/build/twister/twister.json
+            smart-led-badge/build/twister/twister.xml
+            smart-led-badge/build/twister/twister_report.xml
+          if-no-files-found: warn
+          retention-days: 14

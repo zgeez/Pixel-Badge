@@ -1,0 +1,13 @@
+# SPDX-License-Identifier: MIT
+#
+# Proves that the C++17 test toolchain and Twister execution work end to end.
+# It does not test product behavior.
+
+tests:
+  sanity.cpp17:
+    tags: sanity
+    platform_allow:
+      - native_sim
+      - native_sim/native/64
+    integration_platforms:
+      - native_sim

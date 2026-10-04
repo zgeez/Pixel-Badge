@@ -1,0 +1,14 @@
+---
+extends: default
+
+ignore-from-file: .gitignore
+
+rules:
+  document-start: disable
+  line-length:
+    max: 120
+    # Allows long unbreakable values such as digest-pinned image references.
+    allow-non-breakable-inline-mappings: true
+  truthy:
+    # GitHub Actions uses `on:` as a key.
+    check-keys: false

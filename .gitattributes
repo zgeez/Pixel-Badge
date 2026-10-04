@@ -1,0 +1,11 @@
+# Normalize text files to LF in the repository and working tree so scripts
+# behave the same on Windows, Linux, and CI.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.pdf binary
+*.zip binary
+*.step -diff
+*.stp -diff
+*.wrl -diff

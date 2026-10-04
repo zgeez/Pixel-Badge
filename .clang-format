@@ -1,0 +1,56 @@
+# clang-format configuration for application C and C++ sources.
+#
+# Based on the Zephyr project style (Linux kernel derived: tabs, 8-wide
+# indentation, 100 columns) with explicit C++17 settings.
+# Reference: https://clang.llvm.org/docs/ClangFormatStyleOptions.html
+---
+BasedOnStyle: LLVM
+Standard: c++17
+AccessModifierOffset: -8
+AlignConsecutiveMacros: AcrossComments
+AllowShortBlocksOnASingleLine: Never
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortEnumsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: None
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLambdasOnASingleLine: All
+AllowShortLoopsOnASingleLine: false
+AttributeMacros:
+  - __aligned
+  - __deprecated
+  - __packed
+  - __printf_like
+  - __syscall
+  - __subsystem
+BitFieldColonSpacing: After
+BreakBeforeBraces: Linux
+ColumnLimit: 100
+ConstructorInitializerIndentWidth: 8
+ContinuationIndentWidth: 8
+FixNamespaceComments: true
+IncludeCategories:
+  - Regex: '^".*\.h(pp)?"$'
+    Priority: 0
+  - Regex: '^<zephyr/.*\.h>$'
+    Priority: 2
+  - Regex: '.*'
+    Priority: 3
+IndentCaseLabels: false
+IndentGotoLabels: false
+IndentWidth: 8
+InsertBraces: true
+InsertNewlineAtEOF: true
+NamespaceIndentation: None
+PointerAlignment: Right
+SortIncludes: Never
+SpaceBeforeInheritanceColon: false
+SpaceBeforeParens: ControlStatementsExceptControlMacros
+UseTab: ForContinuationAndIndentation
+WhitespaceSensitiveMacros:
+  - COND_CODE_0
+  - COND_CODE_1
+  - IF_DISABLED
+  - IF_ENABLED
+  - LISTIFY
+  - STRINGIFY
+  - Z_STRINGIFY

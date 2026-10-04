@@ -1,0 +1,43 @@
+# Firmware build and test output
+build/
+build-*/
+twister-out*/
+
+# Personal configuration (see .env.example)
+.env
+.env.*
+!.env.example
+
+# KiCad local state and backups
+*.kicad_prl
+*-backups/
+fp-info-cache
+*.lck
+\#auto_saved_files#
+_autosave-*
+
+# Fabrication outputs are CI/release artifacts, not sources
+*.gbr
+*.gbrjob
+*.drl
+hardware/**/fab/
+hardware/**/gerbers/
+hardware/**/production/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Editors and OS
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
+Thumbs.db
+
+# Local-only notes
+.private/
+AGENTS.md
+CLAUDE.md
