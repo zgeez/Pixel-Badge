@@ -1,6 +1,6 @@
 # 0001: Rev A product scope and engineering priorities
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-04
 - Deciders: Project owner
 

@@ -120,9 +120,8 @@ and subsequent authorized MCU updates.
 - Exact NFC tag, IMU, and microphone parts.
 
 The owner-selected Rev A architecture is recorded in
-[decisions/](decisions/README.md). Those ADRs remain `Proposed` while this pull
-request awaits approval and merge, per the repository's ADR process. Design
-selection does not establish hardware validation.
+[decisions/](decisions/README.md) as Accepted ADRs. Design selection does not
+establish hardware validation.
 
 See also: [firmware.md](firmware.md), [hardware.md](hardware.md),
 [power.md](power.md).

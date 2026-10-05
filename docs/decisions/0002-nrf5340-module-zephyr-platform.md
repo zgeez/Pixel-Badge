@@ -1,6 +1,6 @@
 # 0002: nRF5340 module and NCS/Zephyr platform
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-04
 - Deciders: Project owner
 

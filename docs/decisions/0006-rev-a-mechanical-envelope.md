@@ -1,6 +1,6 @@
 # 0006: Rev A PCB and mechanical envelope
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-04
 - Deciders: Project owner
 

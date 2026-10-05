@@ -1,6 +1,6 @@
 # 0004: BLE configuration and external passive NFC
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-04
 - Deciders: Project owner
 
