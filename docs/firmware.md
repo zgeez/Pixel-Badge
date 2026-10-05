@@ -48,6 +48,17 @@ implemented.
 
 No project-specific logging abstraction is used.
 
+## Audio privacy requirement
+
+Planned audio visualization processes raw microphone samples locally in
+volatile/transient buffers only. No raw samples may reach flash, NVS/settings,
+external storage, logs, crash dumps, or other persistent storage. Review capture,
+DSP, logging, persistence, and fault/dump data flows before release, including
+debug configurations. Persistent crash dumps must exclude sample buffers or be
+disabled. Verification requirements are in
+[validation.md](validation.md#8-microphone-and-audio-processing); no audio
+implementation or completed privacy audit exists yet.
+
 ## Building
 
 Requires nRF Connect SDK v3.4.1 and its toolchain.
