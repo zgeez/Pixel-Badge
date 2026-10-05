@@ -65,7 +65,7 @@ flowchart LR
 | Display | 32×32 white SMD LEDs, binary pixels, discrete global brightness levels | Pitch 2.0 mm and 1:32 multiplexing provisional pending prototype testing |
 | Matrix drive | Constant-current column sinks, high-side row switches, refresh timed by hardware peripherals; matrix forced off if the scan stalls | Parts provisional |
 | BLE | Module antenna at a board edge/corner; configuration via companion app | Selected |
-| NFC | External passive NFC tag (NXP NT3H2111, NTAG I²C plus family) with PCB coil on its own switched I²C bus; public RF reads, protected RF writes, MCU I²C updates | Selected; coil tuning to be measured |
+| NFC | External passive NFC tag (NXP NT3H2111, NTAG I²C plus family) with PCB coil on its own switched I²C bus; public RF reads, protected RF writes, MCU I²C updates | Architecture selected; NT3H2111 primary (NT3H2211 alternate), coil tuning and provisioning bytes provisional |
 | Sensors | 6-axis IMU (I²C, interrupts); PDM microphone | Parts provisional |
 | Power | Independently protected 1-cell LiPo; USB-C charging with power path and separate CC1/CC2 Rd; dedicated module USB VBUS supply; regulated logic rail; switched VBAT-to-SAADC sensing; firmware-switchable LED rail with low-battery load shedding | Charging works with switch off; protection/sensing required; parts and thresholds provisional |
 | User interface | Two buttons (Mode/Next, Action/Select), physical power switch, one status LED | Selected |
@@ -117,7 +117,9 @@ and subsequent authorized MCU updates.
 - LED matrix pitch, LED part, and drive current (after QR testing).
 - Exact board outline within the size limit.
 - Battery cell.
-- Exact NFC tag, IMU, and microphone parts.
+- Final NFC tag variant (NT3H2111 primary, NT3H2211 alternate), coil tuning, and
+  provisioning bytes (verified on a development tag; see [nfc.md](nfc.md)).
+- Exact IMU and microphone parts.
 
 The owner-selected Rev A architecture is recorded in
 [decisions/](decisions/README.md) as Accepted ADRs. Design selection does not
