@@ -1,0 +1,14 @@
+(kicad_sch
+	(version 20260306)
+	(generator "eeschema")
+	(generator_version "10.0")
+	(uuid "74bbe464-fea4-444e-bc8a-77af89fd124e")
+	(paper "A3")
+	(title_block
+		(title "User Interface")
+		(rev "A")
+		(comment 1 "Smart LED Badge Rev A")
+		(comment 2 "Draft: schematic capture in progress, not for fabrication")
+	)
+	(lib_symbols)
+)

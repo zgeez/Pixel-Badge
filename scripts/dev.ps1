@@ -7,6 +7,7 @@
     test    Run the Twister host tests in the CI toolchain container (Docker).
     format  Format application C/C++ sources in place with clang-format.
     check   Check formatting, lint YAML, and check repository hygiene.
+    hardware  Run KiCad ERC and export schematic PDF/BOM (requires KiCad 10.0.6).
     clean   Remove the build/ directory.
 
     The nRF Connect SDK at -NcsRoot\-NcsVersion and the toolchain it requires
@@ -23,7 +24,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Position = 0)]
-    [ValidateSet('build', 'test', 'format', 'check', 'clean')]
+    [ValidateSet('build', 'test', 'format', 'check', 'hardware', 'clean')]
     [string] $Command = 'build',
 
     [string] $Board = 'nrf5340dk/nrf5340/cpuapp',
@@ -190,6 +191,9 @@ try {
         'test'   { Invoke-Test }
         'format' { Invoke-Format }
         'check'  { Invoke-Check }
+        'hardware' {
+            Invoke-Native python @((Join-Path $RepoRoot 'scripts/ci/check_hardware.py'))
+        }
         'clean'  {
             if (Test-Path (Join-Path $RepoRoot 'build')) {
                 Remove-Item -Recurse -Force (Join-Path $RepoRoot 'build')

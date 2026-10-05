@@ -9,13 +9,14 @@ TEST_PLATFORM ?= native_sim
 
 export BOARD BUILD_DIR TEST_PLATFORM
 
-.PHONY: help build test format check clean
+.PHONY: help build test format check hardware clean
 
 help:
 	@echo "make build   - build firmware for $(BOARD)"
 	@echo "make test    - run Twister host tests on $(TEST_PLATFORM)"
 	@echo "make format  - format C/C++ sources in place"
 	@echo "make check   - check formatting, lint YAML, check repository hygiene"
+	@echo "make hardware - KiCad ERC + schematic PDF/BOM export (KiCad 10.0.6)"
 	@echo "make clean   - remove build/"
 
 build:
@@ -31,6 +32,9 @@ check:
 	bash scripts/ci/check-format.sh
 	yamllint --strict .
 	python3 scripts/ci/check_hygiene.py
+
+hardware:
+	python3 scripts/ci/check_hardware.py
 
 clean:
 	rm -rf build

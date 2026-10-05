@@ -1,9 +1,10 @@
 # Hardware
 
-Status: **pre-schematic**. Rev A architecture is defined; no schematic or layout
-exists yet. Items marked provisional may change. Electrical values come from
-primary datasheets and are recorded in [references.md](references.md) as parts
-are confirmed.
+Status: **schematic capture started**. Rev A architecture is defined; the
+KiCad project and sheet hierarchy exist in [`hardware/`](../hardware/README.md),
+but no circuits are drawn and no layout exists yet. Items marked provisional
+may change. Electrical values come from primary datasheets and are recorded in
+[references.md](references.md) as parts are confirmed.
 
 ## Development vs final hardware
 
@@ -41,10 +42,13 @@ scheme is not the badge design.
   validation), 1:32 multiplexing (provisional). Two TI TLC59283 constant-current
   column drivers and high-side row switches (provisional); refresh timed by nRF5340
   peripherals; drive current adjustable on Rev A.
-- **NFC:** external passive tag (NTAG I²C plus family) so the link works with the
-  badge off or the battery empty; PCB coil with adjustable tuning. Public RF
-  reads and protected RF writes must coexist with MCU/I²C URL updates; provision
-  per [nfc.md](nfc.md), not factory defaults.
+- **NFC:** external passive tag (NXP NT3H2111, NTAG I²C plus family) so the
+  link works with the badge off or the battery empty; on its own I²C bus with a
+  firmware-switched supply. PCB coil about 30 × 25 mm, 6 turns, designed per NXP
+  AN11276 to resonate slightly above 14.5 MHz, with capacitor footprints to tune
+  it down once the battery, magnets and carrier are installed (not yet
+  measured). Public RF reads and protected RF writes must coexist with MCU/I²C
+  URL updates; provision per [nfc.md](nfc.md), not factory defaults.
 - **USB-C:** charging and USB 2.0 data (5 V sink, no USB Power Delivery), ESD
   protected, on an edge. VBUS feeds both the charger input and MDBT53-P1M
   VBUS pin 44, with the module USB supply circuit described in
@@ -105,16 +109,20 @@ scheme is not the badge design.
   states, source impedance/acquisition/settling, calibration and measurement
   access. Record proposed shed/recovery policy and worst-case margin before
   freeze; final measured thresholds may remain provisional. See power.md.
-- For the final NTAG variant, review the memory/protection map and provisioning
-  sequence in [nfc.md](nfc.md), preserving public passive reads and I²C updates.
-  Route field detect for NXP's RF/I²C errata handling. Review irreversible locks
-  and recovery before provisioning; rejected RF-write tests are required.
-- Use the MDBT53-P drawings in the **241021** footprint/design-guide package
-  and Ver.E §§2.1–2.3 for land pattern, orientation, and antenna keep-out on
-  every layer. Keep the battery, magnets, and carrier clear of that region.
-- Select the external 32.768 kHz crystal and its load configuration using
-  Ver.E §8, the guide's crystal documents, and Nordic clock specifications;
-  check the firmware clock setting against the actual selected crystal.
+- The NTAG memory/protection map, bus, and provisioning sequence are defined in
+  [nfc.md](nfc.md). Route field detect for NXP's RF/I²C errata handling.
+  Irreversible locks are applied only on the verified event build; rejected
+  RF-write tests are required.
+- The project footprint `Raytac_MDBT53-P1M` is KiCad's conversion of Raytac's
+  own library in the **241021** package (`MDBT53_230719.lbr`): 65 pads checked
+  against the source, the vendor antenna keep-out added as a rule area on every
+  copper layer, and pin names matching the Ver.E §2.5 table. Before layout,
+  compare it visually with the Ver.E §§2.1–2.3 drawings. Keep the battery,
+  magnets, and carrier clear of the keep-out.
+- External 32.768 kHz crystal: the package's recommended specification
+  (Epson FC-135, CL 9 pF, ±20 ppm). Check the nRF5340 internal load-capacitor
+  setting against the exact selected crystal; external load-capacitor footprints
+  are fitted but not populated.
 - Before schematic freeze, identify the protected pack and its manufacturer
   protection specifications, or complete the dedicated protection circuit for
   an unprotected cell. Check charge/discharge and peak-current ratings,

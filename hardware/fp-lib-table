@@ -1,0 +1,4 @@
+(fp_lib_table
+	(version 7)
+	(lib (name "smart-led-badge") (type "KiCad") (uri "${KIPRJMOD}/libraries/footprints/smart-led-badge.pretty") (options "") (descr "Project footprints"))
+)

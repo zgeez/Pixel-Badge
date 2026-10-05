@@ -84,7 +84,9 @@ documentation differ, the SDK-versioned documentation above applies.
   §4.5.1.3.2/Figure 4-9 (p.165) requires CC1 and CC2 sink terminations;
   §4.11.1/Table 4-28 (p.245) specifies 5.1 kΩ Rd and total-resistance tolerance;
   §4.6.2.1 defines current behavior and refers Default USB Power sinks to the
-  applicable USB specification. Page numbers are printed numbers;
+  applicable USB specification; Table 4-36 (p.255) gives sink CC voltage ranges
+  and thresholds for current-advertisement detection; tSinkAdj (60 ms) bounds
+  the sink's reaction to an advertisement change. Page numbers are printed numbers;
   accessed 2026-10-04. No USB PD functionality is selected.
 - QR Code: ISO/IEC 18004 (QR Code bar code symbology specification)
 - DENSO WAVE:
@@ -101,9 +103,10 @@ provisional parts do not imply final part selection or hardware validation.
 
 | Part | Function | Manufacturer document | Revision |
 |---|---|---|---|
-| BQ24074 (provisional charger) | Charge/power path; distinguish charger functions from independent cell protection | [TI BQ2407x, SLUS810N](https://www.ti.com/lit/gpn/bq24074), §§9.3.4–9.3.5 | Rev.N, October 2021 |
-| NT3H2111 / NT3H2211 (NTAG I²C plus family; exact variant provisional) | Passive NFC, I²C NDEF persistence and RF-write protection | [NXP NT3H2111_2211](https://www.nxp.com/docs/en/data-sheet/NT3H2111_2211.pdf), §8.3.11/Tables 9–10 (pp.26–29), §8.7 (pp.38–39), §10.8; memory maps §§8.3.2–8.3.5 | Rev.3.6, 2023-07-21 |
+| BQ24074 (provisional charger) | Charge/power path; distinguish charger functions from independent cell protection | [TI BQ2407x, SLUS810N](https://www.ti.com/lit/gpn/bq24074), §§9.3.4–9.3.5; EN1/EN2 Table 7-2, EN logic levels and K_ILIM in §8 electrical characteristics | Rev.N, October 2021 |
+| NT3H2111 (selected) / NT3H2211 (alternate) | Passive NFC, I²C NDEF persistence and RF-write protection | [NXP NT3H2111_2211](https://www.nxp.com/docs/en/data-sheet/NT3H2111_2211.pdf), §8.3.11/Tables 9–10 (pp.26–29), §8.7 (pp.38–39), §10.8; memory maps §§8.3.2–8.3.5 | Rev.3.6, 2023-07-21 |
 | NT3H2111 / NT3H2211 errata | RF/I²C corruption, field-detect/timing, verification, configuration locks and recovery | [NXP ES_NT3H2111_2211](https://www.nxp.com/docs/en/errata/ES_NT3H2111_2211.pdf), §§2–4 | Rev.4.1, 2025-10-30 |
+| NTAG antenna design | Coil target frequency, capacitance budget, rectangular-coil inductance formula, turn exponent | NXP AN11276 NTAG Antenna Design Guide, §§4.2–4.3, Table 5 (NXP-authored; retrieved from the [NXP Community attachment](https://community.nxp.com/pwmxy87654/attachments/pwmxy87654/nfc/10167/1/AN11276.pdf), SHA-256 `ce97eea73d4517fc5d9caed533aba2e35a2d25ca6f07b315bd40309bf5d77d2d`) | Rev.1.8, 2018-10-23 |
 | BQ27427 (comparison only; not selected) | Representative capacity/state-of-charge gauge with chemistry selection | [TI BQ27427, SLUSEB5B](https://www.ti.com/lit/ds/symlink/bq27427.pdf), features, §6.4 device modes and §7 application | Rev.B, September 2025 |
 
 Selected battery pack/cell and any dedicated protector documents: **TBD**.

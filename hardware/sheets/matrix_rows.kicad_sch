@@ -1,0 +1,14 @@
+(kicad_sch
+	(version 20260306)
+	(generator "eeschema")
+	(generator_version "10.0")
+	(uuid "14c76e17-2acc-4f44-879e-9d769904ad89")
+	(paper "A3")
+	(title_block
+		(title "Matrix Row Drivers and Safety")
+		(rev "A")
+		(comment 1 "Smart LED Badge Rev A")
+		(comment 2 "Draft: schematic capture in progress, not for fabrication")
+	)
+	(lib_symbols)
+)

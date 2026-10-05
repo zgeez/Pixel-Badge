@@ -1,0 +1,14 @@
+(kicad_sch
+	(version 20260306)
+	(generator "eeschema")
+	(generator_version "10.0")
+	(uuid "1d5841c1-a6f7-4d61-b43a-1c2b329652bb")
+	(paper "A3")
+	(title_block
+		(title "NFC")
+		(rev "A")
+		(comment 1 "Smart LED Badge Rev A")
+		(comment 2 "Draft: schematic capture in progress, not for fabrication")
+	)
+	(lib_symbols)
+)
