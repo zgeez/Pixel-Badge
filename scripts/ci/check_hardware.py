@@ -7,7 +7,9 @@
 - Exports the schematic PDF and a CSV BOM to build/hardware/ (generated
   artifacts; never committed).
 - --self-test injects a dangling wire into a temporary copy of the project and
-  requires ERC to fail, proving the gate is not a no-op.
+  requires a violation that refers to that wire's UUID (and more violations
+  than a baseline run), so it still proves the gate works when the schematic
+  has unrelated violations.
 
 kicad-cli is found via the KICAD_CLI environment variable, then PATH, then the
 default Windows install location. The KiCad version must match REQUIRED_VERSION
@@ -54,8 +56,8 @@ def check_version(cli: str, allow_other: bool) -> None:
                  "(use --allow-other-version to override)")
 
 
-def erc(cli: str, schematic: Path, report: Path) -> int:
-    """Run ERC; return the number of error/warning violations (non-excluded)."""
+def erc(cli: str, schematic: Path, report: Path, quiet: bool = False) -> list:
+    """Run ERC; return the error/warning violations (excluded ones are omitted)."""
     report.parent.mkdir(parents=True, exist_ok=True)
     result = run(cli, "sch", "erc", "--severity-error", "--severity-warning",
                  "--format", "json", "--output", str(report), str(schematic))
@@ -65,9 +67,10 @@ def erc(cli: str, schematic: Path, report: Path) -> int:
     data = json.loads(report.read_text(encoding="utf-8"))
     violations = [(sheet["path"], v) for sheet in data.get("sheets", [])
                   for v in sheet.get("violations", [])]
-    for path, v in violations:
-        print(f"  {v['severity'].upper():7} {path} {v['type']}: {v['description']}")
-    return len(violations)
+    if not quiet:
+        for path, v in violations:
+            print(f"  {v['severity'].upper():7} {path} {v['type']}: {v['description']}")
+    return [v for _, v in violations]
 
 
 def export(cli: str, schematic: Path) -> None:
@@ -80,24 +83,42 @@ def export(cli: str, schematic: Path) -> None:
         print(f"exported {out.relative_to(REPO_ROOT)}")
 
 
+# Violation types KiCad reports for a wire connected to nothing.
+INJECTED_TYPES = {"wire_dangling", "unconnected_wire_endpoint"}
+
+
 def self_test(cli: str) -> int:
+    """Inject a dangling wire into a copy of the project and require ERC to
+    report a violation that refers to that specific wire."""
     with tempfile.TemporaryDirectory() as tmp:
         copy = Path(tmp) / "hardware"
         shutil.copytree(HW_DIR, copy)
         root = copy / ROOT_SCHEMATIC
         text = root.read_text(encoding="utf-8")
+        baseline = erc(cli, root, Path(tmp) / "baseline.json", quiet=True)
+
+        wire_uuid = str(uuid.uuid4())
         wire = ("\t(wire\n\t\t(pts\n\t\t\t(xy 50.8 50.8) (xy 76.2 50.8)\n\t\t)\n"
                 "\t\t(stroke\n\t\t\t(width 0)\n\t\t\t(type default)\n\t\t)\n"
-                f'\t\t(uuid "{uuid.uuid4()}")\n\t)\n')
+                f'\t\t(uuid "{wire_uuid}")\n\t)\n')
         marker = "\t(sheet_instances"
         if marker not in text:
             sys.exit("error: self-test could not find the injection point")
         root.write_text(text.replace(marker, wire + marker, 1), encoding="utf-8", newline="\n")
-        count = erc(cli, root, Path(tmp) / "erc.json")
-    if count == 0:
-        print("SELF-TEST FAILED: injected dangling wire was not reported", file=sys.stderr)
+        injected = erc(cli, root, Path(tmp) / "erc.json", quiet=True)
+
+    matches = [v for v in injected if v["type"] in INJECTED_TYPES and
+               any(item.get("uuid") == wire_uuid for item in v.get("items", []))]
+    if not matches:
+        print("SELF-TEST FAILED: no violation refers to the injected wire "
+              f"({len(baseline)} baseline, {len(injected)} after injection)", file=sys.stderr)
         return 1
-    print(f"self-test passed: injected fault reported ({count} violations)")
+    if len(injected) <= len(baseline):
+        print("SELF-TEST FAILED: violation count did not increase after injection",
+              file=sys.stderr)
+        return 1
+    print(f"self-test passed: injected wire reported ({len(matches)} matching "
+          f"violation(s); {len(baseline)} baseline, {len(injected)} after injection)")
     return 0
 
 
@@ -115,7 +136,7 @@ def main() -> int:
         return self_test(cli)
 
     schematic = HW_DIR / ROOT_SCHEMATIC
-    count = erc(cli, schematic, OUT_DIR / "erc.json")
+    count = len(erc(cli, schematic, OUT_DIR / "erc.json"))
     if count:
         print(f"ERC failed: {count} violation(s); report: build/hardware/erc.json",
               file=sys.stderr)
