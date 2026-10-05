@@ -1,0 +1,4 @@
+(sym_lib_table
+	(version 7)
+	(lib (name "smart-led-badge") (type "KiCad") (uri "${KIPRJMOD}/libraries/symbols/smart-led-badge.kicad_sym") (options "") (descr "Project symbols"))
+)

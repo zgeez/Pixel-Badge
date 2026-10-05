@@ -1,9 +1,10 @@
 # Hardware
 
-Status: **pre-schematic**. Rev A architecture is defined; no schematic or layout
-exists yet. Items marked provisional may change. Electrical values come from
-primary datasheets and are recorded in [references.md](references.md) as parts
-are confirmed.
+Status: **schematic capture started**. Rev A architecture is defined; the
+KiCad project and sheet hierarchy exist in [`hardware/`](../hardware/README.md),
+but no circuits are drawn and no layout exists yet. Items marked provisional
+may change. Electrical values come from primary datasheets and are recorded in
+[references.md](references.md) as parts are confirmed.
 
 ## Development vs final hardware
 
