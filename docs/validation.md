@@ -58,6 +58,13 @@ with a pack present. Repeat USB enumeration/data in both orientations with
 logic powered; check the reviewed
 source-current policy, including unconfigured/suspended and switch-off states.
 
+Measure both CC-sense SAADC pins against VDD with a 1.5 A and a 3 A source
+attached in both orientations: switch OFF, battery absent, and across power-up
+and power-down (oscilloscope). The pin voltage must stay within the nRF5340
+absolute maximum (VDD + 0.3 V, i.e. ≤ 0.3 V while VDD is 0 V) at all times, and
+the measured effective Rd must stay within tolerance. Repeat for any other
+analog input fitted from a source that is live while the MCU is off.
+
 Record the protected pack's identity and protection specifications, or review
 the dedicated hardware protection circuit for an unprotected cell. Verify
 overdischarge, overcurrent, short-circuit protection and documented recovery,
@@ -127,11 +134,19 @@ Required RF-write-protection test:
 1. Provision according to [nfc.md](nfc.md) for the selected part. Record the
    non-secret memory/access configuration and tool/firmware revision. Never
    include passwords or credential-bearing dumps in evidence committed here.
-2. Start a fresh RF session (remove/reapply the field so a previous successful
-   authentication cannot carry over). With no password authentication, attempt
-   to replace the URL using an NFC writer; include writes to NDEF metadata and
-   configuration that could bypass protection. Record rejection and re-read the
-   exact NDEF/URI and relevant non-secret controls to prove they are unchanged.
+2. With the badge switched **off** (and again with no battery), start a fresh RF
+   session and, without authentication, attempt to write the capability
+   container (including its read-access and size bytes), the static and dynamic
+   lock bits, the NDEF/URI pages and the configuration pages. Without powering
+   the badge, read it passively with phones: the exact URL must still be
+   readable, proving the CC lock holds before any MCU repair. Then power the
+   badge and confirm the MCU detects and clears any lock bits that were set.
+   Start each further test in a fresh RF session (remove/reapply the field so a
+   previous successful authentication cannot carry over). With no password
+   authentication, attempt to replace the URL using an NFC writer; include
+   writes to NDEF metadata and configuration that could bypass protection.
+   Record rejection and re-read the exact NDEF/URI and relevant non-secret
+   controls to prove they are unchanged.
 3. Repeat while powered, switched off, and without battery/USB, and after power
    cycling. Public reads must still work without authentication. Wrong-password
    and retry-limit tests follow the reviewed policy on a sacrificial tag if
@@ -228,6 +243,11 @@ Required battery-measurement and load-shed procedure:
   capture VBAT, logic rail, LED enable/current and sample-to-shed timing. Verify
   the LED rail is disabled with margin before regulator instability or protector
   cutoff; neither compile success nor a battery-voltage log proves this margin.
+- With USB attached as a Default (USB100) source and a depleted pack, verify
+  the display stays off until battery-qualified recovery and that the charger's
+  supplement current does not drain the pack through repeated re-enables. With a
+  1.5 A or 3 A source, verify input-qualified controlled re-enable, the
+  brightness cap below the input limit, and back-off after a failed attempt.
 - Inject missing/stale/invalid samples and verify conservative matrix-off
   behavior. Test voltage rebound, threshold noise, restart near empty and
   charger attachment/removal; controlled recovery must avoid repeated resets
