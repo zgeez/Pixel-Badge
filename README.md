@@ -7,8 +7,8 @@ visualization, is configured over BLE from a companion phone app, and carries a
 passive NFC tag that shares the same link even when the badge is switched off.
 
 **Status:** early development. Rev A scope is defined; firmware is a minimal
-bootstrap and schematic capture has not started. No performance or battery
-figures have been measured.
+bootstrap and schematic capture has started (project hierarchy in place, block
+sheets not yet drawn). No performance or battery figures have been measured.
 
 **Build status:** _CI status badge to be added once the CI workflow has run on
 `main`._
