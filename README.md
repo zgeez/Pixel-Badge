@@ -58,6 +58,7 @@ See [docs/firmware.md](docs/firmware.md) for prerequisites.
 | Run tests | `.\scripts\dev.ps1 test` (Docker) | `make test` |
 | Format sources | `.\scripts\dev.ps1 format` | `make format` |
 | Run checks | `.\scripts\dev.ps1 check` | `make check` |
+| Schematic ERC + PDF/BOM (KiCad 10.0.6) | `.\scripts\dev.ps1 hardware` | `make hardware` |
 
 ## Documentation
 
