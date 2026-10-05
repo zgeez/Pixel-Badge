@@ -23,8 +23,8 @@ The charger input-current policy follows the source state (USB Type-C R2.5
 
 | Source state | BQ24074 EN2/EN1 | Input limit |
 |---|---|---|
-| MCU off or in reset (including switch OFF) | 0/0 by the IC's internal pull-downs | USB100 (100 mA) |
-| CC advertises 1.5 A or 3.0 A (vRd ≥ 0.746 V) | 1/0 (ILIM) | R_ILIM 1.21 kΩ 1%: 1.24 A min, 1.33 A typ, 1.42 A max from TI's K_ILIM range (≤ 1.5 A) |
+| MCU off or in reset (including switch OFF) | 0/0 by external 100 kΩ pull-downs on EN1 and EN2 (TI requires the pins not be left unconnected despite the 285 kΩ internal pull-downs); the powered MCU overrides them | USB100 (100 mA) |
+| CC advertises 1.5 A or 3.0 A (vRd ≥ 0.746 V) | 1/0 (ILIM) | R_ILIM 1.21 kΩ 1%: 1.23 A min, 1.33 A typ, 1.44 A max (TI's K_ILIM range 1500–1720 A·Ω combined with ±1% resistor tolerance; ≤ 1.5 A) |
 | Default advertisement, USB not configured | 0/0 | USB100 |
 | Default advertisement, USB configured by a host | 0/1 | USB500 |
 | USB suspended | 1/1 | Standby |
@@ -158,9 +158,16 @@ USB presence alone does not qualify recovery: on a USB100 (100 mA) source the
 display load exceeds the input limit and the charger's battery-supplement mode
 draws the remainder from the depleted pack without regulation (TI BQ24074,
 §9.3.4.1.3). Controlled re-enable starts at the lowest brightness level and
-steps up one level every 5 s while watching loaded VBAT; in input-qualified
-recovery the brightness is also capped so the estimated display draw stays
-below the active input limit. If VBAT falls below the shed threshold within
+steps up one level every 5 s while watching loaded VBAT. Input-qualified
+recovery is allowed only while the worst-case **total** system input current
+stays below the minimum guaranteed input limit (USB500 450 mA, ILIM 1.23 A)
+with a PROPOSED 20% margin: the charger's limit covers the whole system load
+plus charging, and beyond it the battery supplements (TI BQ24074, §§9.3.4–
+9.3.4.1). The total includes the matrix through the LED boost, the logic rail
+and radio through their regulator, and conversion losses at the lowest expected
+system voltage; the brightness cap is derived from that total, not from the
+display alone. Use datasheet maxima until power measurements (validation §4)
+calibrate the estimate. If VBAT falls below the shed threshold within
 60 s, the matrix is shed again and further attempts back off (60 s, doubling to
 15 min). After three failed attempts the display stays off until
 battery-qualified recovery. All numbers are PROPOSED.
