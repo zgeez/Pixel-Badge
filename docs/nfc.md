@@ -101,9 +101,15 @@ Every I²C transaction follows the errata's procedure (§2.1.1.3.1–2.1.1.3.4):
    user to remove the phone (RF reset), per §4.3's order.
 
 FD latency depends on the FD pull-up and decoupling values (§2.1.1.3.4); measure
-it on the Rev A board and use the measured worst case in steps 2 and 4. Also
-check EEPROM_WR_BUSY before writes and verify every write by reading it back
-(§2.3.1, §2.3.6).
+it on the Rev A board and use the measured worst case in steps 2 and 4.
+
+Every I²C EEPROM write follows NXP's write procedure (errata §2.3.1): once the
+write starts (the Stop condition, datasheet §9.2), start a 5 ms hardware timer
+and poll EEPROM_WR_BUSY in NS_REG until it clears; a timeout is a write error.
+Send no other EEPROM command, read-back, or tag power-off until the flag has
+cleared, because a command sent during the programming cycle can corrupt the
+memory (datasheet §9.2). Then verify the write by reading it back and comparing
+(errata §2.3.6).
 
 Before provisioning any badge, review the ordered configuration writes and
 verify them on a development tag: set the I²C address byte, write the CC and
