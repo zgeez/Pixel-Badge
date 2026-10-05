@@ -110,9 +110,12 @@ scheme is not the badge design.
   sequence in [nfc.md](nfc.md), preserving public passive reads and I²C updates.
   Route field detect for NXP's RF/I²C errata handling. Review irreversible locks
   and recovery before provisioning; rejected RF-write tests are required.
-- Use the MDBT53-P drawings in the **241021** footprint/design-guide package
-  and Ver.E §§2.1–2.3 for land pattern, orientation, and antenna keep-out on
-  every layer. Keep the battery, magnets, and carrier clear of that region.
+- The project footprint `Raytac_MDBT53-P1M` is KiCad's conversion of Raytac's
+  own library in the **241021** package (`MDBT53_230719.lbr`): 65 pads checked
+  against the source, the vendor antenna keep-out added as a rule area on every
+  copper layer, and pin names matching the Ver.E §2.5 table. Before layout,
+  compare it visually with the Ver.E §§2.1–2.3 drawings. Keep the battery,
+  magnets, and carrier clear of the keep-out.
 - Select the external 32.768 kHz crystal and its load configuration using
   Ver.E §8, the guide's crystal documents, and Nordic clock specifications;
   check the firmware clock setting against the actual selected crystal.

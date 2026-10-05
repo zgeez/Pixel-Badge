@@ -20,6 +20,10 @@ empty. See [docs/hardware.md](../docs/hardware.md) for the architecture.
 Project-specific symbols and footprints go in the project libraries so the
 design opens on any machine without local path changes.
 
+| Library item | Source |
+|---|---|
+| Symbol `MDBT53-P1M`, footprint `Raytac_MDBT53-P1M` | KiCad 10.0.6 conversion of Raytac's `MDBT53_230719.lbr` (Footprint & Design Guide 241021); pads checked against the source; Raytac antenna keep-out added as a rule area; pin electrical types set from the Ver.E §2.5 pin table (power pins `power_in`, so ERC checks they are driven). Raytac's 3D model is not redistributed here |
+
 ## Checks
 
 Run ERC on the full hierarchy and export the schematic PDF and BOM to
