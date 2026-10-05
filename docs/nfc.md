@@ -53,11 +53,20 @@ provisioning policy is:
   always reads back as 04h, so read-modify-write of that block (lock bytes, CC)
   cannot then change the address.
 - Provision an unpredictable, non-default, per-device password through a
-  controlled local process. The MCU generates PWD/PACK with the nRF5340
-  random-number generator and does not store them: it needs only I²C access, so
-  no copy is required. Never commit credentials, credential-bearing register
-  dumps, or provisioning logs. This password mechanism is not cryptographic
-  anti-cloning protection; MCU/I²C access is trusted within the badge.
+  controlled local process. The provisioning tool generates PWD/PACK with a
+  cryptographic random-number generator and passes them to the MCU over the
+  debug link for the I²C write. PWD and PACK always read back as zero
+  (§8.3.11), and an RF transition can skip or corrupt an I²C write (errata
+  §2.1.2), so a read-back cannot prove they were programmed. Before the
+  credential is discarded and before any `REG_LOCK`, a fresh RF session must
+  authenticate successfully with the generated PWD (checking the returned
+  PACK) and a second fresh session must show that the factory-default PWD
+  (`FFFFFFFFh`, Table 10) is rejected. The credential exists only transiently on
+  the provisioning host; the MCU does not need it afterwards because it updates
+  the tag over I²C. Never store, log, or commit credentials, credential-bearing
+  register dumps, or provisioning logs. This password mechanism is not
+  cryptographic anti-cloning protection; MCU/I²C access is trusted within the
+  badge.
 
 NXP §8.7.2 warns that failed authentication attempts can permanently lock the
 protected access mode. Do not choose retry limits or blanket lock bits without
@@ -99,12 +108,14 @@ check EEPROM_WR_BUSY before writes and verify every write by reading it back
 Before provisioning any badge, review the ordered configuration writes and
 verify them on a development tag: set the I²C address byte, write the CC and
 NDEF region, then the access policy and credentials, enable protection with
-AUTH0, and set the CC static lock bits last among the reversible steps. Do this
-in a controlled RF environment. Verify public reads, rejected RF writes
-(including CC and lock-bit attempts) and subsequent MCU updates; apply any
-reviewed irreversible configuration locks only after that. Record the
-non-secret settings and result, not the credentials. A failed or interrupted
-provisioning run stays out of service until the policy is verified again.
+AUTH0, verify the generated password by RF authentication (and rejection of the
+factory default) as described above, and set the CC static lock bits last among
+the reversible steps. Do this in a controlled RF environment. Verify public
+reads, rejected RF writes (including CC and lock-bit attempts) and subsequent
+MCU updates; apply any reviewed irreversible configuration locks only after
+that. Record the non-secret settings and result, not the credentials. A failed
+or interrupted provisioning run stays out of service until the policy is
+verified again.
 
 Also apply **NXP ES_NT3H2111_2211 errata Rev.4.1 (2025-10-30)** §§2–4. RF
 transitions during I²C can corrupt transactions, EEPROM/configuration and even

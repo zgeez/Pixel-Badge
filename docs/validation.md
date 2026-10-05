@@ -134,6 +134,11 @@ Required RF-write-protection test:
 1. Provision according to [nfc.md](nfc.md) for the selected part. Record the
    non-secret memory/access configuration and tool/firmware revision. Never
    include passwords or credential-bearing dumps in evidence committed here.
+   Before the credential is discarded, prove it was programmed: in a fresh RF
+   session, authenticate with the generated PWD and check the returned PACK;
+   in another fresh session, confirm the factory-default PWD is rejected.
+   Unauthenticated-rejection tests alone cannot show this, because PWD/PACK
+   always read back as zero.
 2. With the badge switched **off** (and again with no battery), start a fresh RF
    session and, without authentication, attempt to write the capability
    container (including its read-access and size bytes), the static and dynamic
