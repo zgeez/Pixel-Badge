@@ -50,6 +50,14 @@ measure hot-plug/removal and USB attachment with the switch on/off and battery
 present/absent. Verify no unsupported back-powering; use a diagnostic USB image
 to check enumeration/data with the normal MCU supply enabled.
 
+Verify CC1 and CC2 each have independent Rd to ground, within the complete
+circuit's allowed resistance tolerance (power.md). With a compliant C-to-C
+source, test both plug orientations, powered/switch-off and battery-absent
+states: source enables VBUS and powers the charger input; verify actual charging
+with a pack present. Repeat USB enumeration/data in both orientations with
+logic powered; check the reviewed
+source-current policy, including unconfigured/suspended and switch-off states.
+
 Record the protected pack's identity and protection specifications, or review
 the dedicated hardware protection circuit for an unprotected cell. Verify
 overdischarge, overcurrent, short-circuit protection and documented recovery,
@@ -111,10 +119,33 @@ Required content-update test (in addition to read-range tests):
    Verify error reporting, retry/reconciliation after restart, and that update
    success is not reported while NFC and QR differ. Any mismatch blocks this
    functional check; document the recovery behavior before implementation.
+   Include NXP errata Rev.4.1's RF-transition, verification and recovery cases;
+   record any fixture limitations instead of claiming exhaustive timing coverage.
+
+Required RF-write-protection test:
+
+1. Provision according to [nfc.md](nfc.md) for the selected part. Record the
+   non-secret memory/access configuration and tool/firmware revision. Never
+   include passwords or credential-bearing dumps in evidence committed here.
+2. Start a fresh RF session (remove/reapply the field so a previous successful
+   authentication cannot carry over). With no password authentication, attempt
+   to replace the URL using an NFC writer; include writes to NDEF metadata and
+   configuration that could bypass protection. Record rejection and re-read the
+   exact NDEF/URI and relevant non-secret controls to prove they are unchanged.
+3. Repeat while powered, switched off, and without battery/USB, and after power
+   cycling. Public reads must still work without authentication. Wrong-password
+   and retry-limit tests follow the reviewed policy on a sacrificial tag if
+   irreversible locking is possible; do not lock the event tag by accident.
+4. Change to another URL through the intended MCU path. Verify I²C updates still
+   work, exact powered/passive NFC reads match the decoded QR, and the new URL
+   remains protected against unauthenticated RF writes. Recheck after reset and
+   interrupted provisioning/update recovery.
 
 Required outcome: the exact updated configuration URL is shared by QR and NFC
 while powered and remains available passively after power removal. Read-range
-thresholds and the phone test set still need acceptance.
+thresholds and the phone test set still need acceptance. Unauthenticated RF
+writes cannot alter the URL or its interpretation; protection must not prevent
+public passive reads or future MCU/I²C updates.
 
 Acceptance criteria: TBD.
 
@@ -183,5 +214,28 @@ Acceptance criteria: TBD.
 
 Purpose: verify repeated power cycling, low-battery behavior (display load shed
 before logic is affected), watchdog recovery, and settings/firmware recovery.
+
+Required battery-measurement and load-shed procedure:
+
+- Review the selected pack/protector and regulator limits, divider/switch
+  calculations, ADC configuration/error budget and **PROPOSED** threshold,
+  hysteresis, sampling and reaction-time policy before schematic freeze.
+- With a current-limited battery simulator, sweep the intended VBAT range and
+  compare ADC readings with a calibrated meter at VBAT/sense test points. Test
+  loaded and relaxed states, USB present/absent, startup and switch-off leakage/
+  back-powering. Include probe loading and temperature limitations in the record.
+- Ramp through the proposed shed threshold with worst-case display + BLE load;
+  capture VBAT, logic rail, LED enable/current and sample-to-shed timing. Verify
+  the LED rail is disabled with margin before regulator instability or protector
+  cutoff; neither compile success nor a battery-voltage log proves this margin.
+- Inject missing/stale/invalid samples and verify conservative matrix-off
+  behavior. Test voltage rebound, threshold noise, restart near empty and
+  charger attachment/removal; controlled recovery must avoid repeated resets
+  or re-enable loops. Retain independent protection for faults firmware cannot
+  react to.
+- Characterize the selected pack's discharge under the agreed use profile.
+  Accept final accuracy and shed/recovery values only from the error budget and
+  measured sag/cutoff margins; voltage-based sensing must not be reported as
+  calibrated state of charge or remaining runtime. Repeat on the event build.
 
 Acceptance criteria: TBD.

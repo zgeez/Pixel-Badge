@@ -40,11 +40,16 @@ flowchart LR
     UI["2 buttons, status LED"] --- APP
 
     USB["USB-C<br/>charge + USB 2.0"] -->|VBUS| CHG["Power-path charger"]
+    USB -->|CC1| RD1["5.1 kΩ Rd to GND"]
+    USB -->|CC2| RD2["5.1 kΩ Rd to GND"]
     USB -->|VBUS| USBPWR["Module USB supply<br/>conditioning + decoupling"]
     USBPWR --> VBUS["Dedicated VBUS input<br/>module pin 44"]
     VBUS --> MOD
     USB -->|D+/D−| APP
     BATT["Protected 1-cell LiPo pack<br/>or dedicated hardware protection"] --- CHG
+    BATT --> SENSE["Default-off switched<br/>VBAT divider"]
+    SENSE -->|SAADC| APP
+    APP -->|Measurement enable| SENSE
     CHG --> LOGIC["Regulated logic rail"]
     CHG --> LED["Switchable LED rail"]
     SW["Power switch"] --> LOGIC
@@ -60,9 +65,9 @@ flowchart LR
 | Display | 32×32 white SMD LEDs, binary pixels, discrete global brightness levels | Pitch 2.0 mm and 1:32 multiplexing provisional pending prototype testing |
 | Matrix drive | Constant-current column sinks, high-side row switches, refresh timed by hardware peripherals; matrix forced off if the scan stalls | Parts provisional |
 | BLE | Module antenna at a board edge/corner; configuration via companion app | Selected |
-| NFC | External passive NFC tag (NTAG I²C plus family) with PCB coil; MCU updates contents over I²C when powered | Architecture selected; exact part provisional |
+| NFC | External passive NFC tag (NTAG I²C plus family) with PCB coil; public RF reads, protected RF writes, MCU I²C updates | Architecture selected; exact part/provisioning map provisional |
 | Sensors | 6-axis IMU (I²C, interrupts); PDM microphone | Parts provisional |
-| Power | Independently protected 1-cell LiPo; USB-C charging with power path, charging works with the switch off; dedicated module USB VBUS supply; regulated logic rail; LED rail switchable by firmware; matrix load shed on low battery | Protection required; specific parts provisional |
+| Power | Independently protected 1-cell LiPo; USB-C charging with power path and separate CC1/CC2 Rd; dedicated module USB VBUS supply; regulated logic rail; switched VBAT-to-SAADC sensing; firmware-switchable LED rail with low-battery load shedding | Charging works with switch off; protection/sensing required; parts and thresholds provisional |
 | User interface | Two buttons (Mode/Next, Action/Select), physical power switch, one status LED | Selected |
 | Debug | SWD, SEGGER RTT logging, UART test pads, rail and matrix-timing test points | Required on Rev A |
 | Mechanics | 4-layer PCB ≤ 112 × 74 mm (108 × 72 mm nominal), black soldermask, LEDs on the front, rear 3D-printed carrier with battery and magnetic attachment | Outline provisional within the maximum |
@@ -74,6 +79,10 @@ brightness, firmware reliability, battery/power behavior, BLE/NFC usability,
 mechanical wearability, visual polish.
 
 ## USB and battery requirements
+
+Terminate CC1 and CC2 separately to ground with two 5.1 kΩ, 1% Rd resistors,
+present even when switched off or without a battery. Do not join the CC pins.
+This provides sink attachment in either orientation without USB PD.
 
 USB-C VBUS supplies **both** the charger input and the module's dedicated VBUS
 input (pin 44). D+ and D− connect to module pins 46 and 48. USB also requires
@@ -87,6 +96,21 @@ requires a dedicated hardware protection circuit instead. Charger/power-path
 functions and firmware load shedding do not replace independent battery
 overdischarge, overcurrent, and short-circuit protection. Pack selection and
 protection ratings remain open; no safety or runtime measurements exist.
+
+Measure the protected pack's VBAT output through a default-off switched divider
+to an nRF5340 SAADC input. The regulated logic voltage is not battery state.
+Rev A uses voltage-based load shedding; divider values, acquisition timing,
+error margin, shed/recovery thresholds and discharge characterization remain
+provisional. See [power.md](power.md#battery-state-measurement).
+
+## NFC content protection
+
+The contact URL is public, including with all badge power removed. Provision
+the tag to reject unauthenticated RF writes while retaining MCU/I²C EEPROM
+updates. Factory-default NTAG protection is insufficient. The intended policy,
+part-specific provisioning gate and recovery requirements are in
+[nfc.md](nfc.md); tests cover powered and passive reads, rejected RF writes,
+and subsequent authorized MCU updates.
 
 ## Open decisions
 

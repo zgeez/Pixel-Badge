@@ -42,16 +42,23 @@ scheme is not the badge design.
   column drivers and high-side row switches (provisional); refresh timed by nRF5340
   peripherals; drive current adjustable on Rev A.
 - **NFC:** external passive tag (NTAG I²C plus family) so the link works with the
-  badge off or the battery empty; PCB coil with adjustable tuning.
+  badge off or the battery empty; PCB coil with adjustable tuning. Public RF
+  reads and protected RF writes must coexist with MCU/I²C URL updates; provision
+  per [nfc.md](nfc.md), not factory defaults.
 - **USB-C:** charging and USB 2.0 data (5 V sink, no USB Power Delivery), ESD
   protected, on an edge. VBUS feeds both the charger input and MDBT53-P1M
   VBUS pin 44, with the module USB supply circuit described in
   [power.md](power.md); D+ → pin 46, D− → pin 48.
+  CC1 and CC2 each have their own 5.1 kΩ, 1% Rd to ground, present with the
+  switch off/battery absent; no joined CC pins or USB PD controller.
 - **Power:** commercially protected 1-cell LiPo pack preferred (≈ 1200 mAh
   starting target), with a power-path charger; charging works with the power
   switch off; regulated logic rail; firmware-switchable LED
   rail. An unprotected cell requires dedicated hardware protection. Specific
   pack, charger, regulators, and protection ratings remain provisional/open.
+  Battery state comes from a default-off high-side-switched VBAT divider to
+  nRF5340 SAADC, not the regulated logic rail; final sensing values and firmware
+  thresholds await design calculations and pack characterization.
 - **Runtime:** about eight hours under representative career-fair use is the
   design target, not a measured capability. Capacity alone does not establish
   runtime; validate the agreed usage profile in [validation.md](validation.md).
@@ -76,6 +83,8 @@ scheme is not the badge design.
 - UART test pads for fallback logging.
 - Matrix timing test points (clock, latch, blank, row select).
 - Removable links for current measurement where useful.
+- Battery-voltage measurement and sense-node access, with an error budget and
+  load-shed margin above regulator/protection cutoff; see [power.md](power.md).
 
 ## Schematic preparation and review
 
@@ -89,6 +98,17 @@ scheme is not the badge design.
   source resistance, capacitor ratings, and the complete connector inrush
   budget. A 0 Ω measurement link does not provide electrical isolation when
   fitted or replace transient conditioning. See [power.md](power.md).
+- Check separate CC1/CC2 Rd connections, nominal/tolerance and total loading
+  against USB-IF Release 2.5 §4.5.1.3.2 and Table 4-28. Review both orientations,
+  dead-battery attachment and a source-compliant charger current policy.
+- Review VBAT divider/switch, default-off behavior, AIN limits across supply
+  states, source impedance/acquisition/settling, calibration and measurement
+  access. Record proposed shed/recovery policy and worst-case margin before
+  freeze; final measured thresholds may remain provisional. See power.md.
+- For the final NTAG variant, review the memory/protection map and provisioning
+  sequence in [nfc.md](nfc.md), preserving public passive reads and I²C updates.
+  Route field detect for NXP's RF/I²C errata handling. Review irreversible locks
+  and recovery before provisioning; rejected RF-write tests are required.
 - Use the MDBT53-P drawings in the **241021** footprint/design-guide package
   and Ver.E §§2.1–2.3 for land pattern, orientation, and antenna keep-out on
   every layer. Keep the battery, magnets, and carrier clear of that region.

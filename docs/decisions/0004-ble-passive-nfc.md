@@ -27,6 +27,11 @@ configured URL as NDEF into tag EEPROM over I²C while powered. The tag retains
 that same URL for passive reading after power removal. The exact tag variant
 and antenna tuning remain provisional.
 
+Provision protected RF writes with public RF reads, including without badge
+power, while retaining MCU/I²C user-EEPROM updates. Factory-default password
+protection is disabled; use the policy and part-specific review in
+[nfc.md](../nfc.md). No credentials belong in repository content.
+
 ## Consequences
 
 The app, firmware configuration, QR renderer, and tag writer share one URL
@@ -35,9 +40,13 @@ path, powered and unpowered, against the decoded QR; preprogrammed-tag reads
 alone are insufficient. Specify interrupted-update reconciliation and report
 errors instead of claiming success with inconsistent URLs. Validate the coil
 with battery, magnets, and carrier installed; no RF results exist yet.
+RF-write rejection, protection persistence and continued MCU updates are
+release checks. Review the final memory map, protection exclusions, irreversible
+locks and NXP RF/I²C errata; exact provisioning bytes remain provisional.
 
 ## References
 
 - [Architecture](../architecture.md)
+- [NFC provisioning and recovery](../nfc.md)
 - [NFC update, persistence, and recovery tests](../validation.md#6-nfc)
 - [NXP NT3H2111/2211 Rev.3.6](../references.md#component-datasheets)

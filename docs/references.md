@@ -16,6 +16,11 @@ on a specific document, cite the document revision and section.
   and source resistance;
   [Reference circuitry](https://docs.nordicsemi.com/r/bundle/ps_nrf5340/page/chapters/ref_circuitry.html?contentId=VghuZK7iL3DXXXwg0apSEA)
   for supply configurations and recommended VBUS series conditioning.
+- [nRF5340 SAADC](https://docs.nordicsemi.com/r/bundle/ps_nrf5340/page/saadc.html)
+  (latest Product Specification HTML; accessed 2026-10-04), **Digital output**,
+  **Reference**, **Acquisition time/Table 2** and **Electrical specification**:
+  ADC errors/calibration, VSS–VDD analog-input limits, gain/reference and
+  source-resistance/acquisition constraints for battery sensing.
 - [nRF5340 DK Hardware user guide](https://docs.nordicsemi.com/bundle/ug_nrf5340_dk/page/ug/dk/intro.html)
 
 ## Raytac MDBT53-P1M
@@ -72,6 +77,15 @@ documentation differ, the SDK-versioned documentation above applies.
 
 ## Standards
 
+- USB-IF [USB Type-C Cable and Connector Specification Release 2.5](https://www.usb.org/document-library/usb-type-cr-cable-and-connector-specification-release-25),
+  **March 2026** (published 2026-04-08),
+  [official release ZIP](https://www.usb.org/sites/default/files/USB%20Type-C%202.5%20Release%20202603.zip).
+  Use `USB Type-C Spec R2.5 - March 2026.pdf`:
+  §4.5.1.3.2/Figure 4-9 (p.165) requires CC1 and CC2 sink terminations;
+  §4.11.1/Table 4-28 (p.245) specifies 5.1 kΩ Rd and total-resistance tolerance;
+  §4.6.2.1 defines current behavior and refers Default USB Power sinks to the
+  applicable USB specification. Page numbers are printed numbers;
+  accessed 2026-10-04. No USB PD functionality is selected.
 - QR Code: ISO/IEC 18004 (QR Code bar code symbology specification)
 - DENSO WAVE:
   [QR versions and dimensions](https://www.qrcode.com/en/about/version.html)
@@ -88,7 +102,9 @@ provisional parts do not imply final part selection or hardware validation.
 | Part | Function | Manufacturer document | Revision |
 |---|---|---|---|
 | BQ24074 (provisional charger) | Charge/power path; distinguish charger functions from independent cell protection | [TI BQ2407x, SLUS810N](https://www.ti.com/lit/gpn/bq24074), §§9.3.4–9.3.5 | Rev.N, October 2021 |
-| NT3H2111 / NT3H2211 (NTAG I²C plus family; exact variant provisional) | Passive NFC, I²C NDEF persistence | [NXP NT3H2111_2211](https://www.nxp.com/docs/en/data-sheet/NT3H2111_2211.pdf), §§2.3, 8.3–8.4, 9–11 | Rev.3.6, 2023-07-21 |
+| NT3H2111 / NT3H2211 (NTAG I²C plus family; exact variant provisional) | Passive NFC, I²C NDEF persistence and RF-write protection | [NXP NT3H2111_2211](https://www.nxp.com/docs/en/data-sheet/NT3H2111_2211.pdf), §8.3.11/Tables 9–10 (pp.26–29), §8.7 (pp.38–39), §10.8; memory maps §§8.3.2–8.3.5 | Rev.3.6, 2023-07-21 |
+| NT3H2111 / NT3H2211 errata | RF/I²C corruption, field-detect/timing, verification, configuration locks and recovery | [NXP ES_NT3H2111_2211](https://www.nxp.com/docs/en/errata/ES_NT3H2111_2211.pdf), §§2–4 | Rev.4.1, 2025-10-30 |
+| BQ27427 (comparison only; not selected) | Representative capacity/state-of-charge gauge with chemistry selection | [TI BQ27427, SLUSEB5B](https://www.ti.com/lit/ds/symlink/bq27427.pdf), features, §6.4 device modes and §7 application | Rev.B, September 2025 |
 
 Selected battery pack/cell and any dedicated protector documents: **TBD**.
 Record their actual protection/current/temperature limits before schematic

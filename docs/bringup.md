@@ -21,10 +21,15 @@ Board: ____  Serial/batch: ____  Firmware commit: ____  Date: ____
 - [ ] Each rail voltage
 - [ ] Idle current
 - [ ] Charger behavior
+- [ ] CC1/CC2 each have separate 5.1 kΩ Rd; C-to-C VBUS/charging attachment in
+      both orientations, including switch-off and battery-absent states
 - [ ] USB-C VBUS reaches charger input and module VBUS pin 44 through the
       specified conditioning/decoupling; hot-plug and switch-off states checked
 - [ ] USB diagnostic enumeration/data with MCU logic supply enabled
 - [ ] Battery-powered operation
+- [ ] Switched VBAT sensing agrees with meter; disabled/reset/off leakage and
+      ADC back-powering checked; loaded low-battery shedding/recovery and invalid
+      sample behavior verified (validation.md §12); final thresholds recorded
 - [ ] Independent battery protection and recovery checked against selected
       pack/cell specifications using controlled fixtures; record limits/results
 
@@ -60,6 +65,9 @@ Board: ____  Serial/batch: ____  Firmware commit: ____  Date: ____
       update, exact NFC URI while powered and passively after switch-off/power
       removal, and equality with the decoded QR (validation.md §6)
 - [ ] NFC read-range/tap tests with battery, magnets, and carrier installed
+- [ ] Provisioned RF write protection rejects unauthenticated URL/metadata/
+      bypass writes in fresh RF sessions, powered and unpowered; public reads
+      and subsequent MCU/I²C URL updates still work (validation.md §6)
 
 ## Mechanical
 
