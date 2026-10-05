@@ -29,3 +29,4 @@ decision.
 | [0004](0004-ble-passive-nfc.md) | BLE configuration and external passive NTAG NFC | Accepted |
 | [0005](0005-usb-c-charge-and-data.md) | USB-C charging and USB 2.0 data architecture | Accepted |
 | [0006](0006-rev-a-mechanical-envelope.md) | Rev A PCB and mechanical constraints | Accepted |
+| [0007](0007-battery-charger-power-states.md) | 2500 mAh pack, BQ25620 switching charger, USB-powered charging state (amends 0005) | Proposed |
