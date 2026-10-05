@@ -38,8 +38,15 @@ unit-tested on a host target. Public headers shared across layers go in
 `firmware/include/`. Board overlays and custom board definitions go in
 `firmware/boards/`.
 
-The directories exist but are empty; interfaces will be defined as features are
-implemented.
+`firmware/src/drivers/` is a Zephyr module (`zephyr/module.yml`) so the
+application and the tests share its Kconfig, devicetree bindings and sources.
+It holds the ICM-42688-P I²C driver (compatible `invensense,icm42688p-i2c`):
+NCS v3.4.1's `icm4268x` driver supports SPI only. The project driver reuses
+that driver's register map and devicetree property encoding, applies the
+datasheet's I²C settings (DS-000347 §12.3), and supports data-ready interrupts.
+Moving the part to SPI only changes the bus node and compatible. Wake-on-motion
+is not implemented yet. The other directories are empty; interfaces will be
+defined as features are implemented.
 
 ## Logging
 
@@ -101,5 +108,8 @@ install them from a fixed Ubuntu archive snapshot with exact package versions
 make test
 ```
 
-The only current test (`firmware/tests/sanity`) checks that C++17 tests build
-and run; it does not test product behavior.
+`firmware/tests/sanity` checks that C++17 tests build and run.
+`firmware/tests/icm42688_i2c` runs the IMU driver against a register-level
+emulator on the native_sim I²C bus: reset and identity checks, I²C-mode
+configuration, unit conversion, and the data-ready interrupt path. It proves
+the driver logic, not behavior on the real part.

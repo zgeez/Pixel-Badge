@@ -1,0 +1,24 @@
+/* SPDX-License-Identifier: MIT */
+
+#include <zephyr/dt-bindings/sensor/icm42688.h>
+
+&i2c0 {
+	/* Wired INT1; emulator reports the correct WHO_AM_I. */
+	imu: icm42688@68 {
+		compatible = "invensense,icm42688p-i2c";
+		reg = <0x68>;
+		int-gpios = <&gpio0 0 GPIO_ACTIVE_HIGH>;
+		accel-pwr-mode = <ICM42688_DT_ACCEL_LN>;
+		accel-odr = <ICM42688_DT_ACCEL_ODR_100>;
+		accel-fs = <ICM42688_DT_ACCEL_FS_2>;
+		gyro-pwr-mode = <ICM42688_DT_GYRO_LN>;
+		gyro-odr = <ICM42688_DT_GYRO_ODR_200>;
+		gyro-fs = <ICM42688_DT_GYRO_FS_2000>;
+	};
+
+	/* No INT1; emulator reports a wrong WHO_AM_I, so init must fail. */
+	bad_imu: icm42688@69 {
+		compatible = "invensense,icm42688p-i2c";
+		reg = <0x69>;
+	};
+};

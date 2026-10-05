@@ -1,0 +1,11 @@
+# SPDX-License-Identifier: MIT
+#
+# Project drivers, packaged as a Zephyr module so the application and the
+# tests pick up the same Kconfig, devicetree bindings and sources.
+
+name: badge_drivers
+build:
+  cmake: .
+  kconfig: Kconfig
+  settings:
+    dts_root: .

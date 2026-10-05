@@ -1,0 +1,22 @@
+# SPDX-License-Identifier: MIT
+
+config ICM42688_I2C
+	bool "TDK ICM-42688-P on I2C"
+	default y
+	depends on DT_HAS_INVENSENSE_ICM42688P_I2C_ENABLED
+	depends on SENSOR
+	select I2C
+	help
+	  Project driver for the ICM-42688-P on I2C. Zephyr's icm4268x driver
+	  in NCS v3.4.1 supports SPI only; to use SPI instead, move the node to
+	  an SPI bus with the "invensense,icm42688" compatible.
+
+config ICM42688_I2C_TRIGGER
+	bool "Data-ready interrupt"
+	default y
+	depends on ICM42688_I2C
+	depends on GPIO
+	depends on $(dt_compat_any_has_prop,$(DT_COMPAT_INVENSENSE_ICM42688P_I2C),int-gpios)
+	help
+	  Deliver SENSOR_TRIG_DATA_READY from INT1 through the system work
+	  queue.
