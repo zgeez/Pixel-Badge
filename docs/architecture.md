@@ -63,11 +63,11 @@ flowchart LR
 |---|---|---|
 | MCU | Raytac MDBT53-P1M (nRF5340), external 32.768 kHz crystal | Selected |
 | Display | 32×32 white SMD LEDs, binary pixels, discrete global brightness levels | Pitch 2.0 mm and 1:32 multiplexing provisional pending prototype testing |
-| Matrix drive | Constant-current column sinks, high-side row switches, refresh timed by hardware peripherals; matrix forced off if the scan stalls | Parts provisional |
+| Matrix drive | 2 × TLC59283 constant-current column sinks; SN74HC595 row registers behind an SN74LVC8T245 translator driving AO3401A high-side row switches; refresh timed by hardware peripherals; monostable + OR gate force blanking if the scan stalls | Parts selected; peak current and IREF prototype-dependent |
 | BLE | Module antenna at a board edge/corner; configuration via companion app | Selected |
-| NFC | External passive NFC tag (NXP NT3H2111, NTAG I²C plus family) with PCB coil on its own switched I²C bus; public RF reads, protected RF writes, MCU I²C updates | Architecture selected; NT3H2111 primary (NT3H2211 alternate), coil tuning and provisioning bytes provisional |
-| Sensors | 6-axis IMU (I²C, interrupts); PDM microphone | Parts provisional |
-| Power | Independently protected 1-cell LiPo; USB-C charging with power path and separate CC1/CC2 Rd; dedicated module USB VBUS supply; regulated logic rail; switched VBAT-to-SAADC sensing; firmware-switchable LED rail with low-battery load shedding | Charging works with switch off; protection/sensing required; parts and thresholds provisional |
+| NFC | External passive NFC tag (NXP NT3H2111W0FHKH, XQFN-8) with PCB coil on its own switched I²C bus; public RF reads, protected RF writes, MCU I²C updates | Part selected; coil tuning and provisioning bytes provisional |
+| Sensors | TDK ICM-42688-P 6-axis IMU on I²C with interrupts (project I²C driver; SPI fallback provided); Knowles SPH0641LM4H-1 PDM microphone | IMU conditional on real-part verification; microphone conditional on lifecycle check |
+| Power | Protected 1-cell LiPo pack (Adafruit 328, 2500 mAh); BQ25620 switching USB-C charger with NVDC power path (≈ 1 A charge, BC1.2 detection) and separate CC1/CC2 Rd; dedicated module USB VBUS supply; TPS63802 3.3 V logic rail powered by the switch or by USB (charging-only mode); switched VBAT-to-SAADC sensing; TPS61023 firmware-switchable LED rail with low-battery load shedding | Parts selected; charging works with switch off; thresholds and VLED provisional |
 | User interface | Two buttons (Mode/Next, Action/Select), physical power switch, one status LED | Selected |
 | Debug | SWD, SEGGER RTT logging, UART test pads, rail and matrix-timing test points | Required on Rev A |
 | Mechanics | 4-layer PCB ≤ 112 × 74 mm (108 × 72 mm nominal), black soldermask, LEDs on the front, rear 3D-printed carrier with battery and magnetic attachment | Outline provisional within the maximum |
@@ -91,11 +91,16 @@ Connection, decoupling, conditioning, and off-state review are specified in
 [power.md](power.md), using the Nordic USBREG specification and Raytac Ver.E
 §§2.5 and 8.1.2.
 
-Use a commercially protected 1-cell LiPo pack for Rev A. An unprotected cell
-requires a dedicated hardware protection circuit instead. Charger/power-path
-functions and firmware load shedding do not replace independent battery
-overdischarge, overcurrent, and short-circuit protection. Pack selection and
-protection ratings remain open; no safety or runtime measurements exist.
+Rev A uses a commercially protected 1-cell LiPo pack (Adafruit 328, 2500 mAh).
+Charger/power-path functions and firmware load shedding do not replace its
+independent overdischarge, overcurrent and short-circuit protection. The cell
+allows up to 1.2 A charge (vendor) and 1.5 A continuous discharge; the pack
+has no thermistor, so a board NTC next to it qualifies charging. No safety or
+runtime measurements exist. See [power.md](power.md#independent-battery-protection).
+
+The power switch is a signal-level control: with USB attached the logic rail
+runs a charging-only firmware state even when the switch is OFF. See
+[power.md](power.md#power-states).
 
 Measure the protected pack's VBAT output through a default-off switched divider
 to an nRF5340 SAADC input. The regulated logic voltage is not battery state.
@@ -116,10 +121,12 @@ and subsequent authorized MCU updates.
 
 - LED matrix pitch, LED part, and drive current (after QR testing).
 - Exact board outline within the size limit.
-- Battery cell.
-- Final NFC tag variant (NT3H2111 primary, NT3H2211 alternate), coil tuning, and
-  provisioning bytes (verified on a development tag; see [nfc.md](nfc.md)).
-- Exact IMU and microphone parts.
+- NFC coil tuning and provisioning bytes (verified on a development tag; see
+  [nfc.md](nfc.md)).
+- IMU: ICM-42688-P on I²C until real-part verification; SPI is the fallback.
+- Microphone lifecycle confirmation.
+- USB-C receptacle, buttons and power switch (mechanical).
+- Charging temperature qualification with a pack that has no thermistor.
 
 The owner-selected Rev A architecture is recorded in
 [decisions/](decisions/README.md) as Accepted ADRs. Design selection does not
