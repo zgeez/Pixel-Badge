@@ -23,6 +23,11 @@ design opens on any machine without local path changes.
 | Library item | Source |
 |---|---|
 | Symbol `MDBT53-P1M`, footprint `Raytac_MDBT53-P1M` | KiCad 10.0.6 conversion of Raytac's `MDBT53_230719.lbr` (Footprint & Design Guide 241021); pads checked against the source; Raytac antenna keep-out added as a rule area; pin electrical types set from the Ver.E §2.5 pin table (power pins `power_in`, so ERC checks they are driven). Raytac's 3D model is not redistributed here |
+| Symbol `TPS63802`, footprint `Texas_DLA0010A` | Drawn from TI SLVSEU9D: pins and electrical types from Table 7-1; pads from the DLA0010A land pattern example (drawing 4223750/D 03/2019), body 2.0 × 3.0 mm |
+| Symbol `TPS61023`, footprint `Texas_DRL0006A` | Drawn from TI SLVSF14B: pins from the pin-function table; pads from the DRL0006A land pattern example (drawing 4223266/F 11/2024) |
+| Symbol `BQ25620`, footprint `Texas_RYK0018A` | Drawn from TI SLUSEG2D: pins and types from Table 6-1 (BQ25620 column: pin 4 D−, pin 5 D+); pads from the RYK0018A land pattern example (drawing 4226526/A 02/2021), including the four L-shaped corner pads (two pads each), body 3.0 × 2.5 mm |
+| Footprint `L_Coilcraft_XEL4030` | Coilcraft Document 1321-3 recommended land pattern (0.98 × 3.4 mm pads, 2.37 mm centres) |
+| Footprint `L_Murata_DFE201612E` | Murata DFE201612E body and electrodes (spec J(E)TE243A-0006B-01) match DFE201610P, so the pads follow KiCad's `L_Murata_DFE201610P` |
 
 ## Checks
 
