@@ -1,6 +1,6 @@
 # 0005: USB-C charging and USB 2.0 data
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-04
 - Deciders: Project owner
 

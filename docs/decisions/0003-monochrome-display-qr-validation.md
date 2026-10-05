@@ -1,6 +1,6 @@
 # 0003: 32×32 monochrome display and QR-first validation
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-04
 - Deciders: Project owner
 
