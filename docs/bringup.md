@@ -11,6 +11,8 @@ Board: ____  Serial/batch: ____  Firmware commit: ____  Date: ____
 - [ ] Visual inspection (solder bridges, missing/rotated parts, polarity marks)
 - [ ] Resistance from each supply rail to ground
 - [ ] Battery connector polarity
+- [ ] Protected pack identity/specifications verified, or dedicated cell
+      protection circuit reviewed; charger alone is insufficient
 - [ ] Assembly matches BOM and placement
 
 ## Power
@@ -19,7 +21,12 @@ Board: ____  Serial/batch: ____  Firmware commit: ____  Date: ____
 - [ ] Each rail voltage
 - [ ] Idle current
 - [ ] Charger behavior
+- [ ] USB-C VBUS reaches charger input and module VBUS pin 44 through the
+      specified conditioning/decoupling; hot-plug and switch-off states checked
+- [ ] USB diagnostic enumeration/data with MCU logic supply enabled
 - [ ] Battery-powered operation
+- [ ] Independent battery protection and recovery checked against selected
+      pack/cell specifications using controlled fixtures; record limits/results
 
 ## Debug and programming
 
@@ -49,7 +56,10 @@ Board: ____  Serial/batch: ____  Firmware commit: ____  Date: ____
 ## Wireless
 
 - [ ] BLE advertising and connection
-- [ ] NFC tag read (badge on and switched off)
+- [ ] Configure a new URL through the intended MCU path, verify NTAG I²C EEPROM
+      update, exact NFC URI while powered and passively after switch-off/power
+      removal, and equality with the decoded QR (validation.md §6)
+- [ ] NFC read-range/tap tests with battery, magnets, and carrier installed
 
 ## Mechanical
 

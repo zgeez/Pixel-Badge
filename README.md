@@ -17,7 +17,8 @@ figures have been measured.
 
 Rev A scope:
 
-- QR link display (multiple QR versions supported in firmware)
+- QR link display (Version 1 fits the 32×32 display with a full quiet zone;
+  additional encoder versions only where the output geometry permits)
 - Name / identity display
 - Motion-driven Flip/fluid-style simulation (IMU)
 - Audio visualization (PDM microphone; processed on the badge, no audio stored)
