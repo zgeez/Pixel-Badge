@@ -117,7 +117,8 @@ provisional parts do not imply final part selection or hardware validation.
 | CM7V-T1A 32.768 kHz, 9 pF (selected crystal) | CL, RS, C0, drive level against the Raytac crystal specification | Micro Crystal CM7V-T1A datasheet | Version 8.0, 10.2016 |
 | Adafruit 328 / PKCELL LIPO785060 (selected pack) | Capacity, charge and discharge limits, temperature ranges, dimensions, plug | [Adafruit product 328](https://www.adafruit.com/product/328); [PKCELL LIPO785060 2500 mAh specification](https://cdn-shop.adafruit.com/product-files/328/LP785060+2500mAh+3.7V+20190510.pdf) | Valid 2019-05-10 (accessed 2026-10-05) |
 | Ricoh R5478N101CD (pack protection IC) | Over-charge/over-discharge/excess-current thresholds and delays | Ricoh R5475N/R5478N datasheet EA-291-121009 (selection guide) | EA-291-121009 |
-| NCP15XH103F03RC (board NTC) | 10 kΩ, B25/50 3380 K (B25/85 3434 K), 103AT-class | Murata NCP series | — |
+| NCP15XH103F03RC (board NTC) | 10 kΩ ±1%, B25/50 3380 K ±1% (B25/85 3434 K), 103AT-class; resistance–temperature table used for the TS thresholds | Murata NCP series, catalog R44E | R44E-12 |
+| TLC59283 (selected column driver) | IREF setting (Equation 1), IOLC 32.9–37.7 mA at a 35.3 mA target (25 °C), IOLC vs temperature (Figure 5-9), 2–35 mA range below VCC 3.6 V | [TI TLC59283, SBVS199C](https://www.ti.com/lit/ds/symlink/tlc59283.pdf) | Rev.C, January 2024 |
 | BQ27427 (comparison only; not selected) | Representative capacity/state-of-charge gauge with chemistry selection | [TI BQ27427, SLUSEB5B](https://www.ti.com/lit/ds/symlink/bq27427.pdf), features, §6.4 device modes and §7 application | Rev.B, September 2025 |
 
 The pack's protection-board trip current, delays and recovery are not in the

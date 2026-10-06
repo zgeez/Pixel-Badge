@@ -30,14 +30,22 @@ for Rd ±10%; tSinkAdj 60 ms; BC1.2 detection by the charger on D+/D−):
 | SDP after the badge is configured by the host | 500 mA |
 | USB suspended | Suspend current |
 
-The BQ25620 runs BC1.2 detection itself at plug-in and would otherwise apply
-500 mA to an SDP or unknown adapter; firmware starts with automatic detection
-disabled, runs detection, and holds 100 mA until enumeration or a valid CC
-advertisement. A short window at the charger's own defaults may remain before
-firmware has configured it. Firmware samples CC1 and CC2 at least every 20 ms
-while VBUS is present, uses the higher reading as the active CC, treats readings
-in the specification's threshold bands as the lower advertisement, and returns
-to the lower limit within tSinkAdj when the advertisement drops.
+The BQ25620 runs BC1.2 detection itself at plug-in and sets 500 mA for an SDP
+or unknown adapter. Its CE input is pulled up to 3V3, so it does not charge
+until firmware has configured it: firmware sets IINDPM to 100 mA, reads the
+detection result, sets the temperature thresholds and only then drives CE low.
+Until then the input carries the logic load only (the LED rail is held off),
+not charge current; that this stays below 100 mA is checked at bring-up. An
+MCU reset releases CE and stops charging. If the charger's I²C watchdog
+expires, it re-enables charging at half ICHG; it does not reset IINDPM or the
+temperature thresholds (SLUSEG2D §8.6), and both the reset and the firmware
+thresholds stay within the cell's range (below).
+
+Firmware holds 100 mA until enumeration or a valid CC advertisement. It samples
+CC1 and CC2 at least every 20 ms while VBUS is present, uses the higher reading
+as the active CC, treats readings in the specification's threshold bands as the
+lower advertisement, and returns to the lower limit within tSinkAdj when the
+advertisement drops.
 
 The CC voltage (up to 2.042 V per Table 4-36) is present whenever USB is
 attached, including with the switch OFF or no battery, when the MCU supply is
@@ -174,12 +182,29 @@ dissipates far less than a linear one at this current; thermal performance
 still needs measurement. Charge time depends on precharge, the CV taper,
 input limiting and thermal regulation; it is not stated until measured.
 
-**Temperature.** A 10 kΩ NTC (103AT class) on the PCB next to the battery feeds
-the charger's TS pin through TI's RT1/RT2 network (5.23 kΩ / 30.1 kΩ). Firmware
-sets the warm threshold to 45 °C with charging suspended and the cold threshold
-to 0 °C, matching the cell's charge range; the charger's ADC reports the
-reading. **Rev A has no direct cell-temperature sensing:** the NTC measures
-the board next to the cell.
+**Temperature.** A 10 kΩ NTC (Murata NCP15XH103F03RC, B25/50 3380 K) on the
+PCB next to the battery feeds the charger's TS pin through RT1 = 10 kΩ from
+REGN, with the RT2 position left open. The TS comparators act from reset, with
+no firmware. TI's 5.23 kΩ / 30.1 kΩ network for a 103AT NTC would place them at
+0 °C and 60 °C, and the reset JEITA settings (REG0x1A/REG0x1B) keep full charge
+current up to 60 °C, outside the cell's 0–45 °C range. With the selected
+network the reset thresholds fall at these board temperatures (worst case over
+the comparator limits, ±1% resistor, and the NTC's ±1% R25 and ±1% B):
+
+| Threshold (reset setting) | TS, % of REGN | Board temperature |
+|---|---|---|
+| COLD: charging suspended below | 72.8–73.8 | −1.5 to 1.1 °C |
+| COOL: ICHG 20% below | 67.9–68.9 | 4.2–6.7 °C |
+| WARM: VREG − 200 mV above | 44.3–45.3 | 29.5–31.9 °C |
+| HOT: charging suspended above | 33.9–34.9 | 41.7–44.5 °C |
+
+Firmware selects `TS_TH4_TH5_TH6 = 011`, which moves WARM to about 38–40 °C
+and leaves HOT unchanged. Only a power-on or register reset returns to the
+table above; the I²C watchdog does not. Fitting 30.1 kΩ at RT2 restores TI's 0–60 °C
+network if the board-to-cell offset proves it necessary. The charger's ADC
+reports the reading. **Rev A has no direct cell-temperature sensing:** the NTC
+measures the board next to the cell, which charger heat can make warmer than
+the cell (conservative at HOT, optimistic at COLD).
 
 **Logic rail.** TPS63802 buck-boost, 3.30 V (FB 112 kΩ / 20 kΩ, VFB 500 mV),
 Murata DFE201612E-R47M (0.47 µH; Isat 5.5 A at −30% L) against a calculated
@@ -189,16 +214,38 @@ described in [Power states](#power-states).
 
 **LED rail.** TPS61023 boost with load disconnect; `LED_EN` with a 100 kΩ
 pull-down keeps it off while the MCU is off, in reset or in the charging-only
-state. VLED is **PROVISIONAL** at 4.77 V typ (33 kΩ / 4.7 kΩ, VREF 580–610 mV),
-with trim positions for about 4.0–5.2 V once the LED is chosen. Coilcraft
-XEL4030-102ME (1.0 µH; Isat 9.0 A) against a calculated 3.66 A peak (VIN 2.9 V,
-VOUT 5.2 V, 1.12 A = 32 × 35 mA, η 0.8, L −30%).
+state. VLED is **PROVISIONAL** at 4.77 V typ (33 kΩ / 4.7 kΩ, VREF 580–610 mV:
+4.65–4.89 V). The TPS61023 only boosts: when its input exceeds the setting it
+stops switching and passes the input through (SLVSF14B §7.3.5), so
+`VLED ≈ max(setting, SYS − drop)`. SYS reaches about VBAT + 50 mV with charging
+done or disabled (SLUSEG2D §8.3.4.1), about 4.25 V on a full pack, so settings
+below about 4.4 V are not regulated. The trim positions cover settings of about
+4.4–5.2 V once the LED is chosen. Coilcraft XEL4030-102ME (1.0 µH; Isat 9.0 A)
+against a calculated 3.66 A peak (VIN 2.9 V, VOUT 5.2 V, 1.12 A = 32 × 35 mA,
+η 0.8, L −30%).
 
 **Battery discharge limit.** The cell's 1.5 A continuous rating bounds the
-display. The column-driver current setting (R_IREF) is capped at **≤ 25 mA**
-per column, about 1.5 A from the battery with every pixel of a row lit at
-100% on-time at 3.0 V, so a firmware fault cannot exceed the rating. The
-final peak current at or below that cap remains prototype-dependent.
+display. The worst case is a firmware fault with all 32 columns sinking their
+full current at 100% on-time; the column drivers fix the total at
+32 × I_column whatever the rows do. The battery current is then
+
+`I_BAT = 32 × I_column,max × VLED,max / (η × VBAT) + I_logic`
+
+with η = 0.8 (LED boost), VBAT = 3.0 V (cell cut-off), I_logic ≈ 60 mA and
+I_column,max = 1.08 × the R_IREF setting (TLC59283 IOLC 32.9–37.7 mA at a
+35.3 mA target at 25 °C, plus the 1% resistor; drift over temperature,
+SBVS199C Figure 5-9, and the logic load are checked at bring-up). Holding
+I_BAT ≤ 1.5 A gives `I_column ≤ 0.1 V·A / VLED,max`:
+
+| VLED maximum | Column-current cap | R_IREF (E96, 1%) |
+|---|---|---|
+| 5.33 V (5.2 V trim, VREF high) | 18.0 mA | 2.94 kΩ |
+| 4.89 V (4.77 V setting, VREF high) | 19.8 mA | 2.67 kΩ |
+
+A 25 mA cap would allow 1.8–2.0 A, so it does not protect the cell. Rev A uses
+the first row: **18.0 mA, R_IREF 2.94 kΩ 1%**, which holds over the full VLED
+trim range. The final peak current at or below that cap remains
+prototype-dependent.
 
 ## Battery-state measurement
 

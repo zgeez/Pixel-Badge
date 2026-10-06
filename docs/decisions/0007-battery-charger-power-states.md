@@ -23,8 +23,8 @@ would still charge at about 100 mA.
 2. BQ25629 switching charger: BC1.2 detection and low loss, but no power-good
    output for waking the logic rail and very low distributor stock.
 3. BQ25620 switching charger: BC1.2 detection, power-good output, ADC and JEITA
-   temperature input, safe power-on defaults; needs an I²C driver and more
-   board parts.
+   temperature input with comparators active from reset; needs an I²C driver
+   and more board parts.
 
 ## Decision
 
@@ -37,10 +37,14 @@ charging-only state: it reads CC and the charger's BC1.2 result and sets the
 input limit, while the LED rail, display and other user-facing functions stay
 off. Removing USB with the switch off turns the logic rail off in hardware.
 
-A board-mounted NTC next to the pack feeds the charger's temperature input to
-suspend charging outside the cell's 0–45 °C range. It measures the board near
-the cell, not the cell. The column-driver current is capped at 25 mA so that a
-firmware fault cannot exceed the cell's 1.5 A continuous discharge rating.
+A board-mounted NTC next to the pack feeds the charger's temperature input. Its
+network places the charger's reset thresholds so that charging stops below
+about 0 °C and above 45 °C board temperature without firmware. It measures the
+board near the cell, not the cell. The charger's CE input is pulled high, so it
+charges only after firmware has set the input limit and temperature settings.
+The column-driver current is capped so that a firmware fault cannot exceed the
+cell's 1.5 A continuous discharge rating, allowing for boost efficiency, the
+highest LED-rail voltage, driver tolerance and the logic load.
 
 This supersedes ADR 0005's provisional charger direction, its 1200 mAh capacity
 target, and its implied meaning of the physical switch. The rest of ADR 0005

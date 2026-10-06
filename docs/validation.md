@@ -77,10 +77,19 @@ more and on a BC1.2 dedicated charger, with the switch OFF (charging-only
 state) and ON, at several battery voltages: it must stay ≤ 1.2 A (the pack
 limit), with the input limit set as the policy requires. Record charger and
 board-NTC temperatures and any thermal regulation during a full charge; record
-the empty-to-full time only as a measurement. Check that the board NTC
-suspends charging outside 0–45 °C. Measure the average battery current with
-all pixels lit at the configured peak current and maximum brightness at the
-lowest operating VBAT; it must stay ≤ 1.5 A (the cell's continuous rating).
+the empty-to-full time only as a measurement. With the charger at its reset
+settings (CE driven low by a test build that does not configure it), and
+again after an I²C watchdog expiry with firmware's settings, drive the TS pin with a resistance decade or a heated/cooled NTC and check
+that charging stops below about 0 °C and above 45 °C board temperature; then
+repeat with firmware's thresholds. Check that charging stays off from
+plug-in until firmware drives CE low, that an MCU reset stops charging, and
+measure the input current on an SDP host before firmware has configured the
+charger (≤ 100 mA).
+Measure the average battery current with all pixels lit at the configured
+peak current and maximum brightness at the lowest operating VBAT and at the
+highest VLED setting; it must stay ≤ 1.5 A (the cell's continuous rating).
+Measure VLED across the full battery range to confirm the pass-through
+envelope.
 Verify the power states: no USB and switch OFF leaves the logic rail off;
 USB with switch OFF starts the charging-only state with the LED rail off;
 removing USB with the switch OFF turns the logic rail off. Record the pack
