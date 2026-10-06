@@ -37,7 +37,12 @@ Board: ____  Serial/batch: ____  Firmware commit: ____  Date: ____
 
 ## Debug and programming
 
-- [ ] SWD connection
+- [ ] SWD through the nRF5340 DK debug out (P19, 10-pin 1.27 mm flat cable):
+      DK SB47 open; DK on USB for the debugger; 3.3 V on DK P21 with SW10
+      VEXT->nRF on and SW9 at VDD; meter the DK VDD and the badge 3V3 and
+      confirm they match before connecting the cable (a DK on USB alone is 3 V)
+- [ ] DC/DC regulators (DCC/DECR, DCCD/DECD): output ripple and stable operation
+      at idle and with the radio active
 - [ ] Flash and run bootstrap firmware
 - [ ] RTT log output
 - [ ] UART test pad output
