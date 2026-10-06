@@ -1,6 +1,7 @@
 # 0005: USB-C charging and USB 2.0 data
 
-- Status: Accepted
+- Status: Accepted; charger direction, capacity target and power-switch
+  meaning superseded by [0007](0007-battery-charger-power-states.md)
 - Date: 2026-10-04
 - Deciders: Project owner
 

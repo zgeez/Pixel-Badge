@@ -1,6 +1,6 @@
 # 0007: 2500 mAh pack, switching charger, and USB-powered charging state
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-05
 - Deciders: Project owner
 
