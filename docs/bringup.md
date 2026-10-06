@@ -10,7 +10,8 @@ Board: ____  Serial/batch: ____  Firmware commit: ____  Date: ____
 
 - [ ] Visual inspection (solder bridges, missing/rotated parts, polarity marks)
 - [ ] Resistance from each supply rail to ground
-- [ ] Battery connector polarity
+- [ ] Battery connector polarity: meter the pack plug before first connection
+      (red wire must land on header pin 2, BAT+)
 - [ ] Protected pack identity/specifications verified, or dedicated cell
       protection circuit reviewed; charger alone is insufficient
 - [ ] Assembly matches BOM and placement
@@ -20,7 +21,8 @@ Board: ____  Serial/batch: ____  Firmware commit: ____  Date: ____
 - [ ] First power from current-limited bench supply
 - [ ] Each rail voltage
 - [ ] Idle current
-- [ ] Charger behavior
+- [ ] Charger behavior: no charging until firmware drives CE low; reset TS
+      thresholds stop charging below about 0 °C and above 45 °C
 - [ ] CC1/CC2 each have separate 5.1 kΩ Rd; C-to-C VBUS/charging attachment in
       both orientations, including switch-off and battery-absent states
 - [ ] USB-C VBUS reaches charger input and module VBUS pin 44 through the

@@ -103,12 +103,24 @@ provisional parts do not imply final part selection or hardware validation.
 
 | Part | Function | Manufacturer document | Revision |
 |---|---|---|---|
-| BQ24074 (provisional charger) | Charge/power path; distinguish charger functions from independent cell protection | [TI BQ2407x, SLUS810N](https://www.ti.com/lit/gpn/bq24074), §§9.3.4–9.3.5; EN1/EN2 Table 7-2, EN logic levels and K_ILIM in §8 electrical characteristics | Rev.N, October 2021 |
-| NT3H2111 (selected) / NT3H2211 (alternate) | Passive NFC, I²C NDEF persistence and RF-write protection | [NXP NT3H2111_2211](https://www.nxp.com/docs/en/data-sheet/NT3H2111_2211.pdf), §8.3.11/Tables 9–10 (pp.26–29), §8.7 (pp.38–39), §10.8; memory maps §§8.3.2–8.3.5 | Rev.3.6, 2023-07-21 |
+| BQ25620 (selected charger) | Switching charger, NVDC power path, BC1.2 detection (Tables 8-1/8-2), POR defaults (§8.6), TS/JEITA network (§8.3.5.4.2), inductor/capacitor selection (§9.2.2), RYK0018A land pattern (4226526/A), I²C address 0x6B | [TI BQ25620/BQ25622, SLUSEG2D](https://www.ti.com/lit/ds/symlink/bq25620.pdf) | Rev.D, February 2025 |
+| BQ24074 (previously selected; replaced) | Linear-charger analysis kept for reference: K_ISET, thermal Eq. 11 | [TI BQ2407x, SLUS810N](https://www.ti.com/lit/gpn/bq24074) | Rev.N, October 2021 |
+| NT3H2111 (selected: NT3H2111W0FHKH, XQFN-8) | Passive NFC, I²C NDEF persistence and RF-write protection | [NXP NT3H2111_2211](https://www.nxp.com/docs/en/data-sheet/NT3H2111_2211.pdf), §8.3.11/Tables 9–10 (pp.26–29), §8.7 (pp.38–39), §10.8; memory maps §§8.3.2–8.3.5 | Rev.3.6, 2023-07-21 |
 | NT3H2111 / NT3H2211 errata | RF/I²C corruption, field-detect/timing, verification, configuration locks and recovery | [NXP ES_NT3H2111_2211](https://www.nxp.com/docs/en/errata/ES_NT3H2111_2211.pdf), §§2–4 | Rev.4.1, 2025-10-30 |
 | NTAG antenna design | Coil target frequency, capacitance budget, rectangular-coil inductance formula, turn exponent | NXP AN11276 NTAG Antenna Design Guide, §§4.2–4.3, Table 5 (NXP-authored; retrieved from the [NXP Community attachment](https://community.nxp.com/pwmxy87654/attachments/pwmxy87654/nfc/10167/1/AN11276.pdf), SHA-256 `ce97eea73d4517fc5d9caed533aba2e35a2d25ca6f07b315bd40309bf5d77d2d`) | Rev.1.8, 2018-10-23 |
+| TPS63802 (selected logic regulator) | 3.3 V buck-boost; pin functions Table 7-1; FB setting §10.2.2.5; inductor selection §10.2.2.2; DLA0010A package and land pattern (drawing 4223750/D) | [TI TPS63802, SLVSEU9D](https://www.ti.com/lit/ds/symlink/tps63802.pdf) | Rev.D, January 2021 |
+| TPS61023 (selected LED boost) | VLED boost with load disconnect; VREF/OVP/EN in §6.5; FB §8.2.2.1; inductor §8.2.2.2; feed-forward §8.2.2.4; DRL0006A land pattern (4223266/F) | [TI TPS61023, SLVSF14B](https://www.ti.com/lit/ds/symlink/tps61023.pdf) | Rev.B, August 2020 |
+| XEL4030-102ME (TPS61023 inductor) | 1.0 µH, DCR 9.78 mΩ max, Isat 9.0 A, Irms 8.4 A (20 °C rise); recommended land pattern | Coilcraft XEL4030, Documents 1321-1 to 1321-3 | Revised 02/19/26 |
+| DFE201612E-R47M=P2 (TPS63802 inductor) | 0.47 µH ±20%, DCR 26 mΩ max, 5.5 A (−30% L), 4.5 A (40 °C rise) | Murata reference specification J(E)TE243A-0006B-01 | — |
+| ICM-42688-P (conditional IMU) | Pinout (Table 9), I²C address and 1 MHz limit, I²C driver settings §12.3, INT_ASYNC_RESET §12.6, registers §§13–15 | TDK InvenSense DS-000347 | Rev.1.2 |
+| AO3401A / AO3400A | Row and VBAT high-side switch; VBAT and CC-sense N-MOSFETs; IDSS, VGS(th), RDS(on), SOT-23 pinout | Alpha & Omega AO3401A and AO3400A datasheets | Rev.3.1 (December 2023 / July 2023) |
+| CM7V-T1A 32.768 kHz, 9 pF (selected crystal) | CL, RS, C0, drive level against the Raytac crystal specification | Micro Crystal CM7V-T1A datasheet | Version 8.0, 10.2016 |
+| Adafruit 328 / PKCELL LIPO785060 (selected pack) | Capacity, charge and discharge limits, temperature ranges, dimensions, plug | [Adafruit product 328](https://www.adafruit.com/product/328); [PKCELL LIPO785060 2500 mAh specification](https://cdn-shop.adafruit.com/product-files/328/LP785060+2500mAh+3.7V+20190510.pdf) | Valid 2019-05-10 (accessed 2026-10-05) |
+| Ricoh R5478N101CD (pack protection IC) | Over-charge/over-discharge/excess-current thresholds and delays | Ricoh R5475N/R5478N datasheet EA-291-121009 (selection guide) | EA-291-121009 |
+| NCP15XH103F03RC (board NTC) | 10 kΩ ±1%, B25/50 3380 K ±1% (B25/85 3434 K), 103AT-class; resistance–temperature table used for the TS thresholds | Murata NCP series, catalog R44E | R44E-12 |
+| TLC59283 (selected column driver) | IREF setting (Equation 1), IOLC 32.9–37.7 mA at a 35.3 mA target (25 °C), IOLC vs temperature (Figure 5-9), 2–35 mA range below VCC 3.6 V | [TI TLC59283, SBVS199C](https://www.ti.com/lit/ds/symlink/tlc59283.pdf) | Rev.C, January 2024 |
 | BQ27427 (comparison only; not selected) | Representative capacity/state-of-charge gauge with chemistry selection | [TI BQ27427, SLUSEB5B](https://www.ti.com/lit/ds/symlink/bq27427.pdf), features, §6.4 device modes and §7 application | Rev.B, September 2025 |
 
-Selected battery pack/cell and any dedicated protector documents: **TBD**.
-Record their actual protection/current/temperature limits before schematic
-freeze and wearable-use approval; do not assign electrical values from targets.
+The pack's protection-board trip current, delays and recovery are not in the
+documents above; record them if the vendor provides them. Do not assign
+electrical values from targets.

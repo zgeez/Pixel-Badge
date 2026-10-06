@@ -1,8 +1,9 @@
 # Passive NFC content and provisioning
 
-Status: **design decided; no hardware/security test results**. Part:
-**NXP NT3H2111W0FTT** (1 kB, TSSOP8; availability to confirm); NT3H2211W0FTT
-(2 kB) is the alternate. The configured contact URL is
+Status: **design decided; no hardware/security test results**. Rev A part:
+**NXP NT3H2111W0FHKH** (NTAG I²C plus 1 kB, XQFN-8 1.6 × 1.6 mm), a single
+footprint with no TSSOP alternative; development hardware uses a separate
+NTAG breakout. Coil tuning remains prototype-dependent. The configured contact URL is
 stored as NDEF in EEPROM, publicly readable while powered or entirely unpowered,
 and updateable by the MCU over I²C. Unauthenticated RF devices must not overwrite
 that URL or alter its interpretation through metadata/configuration writes.
@@ -82,7 +83,8 @@ GPIO. The tag is powered only while firmware updates or verifies it; NFC reads
 are passive either way. This keeps the power-up SCL/SDA glitch (§3) off the IMU
 bus, lets firmware perform the VCC reset in §4's recovery order, and limits RF
 transitions during I²C (§2.1) to update windows. VOUT (energy harvesting) is
-unused.
+unused. Test points on the tag's VCC, SDA, SCL and FD allow bus and
+field-detect timing to be measured on Rev A.
 
 Every I²C transaction follows the errata's procedure (§2.1.1.3.1–2.1.1.3.4):
 

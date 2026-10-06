@@ -1,0 +1,60 @@
+# SPDX-License-Identifier: MIT
+
+description: |
+  TDK ICM-42688-P 6-axis IMU on I2C (project driver).
+
+  Property names and value encodings match Zephyr's "invensense,icm4268x"
+  binding, so the same node body works if the part moves to SPI. The
+  defaults differ (that binding defaults to sensors off), so set every
+  property explicitly in board files. Use the macros in
+  <zephyr/dt-bindings/sensor/icm42688.h>.
+
+  AP_CS must be held at VDDIO for I2C; AP_AD0 sets the address LSB
+  (0x68 or 0x69).
+
+compatible: "invensense,icm42688p-i2c"
+
+include: [sensor-device.yaml, i2c-device.yaml]
+
+properties:
+  int-gpios:
+    type: phandle-array
+    description: |
+      INT1. The driver configures it push-pull, active high, pulsed;
+      describe it as GPIO_ACTIVE_HIGH.
+
+  accel-pwr-mode:
+    type: int
+    default: 3
+    description: Accelerometer power mode (default low-noise).
+    enum: [0, 2, 3]
+
+  accel-odr:
+    type: int
+    default: 8
+    description: Accelerometer output data rate code (default 100 Hz).
+    enum: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+
+  accel-fs:
+    type: int
+    default: 3
+    description: Accelerometer full scale code (default +/-2 g).
+    enum: [0, 1, 2, 3]
+
+  gyro-pwr-mode:
+    type: int
+    default: 3
+    description: Gyroscope power mode (default low-noise).
+    enum: [0, 1, 3]
+
+  gyro-odr:
+    type: int
+    default: 8
+    description: Gyroscope output data rate code (default 100 Hz).
+    enum: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 15]
+
+  gyro-fs:
+    type: int
+    default: 0
+    description: Gyroscope full scale code (default +/-2000 dps).
+    enum: [0, 1, 2, 3, 4, 5, 6, 7]

@@ -1,9 +1,10 @@
 # Hardware
 
-Status: **schematic capture started**. Rev A architecture is defined; the
-KiCad project and sheet hierarchy exist in [`hardware/`](../hardware/README.md),
-but no circuits are drawn and no layout exists yet. Items marked provisional
-may change. Electrical values come from primary datasheets and are recorded in
+Status: **schematic capture in progress**. Rev A architecture is defined; the
+KiCad project lives in [`hardware/`](../hardware/README.md). The regulators/
+power-tree and USB/charger/battery sheets are drawn; the other sheets are not,
+and no layout exists yet.
+Items marked provisional may change. Electrical values come from primary datasheets and are recorded in
 [references.md](references.md) as parts are confirmed.
 
 ## Development vs final hardware
@@ -42,32 +43,37 @@ scheme is not the badge design.
   validation), 1:32 multiplexing (provisional). Two TI TLC59283 constant-current
   column drivers and high-side row switches (provisional); refresh timed by nRF5340
   peripherals; drive current adjustable on Rev A.
-- **NFC:** external passive tag (NXP NT3H2111, NTAG I²C plus family) so the
+- **NFC:** external passive tag (NXP NT3H2111W0FHKH, XQFN-8, NTAG I²C plus) so the
   link works with the badge off or the battery empty; on its own I²C bus with a
   firmware-switched supply. PCB coil about 30 × 25 mm, 6 turns, designed per NXP
   AN11276 to resonate slightly above 14.5 MHz, with capacitor footprints to tune
   it down once the battery, magnets and carrier are installed (not yet
   measured). Public RF reads and protected RF writes must coexist with MCU/I²C
-  URL updates; provision per [nfc.md](nfc.md), not factory defaults.
+  URL updates; provision per [nfc.md](nfc.md), not factory defaults. Test
+  access on the tag's VCC, SDA, SCL and FD.
 - **USB-C:** charging and USB 2.0 data (5 V sink, no USB Power Delivery), ESD
   protected, on an edge. VBUS feeds both the charger input and MDBT53-P1M
   VBUS pin 44, with the module USB supply circuit described in
   [power.md](power.md); D+ → pin 46, D− → pin 48.
   CC1 and CC2 each have their own 5.1 kΩ, 1% Rd to ground, present with the
   switch off/battery absent; no joined CC pins or USB PD controller.
-- **Power:** commercially protected 1-cell LiPo pack preferred (≈ 1200 mAh
-  starting target), with a power-path charger; charging works with the power
-  switch off; regulated logic rail; firmware-switchable LED
-  rail. An unprotected cell requires dedicated hardware protection. Specific
-  pack, charger, regulators, and protection ratings remain provisional/open.
+- **Power:** protected 1-cell LiPo pack (Adafruit 328, 2500 mAh, genuine
+  JST-PH 2-pin, integrated protection, no thermistor) with a BQ25620
+  switching charger (≈ 1 A charge, BC1.2 detection, NVDC power path); a
+  board NTC next to the pack qualifies charging temperature. TPS63802
+  buck-boost logic rail (3.3 V) enabled by the power switch or, for a
+  charging-only state, by USB presence; TPS61023 boost LED rail with load
+  disconnect, enabled by firmware. See [power.md](power.md).
   Battery state comes from a default-off high-side-switched VBAT divider to
   nRF5340 SAADC, not the regulated logic rail; final sensing values and firmware
   thresholds await design calculations and pack characterization.
 - **Runtime:** about eight hours under representative career-fair use is the
   design target, not a measured capability. Capacity alone does not establish
   runtime; validate the agreed usage profile in [validation.md](validation.md).
-- **Sensors:** 6-axis IMU on I²C (LSM6DSO family, provisional); PDM microphone
-  (provisional).
+- **Sensors:** TDK ICM-42688-P 6-axis IMU on I²C (**conditional**: project I²C
+  driver passes build and emulator tests; real-part I²C, interrupt and
+  wake-on-motion checks pending), with SPI-fallback links; Knowles
+  SPH0641LM4H-1 PDM microphone (lifecycle not yet confirmed).
 - **User interface:** two edge-accessible buttons, edge-accessible power switch,
   one status LED.
 - **RF:** module-integrated antenna at a board edge/corner with the keep-out the
@@ -76,12 +82,34 @@ scheme is not the badge design.
 - **Mechanical:** rear 3D-printed carrier for the battery and attachment magnets,
   mounted to the PCB; target total thickness ≈ 12 mm.
 
+## Selected Rev A components
+
+Selection is not validation: nothing below has been measured on Rev A.
+
+| Function | Part | Status |
+|---|---|---|
+| MCU module | Raytac MDBT53-P1M | Selected |
+| Charger / power path | TI BQ25620 (switching, I²C, BC1.2) | Selected; drawn; ≈ 1 A charge |
+| Logic rail (3.3 V) | TI TPS63802, Murata DFE201612E-R47M (0.47 µH) | Selected; drawn |
+| LED rail | TI TPS61023, Coilcraft XEL4030-102ME (1.0 µH) | Selected; VLED setting provisional |
+| Column drivers | 2 × TI TLC59283RGER (QFN-24) | Selected; IREF/peak current prototype-dependent |
+| Row control | 4 × SN74HC595, SN74LVC8T245 translator, 32 × AO3401A, SN74LVC1G123 + SN74LVC1G32 safety blanking | Selected |
+| NFC tag | NXP NT3H2111W0FHKH (XQFN-8) | Selected; coil tuning prototype-dependent |
+| IMU | TDK ICM-42688-P on I²C | Conditional (real-part verification pending) |
+| Microphone | Knowles SPH0641LM4H-1 | Conditional (lifecycle check) |
+| 32.768 kHz crystal | Micro Crystal CM7V-T1A, 9 pF | Selected |
+| USB ESD | TI TPD4E05U06 (D+, D−, CC1, CC2) | Selected |
+| Battery | Adafruit 328, protected 2500 mAh LiPo; JST B2B-PH-SM4-TB header | Selected; header pin 1 = BAT−, pin 2 = BAT+ (Adafruit convention) |
+| USB-C receptacle, buttons, power switch, matrix LED | — | Mechanical / prototype gates |
+
 ## Rev A requirements
 
 - Independent battery protection covering overdischarge, overcurrent, and
   short circuit, with charge protection appropriate to the selected cell. The
-  BQ24074 charger/power-path direction is provisional and does not satisfy this
-  requirement by itself. Firmware low-battery cutoff is additional control.
+  selected pack's integrated protection is intended to meet this (overcharge,
+  over-discharge at 2.3 V per its protection IC, short circuit); its trip limits
+  are not documented. The BQ25620 does not satisfy this requirement by itself;
+  firmware low-battery cutoff is additional control.
 - SWD access, reset access, and power test points (VBAT, VBUS, logic rail, LED
   rail, charger/system rail).
 - UART test pads for fallback logging.
@@ -119,15 +147,17 @@ scheme is not the badge design.
   copper layer, and pin names matching the Ver.E §2.5 table. Before layout,
   compare it visually with the Ver.E §§2.1–2.3 drawings. Keep the battery,
   magnets, and carrier clear of the keep-out.
-- External 32.768 kHz crystal: the package's recommended specification
-  (Epson FC-135, CL 9 pF, ±20 ppm). Check the nRF5340 internal load-capacitor
-  setting against the exact selected crystal; external load-capacitor footprints
-  are fitted but not populated.
-- Before schematic freeze, identify the protected pack and its manufacturer
-  protection specifications, or complete the dedicated protection circuit for
-  an unprotected cell. Check charge/discharge and peak-current ratings,
-  protection trip/recovery behavior, temperature limits, and connector polarity
-  against the chosen pack/cell documents. Do not infer these from the charger.
+- External 32.768 kHz crystal: Micro Crystal CM7V-T1A, CL 9 pF, ±20 ppm,
+  RS ≤ 70 kΩ, which meets the package's recommended specification. The Rev A
+  devicetree must set the nRF5340 internal load capacitance to 9 pF (the DK
+  uses 7 pF); external load-capacitor footprints are fitted but not populated.
+- Pack (Adafruit 328; PKCELL LIPO785060 specification): 1.2 A maximum charge
+  (vendor), 1.5 A maximum continuous discharge, charging 0–45 °C, 3.0 V cell
+  cut-off, protection IC over-discharge at 2.3 V. 50.5 × 62.5 × 8.1 mm max and
+  50 g: keep rear components out from under it, and keep the NFC coil, module
+  antenna and magnets clear. Header pin 1 = BAT−, pin 2 = BAT+ as on Adafruit's
+  charger boards; mark + and − on the silkscreen and meter-check each pack
+  before its first connection.
 - LED part, pitch, peak current, current-setting resistor, brightness cap, NFC
   tuning, and exact outline remain dependent on prototype evidence. A build or
   clean ERC result does not validate any of them.

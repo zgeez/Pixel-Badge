@@ -69,8 +69,31 @@ Record the protected pack's identity and protection specifications, or review
 the dedicated hardware protection circuit for an unprotected cell. Verify
 overdischarge, overcurrent, short-circuit protection and documented recovery,
 using controlled fixtures/battery simulation where practical. Check operating
-peaks against pack/protector ratings. Do not rely on the BQ24074 or firmware
+peaks against pack/protector ratings. Do not rely on the BQ25620 or firmware
 alone, and do not perform uncontrolled short-circuit tests on a LiPo.
+
+Measure the battery charge current on a USB-C source that advertises 1.5 A or
+more and on a BC1.2 dedicated charger, with the switch OFF (charging-only
+state) and ON, at several battery voltages: it must stay ≤ 1.2 A (the pack
+limit), with the input limit set as the policy requires. Record charger and
+board-NTC temperatures and any thermal regulation during a full charge; record
+the empty-to-full time only as a measurement. With the charger at its reset
+settings (CE driven low by a test build that does not configure it), and
+again after an I²C watchdog expiry with firmware's settings, drive the TS pin with a resistance decade or a heated/cooled NTC and check
+that charging stops below about 0 °C and above 45 °C board temperature; then
+repeat with firmware's thresholds. Check that charging stays off from
+plug-in until firmware drives CE low, that an MCU reset stops charging, and
+measure the input current on an SDP host before firmware has configured the
+charger (≤ 100 mA).
+Measure the average battery current with all pixels lit at the configured
+peak current and maximum brightness at the lowest operating VBAT and at the
+highest VLED setting; it must stay ≤ 1.5 A (the cell's continuous rating).
+Measure VLED across the full battery range to confirm the pass-through
+envelope.
+Verify the power states: no USB and switch OFF leaves the logic rail off;
+USB with switch OFF starts the charging-only state with the LED rail off;
+removing USB with the switch OFF turns the logic rail off. Record the pack
+protection board's actual trip behavior only with a current-limited fixture.
 
 Acceptance criteria: TBD.
 
@@ -173,6 +196,14 @@ Acceptance criteria: TBD.
 
 Purpose: verify orientation and motion response driving the fluid simulation.
 
+The ICM-42688-P I²C driver has passed only build and emulator tests. On real
+hardware (a breakout before Rev A where possible, then Rev A), verify: I²C
+waveforms and address (AP_CS high, AP_AD0 strap), reset and WHO_AM_I,
+configuration read-back including the I²C-mode settings, accelerometer and
+gyroscope readings against known orientations and rotation, the INT1
+data-ready interrupt at the configured rate, and wake-on-motion once
+implemented. Record any I²C failure that triggers the SPI fallback.
+
 Acceptance criteria: TBD.
 
 ### 8. Microphone and audio processing
@@ -248,7 +279,7 @@ Required battery-measurement and load-shed procedure:
   capture VBAT, logic rail, LED enable/current and sample-to-shed timing. Verify
   the LED rail is disabled with margin before regulator instability or protector
   cutoff; neither compile success nor a battery-voltage log proves this margin.
-- With USB attached as a Default (USB100) source and a depleted pack, verify
+- With USB attached as a Default source at the 100 mA input limit and a depleted pack, verify
   the display stays off until battery-qualified recovery and that the charger's
   supplement current does not drain the pack through repeated re-enables. With a
   1.5 A or 3 A source, verify input-qualified controlled re-enable, the

@@ -1,8 +1,8 @@
 # Power and USB
 
-Status: **design requirements; no schematic or measured results yet**. The
-charger/regulator parts, exact battery pack, and final component values remain
-provisional. Sources are indexed in [references.md](references.md).
+Status: **parts selected; regulators/power-tree and USB/charger/battery sheets
+drawn; no measured results**. Values marked PROVISIONAL remain so until prototype
+measurements. Sources are indexed in [references.md](references.md).
 
 ## USB supply connections
 
@@ -18,45 +18,70 @@ Verify attachment and VBUS availability with a compliant C-to-C source in both
 orientations, including switch-off and battery-absent states.
 
 Rd identifies a sink; it does not authorize an arbitrary charging current.
-The charger input-current policy follows the source state (USB Type-C R2.5
-§4.6.2.1; sink thresholds from Table 4-36 for Rd ±10%; tSinkAdj 60 ms):
+The BQ25620 charger sets its input current limit (IINDPM) over I²C. Firmware
+applies this policy (USB Type-C R2.5 §4.6.2.1; sink thresholds from Table 4-36
+for Rd ±10%; tSinkAdj 60 ms; BC1.2 detection by the charger on D+/D−):
 
-| Source state | BQ24074 EN2/EN1 | Input limit |
-|---|---|---|
-| MCU off or in reset (including switch OFF) | 0/0 by external 100 kΩ pull-downs on EN1 and EN2 (TI requires the pins not be left unconnected despite the 285 kΩ internal pull-downs); the powered MCU overrides them | USB100 (100 mA) |
-| CC advertises 1.5 A or 3.0 A (vRd ≥ 0.746 V) | 1/0 (ILIM) | R_ILIM 1.21 kΩ 1%: 1.23 A min, 1.33 A typ, 1.44 A max (TI's K_ILIM range 1500–1720 A·Ω combined with ±1% resistor tolerance; ≤ 1.5 A) |
-| Default advertisement, USB not configured | 0/0 | USB100 |
-| Default advertisement, USB configured by a host | 0/1 | USB500 |
-| USB suspended | 1/1 | Standby |
+| Source state | Input limit (IINDPM) |
+|---|---|
+| CC advertises 1.5 A or 3.0 A (vRd ≥ 0.746 V) | 1.5 A |
+| BC1.2 dedicated or charging downstream port (DCP/CDP) | 1.5 A |
+| USB host port (SDP) or unknown 5 V adapter, before USB configuration | 100 mA |
+| SDP after the badge is configured by the host | 500 mA |
+| USB suspended | Suspend current |
 
-Firmware samples CC1 and CC2 at least every 20 ms while VBUS is present, uses
-the higher reading as the active CC, treats readings in the specification's
-threshold bands as the lower advertisement, and returns to USB100 within
-tSinkAdj when the advertisement drops.
+The BQ25620 runs BC1.2 detection itself at plug-in and sets 500 mA for an SDP
+or unknown adapter. Its CE input is pulled up to 3V3, so it does not charge
+until firmware has configured it: firmware sets IINDPM to 100 mA, reads the
+detection result, sets the temperature thresholds and only then drives CE low.
+Until then the input carries the logic load only (the LED rail is held off),
+not charge current; that this stays below 100 mA is checked at bring-up. An
+MCU reset releases CE and stops charging. If the charger's I²C watchdog
+expires, it re-enables charging at half ICHG; it does not reset IINDPM or the
+temperature thresholds (SLUSEG2D §8.6), and both the reset and the firmware
+thresholds stay within the cell's range (below).
+
+Firmware holds 100 mA until enumeration or a valid CC advertisement. It samples
+CC1 and CC2 at least every 20 ms while VBUS is present, uses the higher reading
+as the active CC, treats readings in the specification's threshold bands as the
+lower advertisement, and returns to the lower limit within tSinkAdj when the
+advertisement drops.
 
 The CC voltage (up to 2.042 V per Table 4-36) is present whenever USB is
 attached, including with the switch OFF or no battery, when the MCU supply is
 0 V. Nordic's absolute maximum rating for I/O pins is VDD + 0.3 V (nRF5340 PS,
 Absolute maximum ratings), so a series resistor alone is not acceptable. Each
-CC sense path is therefore: CC → 100 kΩ → N-MOSFET pass gate (drain on the CC
-side) → SAADC pin, with 1 MΩ from the SAADC pin to ground and the MOSFET gate
-tied to the logic rail (3V3). With 3V3 off the gate is at 0 V and the MOSFET is
-off, so the pin is held near 0 V by the 1 MΩ resistor; with 3V3 on, the pin can
-never exceed 3V3 minus the MOSFET's threshold, including during power-up and
-power-down. Readings clip at that level, which is acceptable because the policy
-only distinguishes Default from 1.5 A or more (≥ 0.746 V); choose a MOSFET whose
-maximum gate threshold leaves that range unclipped. The 1.1 MΩ path changes the
-effective Rd by about 0.5% when powered and is disconnected when unpowered.
+CC sense path is: CC → 100 kΩ → AO3400A N-MOSFET pass gate (drain on the CC
+side, gate tied to 3V3) → SAADC pin, with **12 kΩ and 100 nF** from the pin to
+ground (ratio 0.107).
+
+- **Unpowered:** the MOSFET is off (VGS = 0). Its leakage is at most 5 µA
+  (AOS: IDSS at 30 V, 55 °C), so the pin stays ≤ 60 mV. Even with the MOSFET
+  failed short, a compliant CC voltage (≤ 2.042 V) gives ≤ 0.22 V. A 1 MΩ
+  pull-down, as first proposed, does not meet the limit: leakage × 1 MΩ can far
+  exceed 0.3 V.
+- **Powered:** the pin never exceeds 0.22 V, so VGS ≥ 3.0 V, well above the
+  1.45 V maximum threshold; RDS(on) (< 48 mΩ at 2.5 V) is negligible against
+  100 kΩ and readings do not clip. The body diode (pin side to CC side) never
+  conducts. During power-up the MOSFET cannot conduct before VDD exceeds its
+  threshold, so the pin stays within VDD + 0.3 V.
+- **Thresholds at the pin:** Default ≤ 0.612 V → ≤ 0.066 V; 1.5 A ≥ 0.746 V →
+  ≥ 0.080 V (±1.6% resistor ratio). Use gain 2 with the 0.6 V reference
+  (0.3 V full scale). Confirm SAADC offset/gain error after calibration
+  against this ±6 mV margin.
+- **Loading:** 112 kΩ in parallel with Rd while powered gives 4.88 kΩ, within
+  Table 4-28's ±10%; no load while unpowered.
+- **Filtering:** 100 nF with 10.7 kΩ (τ ≈ 1.1 ms) averages PD signalling from a
+  PD-capable source; wait ≥ 8 ms after boot before trusting readings (100 mA
+  applies meanwhile).
+
 Verify the pin voltage against VDD with USB attached in both orientations at
 switch-off, with the battery absent, and through power-up/down (validation
-§2). The DNP ISET-sense option must not be fitted without the same isolation,
-because the charger drives ISET while the MCU is off.
+§2).
 
-Consequence: with the switch OFF, or on a legacy cable presenting Default
-current, the badge charges at the USB100 limit (slow); fast charging needs a
-1.5 A or 3 A advertisement and the badge switched on. Hardware advertisement
-detection for fast charging with the switch OFF is a candidate Rev B
-improvement. No PD is used.
+USB presence powers the logic rail through the charger's PG output (see
+[Power states](#power-states)), so the MCU can read CC and set the input limit
+with the power switch OFF. No PD is used.
 
 USB-C is a standard 5 V sink with USB 2.0 data; no USB Power Delivery. VBUS
 branches to the charger/power-path input **and** the MDBT53-P1M dedicated USB
@@ -87,29 +112,140 @@ link is a measurement provision, not protection or off-state isolation.
 
 Review and then measure USB attachment/removal with the switch on/off, battery
 present/absent, and normal supplies present/absent. Charging must remain possible
-with the switch off. VBUS availability alone does not imply USB operation when
-the MCU logic rail is off. Resolve any unsupported power sequencing or
-back-power path before releasing the schematic; do not assume a test link fixes
-it. Product USB firmware uses beyond routing the data interface remain future
-work; a diagnostic USB image can validate the hardware interface.
+with the switch off. With USB present the logic rail is on (PG path), so the
+module's VBUS and VDD supplies are present together. Resolve any unsupported
+power sequencing or back-power path before releasing the schematic; do not
+assume a test link fixes it. Product USB firmware uses beyond routing the data
+interface remain future work; a diagnostic USB image can validate the hardware
+interface.
+
+## Power states
+
+The power switch is a signal-level control, not electrical isolation:
+`EN_3V3 = switch ON or charger PG (valid VBUS)`.
+
+| USB | Switch | 3V3 | Behavior |
+|---|---|---|---|
+| No | OFF | Off | Badge off; only battery-side quiescent currents remain |
+| No | ON | On | Normal operation |
+| Yes | OFF | On | **Charging-only** firmware state: charger management, CC/USB detection and the charger ADC on; LED rail, matrix, microphone, IMU, NFC I²C side and BLE off |
+| Yes | ON | On | Normal operation while charging; charge current falls as system load rises |
+| Removed while OFF | OFF | Off (hardware) | PG releases and the enable pull-down turns the logic rail off; no firmware involvement |
+
+The switch drives EN through 10 kΩ with a 20 kΩ pull-down; PG drives a P-MOSFET
+from SYS. EN stays below SYS (< 4.6 V; TPS63802 EN abs max 6 V). Leakage of the
+off P-MOSFET (≤ 5 µA) gives ≤ 85 mV on EN. The MCU reads the switch through an
+open-drain N-MOSFET (`PWR_SW_N`), so no SYS-level signal reaches a GPIO. The
+LED rail stays off at every boot (LED_EN pull-down); firmware enables it only in
+normal operation. Passive NFC works in every state.
 
 ## Independent battery protection
 
-Rev A requires independent hardware battery protection. Prefer a commercially
-protected 1-cell LiPo pack. Obtain the exact pack/cell specification and evidence
-of its protection functions. If an unprotected cell is used, add an appropriate
-dedicated protection circuit before schematic/fabrication release.
+Rev A requires independent hardware battery protection. The selected pack is
+**Adafruit 328** (PKCELL LIPO785060, 3.7 V, 2500 mAh, about 10 Wh, genuine
+2-pin JST-PH, integrated protection board, no thermistor):
 
-Protection must cover overdischarge, overcurrent, and short circuit, and provide
-charge protection appropriate to the cell. Choose thresholds, delays, recovery
-conditions, and charge/discharge current ratings from the selected pack/cell and
-protector specifications; these values are **TBD**, not inferred from capacity.
+| Item | Value | Source |
+|---|---|---|
+| Capacity | 2375 mAh min, 2500 mAh typ | PKCELL specification |
+| Maximum charge current | 1200 mA (½C or less recommended) | Adafruit (PKCELL allows 1500 mA; the stricter limit applies) |
+| Maximum continuous discharge | 1500 mA | PKCELL specification |
+| Charge / discharge temperature | 0–45 °C / −20 to 60 °C | PKCELL specification |
+| Cell discharge cut-off | 3.0 V | PKCELL specification |
+| Protection IC | Ricoh R5478N101CD: overcharge 4.280 V, over-discharge 2.300 V (release 3.000 V), excess discharge 0.130 V across the MOSFET pair, short 0.75 V | PKCELL drawing; Ricoh EA-291-121009 |
+| Protection trip current | Depends on the pack's MOSFET resistance; not specified | — |
+| Size / mass | 50.5 × 62.5 × 8.1 mm max with protection board; 50 g | PKCELL drawing; Adafruit |
 
-The provisional BQ24074 is a charger and power-path controller. TI's **BQ2407x
-datasheet, Rev.N**, documents charger/system protections, including OUT
-short-circuit behavior (§§9.3.4.1.3 and 9.3.4.2); those functions do not replace a
-dedicated battery protector covering the full battery discharge path. Firmware
-matrix load shedding and low-battery warnings supplement hardware protection.
+The protection board's over-discharge threshold (2.3 V) is below the cell's
+rated 3.0 V cut-off, so firmware load shedding must act well above it. The
+board header uses pin 1 = BAT− and pin 2 = BAT+, as in Adafruit's own charger
+boards (product 328 is stated to match them; the "reverse plug" note on the
+cell drawing describes that reversal). Meter-check each pack before its first
+connection.
+
+The BQ25620 is a charger and power-path controller; its protections do not
+replace a dedicated battery protector covering the full discharge path.
+Firmware matrix load shedding and low-battery warnings supplement hardware
+protection.
+
+## Regulators and charge current
+
+**Charger.** TI BQ25620 switching charger (SLUSEG2D) with NVDC power path:
+SYS is held at or above the minimum system voltage (3.52 V) while USB is
+present and follows the battery otherwise. The **input** limit (IINDPM, table
+above) and the **battery charge** current (ICHG) are separate settings; system
+load has priority and the charge current falls when the input limit is reached.
+ICHG powers up at 1040 mA (±5.5%: 0.98–1.10 A), below the pack's 1.2 A limit
+without firmware; firmware targets about 1.0 A. When the I²C watchdog expires
+the charger halves ICHG. VREG powers up at 4.200 V. A switching charger
+dissipates far less than a linear one at this current; thermal performance
+still needs measurement. Charge time depends on precharge, the CV taper,
+input limiting and thermal regulation; it is not stated until measured.
+
+**Temperature.** A 10 kΩ NTC (Murata NCP15XH103F03RC, B25/50 3380 K) on the
+PCB next to the battery feeds the charger's TS pin through RT1 = 10 kΩ from
+REGN, with the RT2 position left open. The TS comparators act from reset, with
+no firmware. TI's 5.23 kΩ / 30.1 kΩ network for a 103AT NTC would place them at
+0 °C and 60 °C, and the reset JEITA settings (REG0x1A/REG0x1B) keep full charge
+current up to 60 °C, outside the cell's 0–45 °C range. With the selected
+network the reset thresholds fall at these board temperatures (worst case over
+the comparator limits, ±1% resistor, and the NTC's ±1% R25 and ±1% B):
+
+| Threshold (reset setting) | TS, % of REGN | Board temperature |
+|---|---|---|
+| COLD: charging suspended below | 72.8–73.8 | −1.5 to 1.1 °C |
+| COOL: ICHG 20% below | 67.9–68.9 | 4.2–6.7 °C |
+| WARM: VREG − 200 mV above | 44.3–45.3 | 29.5–31.9 °C |
+| HOT: charging suspended above | 33.9–34.9 | 41.7–44.5 °C |
+
+Firmware selects `TS_TH4_TH5_TH6 = 011`, which moves WARM to about 38–40 °C
+and leaves HOT unchanged. Only a power-on or register reset returns to the
+table above; the I²C watchdog does not. Fitting 30.1 kΩ at RT2 restores TI's 0–60 °C
+network if the board-to-cell offset proves it necessary. The charger's ADC
+reports the reading. **Rev A has no direct cell-temperature sensing:** the NTC
+measures the board next to the cell, which charger heat can make warmer than
+the cell (conservative at HOT, optimistic at COLD).
+
+**Logic rail.** TPS63802 buck-boost, 3.30 V (FB 112 kΩ / 20 kΩ, VFB 500 mV),
+Murata DFE201612E-R47M (0.47 µH; Isat 5.5 A at −30% L) against a calculated
+1.21 A requirement (boost mode, VIN 2.9 V, 0.5 A design load, L 0.37 µH,
+1.4 MHz, +20%). MODE low (power-save); forced-PWM option DNP. Enabled as
+described in [Power states](#power-states).
+
+**LED rail.** TPS61023 boost with load disconnect; `LED_EN` with a 100 kΩ
+pull-down keeps it off while the MCU is off, in reset or in the charging-only
+state. VLED is **PROVISIONAL** at 4.77 V typ (33 kΩ / 4.7 kΩ, VREF 580–610 mV:
+4.65–4.89 V). The TPS61023 only boosts: when its input exceeds the setting it
+stops switching and passes the input through (SLVSF14B §7.3.5), so
+`VLED ≈ max(setting, SYS − drop)`. SYS reaches about VBAT + 50 mV with charging
+done or disabled (SLUSEG2D §8.3.4.1), about 4.25 V on a full pack, so settings
+below about 4.4 V are not regulated. The trim positions cover settings of about
+4.4–5.2 V once the LED is chosen. Coilcraft XEL4030-102ME (1.0 µH; Isat 9.0 A)
+against a calculated 3.66 A peak (VIN 2.9 V, VOUT 5.2 V, 1.12 A = 32 × 35 mA,
+η 0.8, L −30%).
+
+**Battery discharge limit.** The cell's 1.5 A continuous rating bounds the
+display. The worst case is a firmware fault with all 32 columns sinking their
+full current at 100% on-time; the column drivers fix the total at
+32 × I_column whatever the rows do. The battery current is then
+
+`I_BAT = 32 × I_column,max × VLED,max / (η × VBAT) + I_logic`
+
+with η = 0.8 (LED boost), VBAT = 3.0 V (cell cut-off), I_logic ≈ 60 mA and
+I_column,max = 1.08 × the R_IREF setting (TLC59283 IOLC 32.9–37.7 mA at a
+35.3 mA target at 25 °C, plus the 1% resistor; drift over temperature,
+SBVS199C Figure 5-9, and the logic load are checked at bring-up). Holding
+I_BAT ≤ 1.5 A gives `I_column ≤ 0.1 V·A / VLED,max`:
+
+| VLED maximum | Column-current cap | R_IREF (E96, 1%) |
+|---|---|---|
+| 5.33 V (5.2 V trim, VREF high) | 18.0 mA | 2.94 kΩ |
+| 4.89 V (4.77 V setting, VREF high) | 19.8 mA | 2.67 kΩ |
+
+A 25 mA cap would allow 1.8–2.0 A, so it does not protect the cell. Rev A uses
+the first row: **18.0 mA, R_IREF 2.94 kΩ 1%**, which holds over the full VLED
+trim range. The final peak current at or below that cap remains
+prototype-dependent.
 
 ## Battery-state measurement
 
@@ -134,14 +270,14 @@ gauge with chemistry selection and capacity reporting, not a selected part.
 Its small 9-ball DSBGA package also adds assembly/rework considerations; actual
 cost and occupied area depend on selected parts/footprints, not sophistication.
 
-Selected circuit (component values provisional until schematic review):
-high-side P-MOSFET between the pack and a 100 kΩ/100 kΩ divider, gate pulled
-to VBAT (off by default) and switched by a logic-level N-MOSFET from a GPIO
-with a pull-down; 0.1% divider resistors if available, otherwise 1% with
-per-board calibration; 10 nF at the ADC node; sample after at least 3 ms
-(about six time constants) of settling. The bottom resistor holds the ADC node
-at ground while the switch is off, and the node stays below 2.2 V at a 4.35 V
-pack maximum.
+Drawn circuit: AO3401A high-side P-MOSFET between the pack and a 47 kΩ/47 kΩ
+1% divider (per-board calibration), gate pulled to VBAT by 47 kΩ (off by
+default) and switched by an AO3400A from `VBAT_MEAS_EN` with a 100 kΩ
+pull-down; 100 nF at the ADC node (sample after ≥ 16 ms, about seven time
+constants). The node stays ≤ 2.1 V at 4.2 V (gain ¼, 2.4 V full scale). With
+the MCU unpowered, P-MOSFET leakage (≤ 5 µA, 55 °C) × 47 kΩ keeps the node
+≤ 0.24 V, and N-MOSFET leakage × 47 kΩ keeps the P-MOSFET gate within 0.24 V of
+VBAT, below its 0.5 V minimum threshold.
 
 **PROPOSED** Rev A firmware defaults (configurable; not accepted thresholds
 until characterized with the selected pack):
@@ -150,26 +286,24 @@ until characterized with the selected pack):
 |---|---|
 | Loaded VBAT < 3.55 V | Cap brightness (≤ 50 % on-time) |
 | Loaded VBAT < 3.40 V for 3 consecutive 100 ms samples | Disable the LED rail |
-| After a shed: battery-qualified (unloaded VBAT ≥ 3.70 V for 10 s), **or** input-qualified (ILIM mode or a configured USB500 session, PGOOD asserted, and unloaded VBAT ≥ 3.50 V) | Allow controlled re-enable (below) |
+| After a shed: battery-qualified (unloaded VBAT ≥ 3.70 V for 10 s), **or** input-qualified (charger input limit ≥ 500 mA established, USB present, and unloaded VBAT ≥ 3.50 V) | Allow controlled re-enable (below) |
 | Unloaded VBAT < 3.30 V | Enter the lowest-power firmware state |
 | Missing, stale or invalid reading | Keep the matrix disabled |
 
-USB presence alone does not qualify recovery: on a USB100 (100 mA) source the
-display load exceeds the input limit and the charger's battery-supplement mode
-draws the remainder from the depleted pack without regulation (TI BQ24074,
-§9.3.4.1.3). Controlled re-enable starts at the lowest brightness level and
-steps up one level every 5 s while watching loaded VBAT. Input-qualified
-recovery is allowed only while the worst-case **total** system input current
-stays below the minimum guaranteed input limit (USB500 450 mA, ILIM 1.23 A)
-with a PROPOSED 20% margin: the charger's limit covers the whole system load
-plus charging, and beyond it the battery supplements (TI BQ24074, §§9.3.4–
-9.3.4.1). The total includes the matrix through the LED boost, the logic rail
-and radio through their regulator, and conversion losses at the lowest expected
-system voltage; the brightness cap is derived from that total, not from the
-display alone. Use datasheet maxima until power measurements (validation §4)
-calibrate the estimate. If VBAT falls below the shed threshold within
-60 s, the matrix is shed again and further attempts back off (60 s, doubling to
-15 min). After three failed attempts the display stays off until
+USB presence alone does not qualify recovery: on a 100 mA input limit the
+display load exceeds the input and the battery supplies the remainder.
+Controlled re-enable starts at the lowest brightness level and steps up one
+level every 5 s while watching loaded VBAT. Input-qualified recovery is allowed
+only while the worst-case **total** system input current stays below the
+input limit actually set (500 mA or 1.5 A, using the charger's minimum
+accuracy) with a PROPOSED 20% margin: the limit covers the whole system load
+plus charging. The total includes the matrix through the LED boost, the logic
+rail and radio through their regulator, and conversion losses at the lowest
+expected system voltage; the brightness cap is derived from that total, not
+from the display alone. Use datasheet maxima until power measurements
+(validation §4) calibrate the estimate. If VBAT falls below the shed threshold
+within 60 s, the matrix is shed again and further attempts back off (60 s,
+doubling to 15 min). After three failed attempts the display stays off until
 battery-qualified recovery. All numbers are PROPOSED.
 
 These values must still be checked against the selected pack's protection
@@ -209,12 +343,13 @@ battery simulator, then the selected pack discharge profile; see
 
 ## Runtime and validation
 
-The starting capacity target is approximately 1200 mAh. The runtime design
-target is **about eight hours under representative career-fair use**, with no
-runtime claim until measured. Agree on the brightness, display/mode mix, audio
-duty, BLE activity, and end-of-use condition before running a full-charge to
-normal-stop test. Use measured mode currents and usable pack capacity to revise
-the budget; do not discharge beyond the cell's allowed limits.
+The selected pack provides 2500 mAh (about 10 Wh). The runtime design target is
+**about eight hours under representative career-fair use**, with no runtime
+claim until measured; the larger pack is more energy, not a runtime result.
+Agree on the brightness, display/mode mix, audio duty, BLE activity, and
+end-of-use condition before running a full-charge to normal-stop test. Use
+measured mode currents and usable pack capacity to revise the budget; do not
+discharge beyond the cell's allowed limits.
 
 Before wearable use, verify pack identity/protection, charger configuration,
 current/thermal margins, low-battery behavior, and protection recovery. Use

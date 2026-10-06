@@ -38,8 +38,23 @@ unit-tested on a host target. Public headers shared across layers go in
 `firmware/include/`. Board overlays and custom board definitions go in
 `firmware/boards/`.
 
-The directories exist but are empty; interfaces will be defined as features are
-implemented.
+`firmware/src/drivers/` is a Zephyr module (`zephyr/module.yml`) so the
+application and the tests share its Kconfig, devicetree bindings and sources.
+It holds the ICM-42688-P I²C driver (compatible `invensense,icm42688p-i2c`):
+NCS v3.4.1's `icm4268x` driver supports SPI only. The project driver reuses
+that driver's register map and devicetree property encoding, applies the
+datasheet's I²C settings (DS-000347 §12.3), and supports data-ready interrupts.
+It rejects accelerometer ODRs the selected power mode cannot run, sets ODR and
+full scale before turning the sensors on, and reports a sensor that has no
+sample since reset (data registers at -32768: sensor off or still starting) as
+`-EAGAIN` from fetch and `-ENODATA` from `channel_get` instead of as data. It
+does not detect repeated samples: with unequal ODRs the slower sensor's
+registers hold its last sample, so consumers that need each sample once use
+matching ODRs or, later, the FIFO. Moving the part to SPI only
+changes the bus node and uses `compatible = "invensense,icm42688",
+"invensense,icm4268x"`. Wake-on-motion
+is not implemented yet. The other directories are empty; interfaces will be
+defined as features are implemented.
 
 ## Logging
 
@@ -101,5 +116,10 @@ install them from a fixed Ubuntu archive snapshot with exact package versions
 make test
 ```
 
-The only current test (`firmware/tests/sanity`) checks that C++17 tests build
-and run; it does not test product behavior.
+`firmware/tests/sanity` checks that C++17 tests build and run.
+`firmware/tests/icm42688_i2c` runs the IMU driver against a register-level
+emulator on the native_sim I²C bus: reset and identity checks, I²C-mode
+configuration and write order, power-mode/ODR validation (including a
+low-power start-up), invalid-sample handling, unit conversion, and the
+data-ready interrupt path. It proves
+the driver logic, not behavior on the real part.
