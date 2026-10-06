@@ -44,7 +44,12 @@ It holds the ICM-42688-P I²C driver (compatible `invensense,icm42688p-i2c`):
 NCS v3.4.1's `icm4268x` driver supports SPI only. The project driver reuses
 that driver's register map and devicetree property encoding, applies the
 datasheet's I²C settings (DS-000347 §12.3), and supports data-ready interrupts.
-Moving the part to SPI only changes the bus node and compatible. Wake-on-motion
+It rejects accelerometer ODRs the selected power mode cannot run, sets ODR and
+full scale before turning the sensors on, and reports invalid samples (-32768,
+for a sensor that is off or has no new data) as `-EAGAIN` from fetch and
+`-ENODATA` from `channel_get` instead of as data. Moving the part to SPI only
+changes the bus node and uses `compatible = "invensense,icm42688",
+"invensense,icm4268x"`. Wake-on-motion
 is not implemented yet. The other directories are empty; interfaces will be
 defined as features are implemented.
 
@@ -111,5 +116,7 @@ make test
 `firmware/tests/sanity` checks that C++17 tests build and run.
 `firmware/tests/icm42688_i2c` runs the IMU driver against a register-level
 emulator on the native_sim I²C bus: reset and identity checks, I²C-mode
-configuration, unit conversion, and the data-ready interrupt path. It proves
+configuration and write order, power-mode/ODR validation (including a
+low-power start-up), invalid-sample handling, unit conversion, and the
+data-ready interrupt path. It proves
 the driver logic, not behavior on the real part.

@@ -3,9 +3,11 @@
  *
  * Register-level ICM-42688-P emulator: five register banks selected through
  * BANK_SEL, soft reset with RESET_DONE, read-to-clear INT_STATUS, and the
- * reset values the driver relies on (TDK DS-000347 Rev 1.2). Instances at
- * address 0x68 report the real WHO_AM_I; any other address reports 0x00 so
- * the identity check can be tested.
+ * reset values the driver relies on (TDK DS-000347 Rev 1.2). Sensor data
+ * registers power up holding the invalid-sample value -32768 (§14.34).
+ * The instance at address 0x69 reports WHO_AM_I 0x00 so the identity check
+ * can be tested; the instance at 0x6A powers up with INTF_CONFIG4.I3C_BUS_MODE
+ * set so clearing it can be tested.
  */
 
 #define DT_DRV_COMPAT invensense_icm42688p_i2c
@@ -19,17 +21,21 @@
 #include "icm4268x_reg.h"
 #include "icm42688_emul.h"
 
-#define BANKS   5
-#define B0(reg) ((uint8_t)FIELD_GET(REG_ADDRESS_MASK, (reg)))
+#define BANKS        5
+#define B0(reg)      ((uint8_t)FIELD_GET(REG_ADDRESS_MASK, (reg)))
+#define INTF_CONFIG4 0x7A /* bank 1 */
+#define INTF_CONFIG6 0x7C /* bank 1 */
 
 struct icm42688_emul_data {
 	uint8_t regs[BANKS][256];
 	uint8_t bank;
 	unsigned int resets;
+	bool config_while_on;
 };
 
 struct icm42688_emul_cfg {
 	uint8_t who_am_i;
+	uint8_t intf_config4;
 };
 
 static void power_on(const struct emul *target)
@@ -43,7 +49,13 @@ static void power_on(const struct emul *target)
 	d->regs[0][B0(REG_INTF_CONFIG0)] = 0x30;
 	d->regs[0][B0(REG_INTF_CONFIG1)] = 0x91;
 	d->regs[0][B0(REG_INT_CONFIG1)] = 0x10;
-	d->regs[1][0x7C] = 0x5F; /* INTF_CONFIG6 */
+	d->regs[0][B0(REG_GYRO_CONFIG0)] = 0x06;
+	d->regs[0][B0(REG_ACCEL_CONFIG0)] = 0x06;
+	for (uint8_t r = B0(REG_TEMP_DATA1); r <= B0(REG_GYRO_DATA_Z0); r += 2) {
+		d->regs[0][r] = 0x80; /* -32768, big-endian */
+	}
+	d->regs[1][INTF_CONFIG4] = cfg->intf_config4;
+	d->regs[1][INTF_CONFIG6] = 0x5F;
 }
 
 static void write_reg(const struct emul *target, uint8_t reg, uint8_t val)
@@ -62,6 +74,13 @@ static void write_reg(const struct emul *target, uint8_t reg, uint8_t val)
 		d->regs[0][B0(REG_INT_STATUS)] = BIT_RESET_DONE_INT;
 		d->resets++;
 		return;
+	}
+	/* ODR/full-scale writes while a sensor is on are recorded so the
+	 * driver's configuration order can be checked.
+	 */
+	if (d->bank == 0 && (reg == B0(REG_ACCEL_CONFIG0) || reg == B0(REG_GYRO_CONFIG0)) &&
+	    d->regs[0][B0(REG_PWR_MGMT0)] != 0) {
+		d->config_while_on = true;
 	}
 	d->regs[d->bank][reg] = val;
 }
@@ -134,6 +153,13 @@ unsigned int icm42688_emul_resets(const struct emul *target)
 	return d->resets;
 }
 
+bool icm42688_emul_config_while_on(const struct emul *target)
+{
+	struct icm42688_emul_data *d = target->data;
+
+	return d->config_while_on;
+}
+
 static int icm42688_emul_init(const struct emul *target, const struct device *parent)
 {
 	ARG_UNUSED(parent);
@@ -146,7 +172,8 @@ static int icm42688_emul_init(const struct emul *target, const struct device *pa
 #define ICM42688_EMUL(inst)                                                                        \
 	static struct icm42688_emul_data icm42688_emul_data_##inst;                                \
 	static const struct icm42688_emul_cfg icm42688_emul_cfg_##inst = {                         \
-		.who_am_i = DT_INST_REG_ADDR(inst) == 0x68 ? WHO_AM_I_ICM42688 : 0x00,             \
+		.who_am_i = DT_INST_REG_ADDR(inst) == 0x69 ? 0x00 : WHO_AM_I_ICM42688,             \
+		.intf_config4 = DT_INST_REG_ADDR(inst) == 0x6A ? 0xC3 : 0x83,                      \
 	};                                                                                         \
 	EMUL_DT_INST_DEFINE(inst, icm42688_emul_init, &icm42688_emul_data_##inst,                  \
 			    &icm42688_emul_cfg_##inst, &icm42688_emul_api, NULL);

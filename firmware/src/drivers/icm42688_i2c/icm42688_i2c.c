@@ -34,16 +34,21 @@ LOG_MODULE_REGISTER(icm42688_i2c, CONFIG_SENSOR_LOG_LEVEL);
  * other-bank registers used here carry an explicit bank number. Wake-on-motion
  * thresholds (bank 4, 0x4A-0x4C) will use the same reg_write() path.
  */
-#define BANK1_INTF_CONFIG6      0x7C
-#define INTF_CONFIG6_I3C_SDR_EN BIT(0)
-#define INTF_CONFIG6_I3C_DDR_EN BIT(1)
+#define BANK1_INTF_CONFIG4        0x7A
+#define INTF_CONFIG4_I3C_BUS_MODE BIT(6)
+#define BANK1_INTF_CONFIG6        0x7C
+#define INTF_CONFIG6_I3C_SDR_EN   BIT(0)
+#define INTF_CONFIG6_I3C_DDR_EN   BIT(1)
 
 /* §12.3 I2C driver settings: I2C_SLEW_RATE = 1, SPI_SLEW_RATE = 1. */
 #define DRIVE_CONFIG_I2C 0x09
 /* INTF_CONFIG0: reset value 0x30 (big-endian data) with UI_SIFS_CFG = 10,
  * which disables the SPI interface while the part is used on I2C.
+ * FIFO_HOLD_LAST_DATA_EN stays 0, so an invalid sample reads -32768 and a
+ * valid -32768 is reported as -32766 (§14.34).
  */
 #define INTF_CONFIG0_I2C 0x32
+#define INVALID_SAMPLE   INT16_MIN
 /* INT1 push-pull, active high, pulsed. */
 #define INT_CONFIG_INT1  (BIT_INT1_DRIVE_CIRCUIT | BIT_INT1_POLARITY)
 
@@ -70,6 +75,10 @@ struct icm42688_i2c_data {
 	int16_t temp;
 	int16_t accel[3];
 	int16_t gyro[3];
+	/* Whether the last fetch returned a valid sample for each group. */
+	bool temp_valid;
+	bool accel_valid;
+	bool gyro_valid;
 #ifdef CONFIG_ICM42688_I2C_TRIGGER
 	const struct device *dev;
 	struct gpio_callback gpio_cb;
@@ -152,6 +161,26 @@ static int icm42688_i2c_reset(const struct device *dev)
 	return 0;
 }
 
+/*
+ * The binding limits each property to valid codes; this rejects the
+ * accelerometer ODRs its power mode cannot run (§14.38, §12.1): 6.25 Hz and
+ * below are LP only, 1 kHz and above are LN only.
+ */
+static int icm42688_i2c_check_config(const struct icm42688_i2c_config *cfg)
+{
+	bool lp_only = cfg->accel_odr >= ICM42688_DT_ACCEL_ODR_6_25 &&
+		       cfg->accel_odr <= ICM42688_DT_ACCEL_ODR_1_5625;
+	bool ln_only = cfg->accel_odr <= ICM42688_DT_ACCEL_ODR_1000;
+
+	if ((cfg->accel_pwr_mode == ICM42688_DT_ACCEL_LP && ln_only) ||
+	    (cfg->accel_pwr_mode == ICM42688_DT_ACCEL_LN && lp_only)) {
+		LOG_ERR("accel ODR code %u not supported in power mode %u", cfg->accel_odr,
+			cfg->accel_pwr_mode);
+		return -EINVAL;
+	}
+	return 0;
+}
+
 static int icm42688_i2c_configure(const struct device *dev)
 {
 	const struct icm42688_i2c_config *cfg = dev->config;
@@ -159,18 +188,28 @@ static int icm42688_i2c_configure(const struct device *dev)
 	 * de-assert time are required at ODR >= 4 kHz. INT_ASYNC_RESET is left
 	 * at 0 as §12.6 requires for INT1/INT2 operation.
 	 */
-	bool fast = cfg->accel_odr <= ICM42688_DT_ACCEL_ODR_4000 ||
-		    cfg->gyro_odr <= ICM42688_DT_GYRO_ODR_4000;
+	bool fast = (cfg->accel_pwr_mode != ICM42688_DT_ACCEL_OFF &&
+		     cfg->accel_odr <= ICM42688_DT_ACCEL_ODR_4000) ||
+		    (cfg->gyro_pwr_mode == ICM42688_DT_GYRO_LN &&
+		     cfg->gyro_odr <= ICM42688_DT_GYRO_ODR_4000);
+	/* ODR and full scale are set before PWR_MGMT0 turns the sensors on. */
 	const struct {
 		uint8_t bank, reg, mask, val;
 	} seq[] = {
 		{1, BANK1_INTF_CONFIG6, INTF_CONFIG6_I3C_SDR_EN | INTF_CONFIG6_I3C_DDR_EN, 0},
+		{1, BANK1_INTF_CONFIG4, INTF_CONFIG4_I3C_BUS_MODE, 0},
 		{0, B0(REG_DRIVE_CONFIG), 0xFF, DRIVE_CONFIG_I2C},
 		{0, B0(REG_INTF_CONFIG0), 0xFF, INTF_CONFIG0_I2C},
 		{0, B0(REG_INT_SOURCE0), 0xFF, 0},
 		{0, B0(REG_INT_CONFIG), 0xFF, INT_CONFIG_INT1},
 		{0, B0(REG_INT_CONFIG1), 0xFF,
 		 fast ? (BIT_INT_TPULSE_DURATION | BIT_INT_TDEASSERT_DISABLE) : 0},
+		{0, B0(REG_ACCEL_CONFIG0), 0xFF,
+		 FIELD_PREP(MASK_ACCEL_ODR, cfg->accel_odr) |
+			 FIELD_PREP(MASK_ACCEL_UI_FS_SEL, cfg->accel_fs)},
+		{0, B0(REG_GYRO_CONFIG0), 0xFF,
+		 FIELD_PREP(MASK_GYRO_ODR, cfg->gyro_odr) |
+			 FIELD_PREP(MASK_GYRO_UI_FS_SEL, cfg->gyro_fs)},
 		{0, B0(REG_PWR_MGMT0), 0xFF,
 		 FIELD_PREP(MASK_GYRO_MODE, cfg->gyro_pwr_mode) |
 			 FIELD_PREP(MASK_ACCEL_MODE, cfg->accel_pwr_mode)},
@@ -187,18 +226,10 @@ static int icm42688_i2c_configure(const struct device *dev)
 	}
 	k_busy_wait(MODE_DELAY_US);
 
-	ret = reg_write(dev, 0, B0(REG_ACCEL_CONFIG0),
-			FIELD_PREP(MASK_ACCEL_ODR, cfg->accel_odr) |
-				FIELD_PREP(MASK_ACCEL_UI_FS_SEL, cfg->accel_fs));
-	if (ret == 0) {
-		ret = reg_write(dev, 0, B0(REG_GYRO_CONFIG0),
-				FIELD_PREP(MASK_GYRO_ODR, cfg->gyro_odr) |
-					FIELD_PREP(MASK_GYRO_UI_FS_SEL, cfg->gyro_fs));
-	}
-	if (ret == 0 && (cfg->accel_pwr_mode || cfg->gyro_pwr_mode)) {
+	if (cfg->accel_pwr_mode || cfg->gyro_pwr_mode) {
 		k_msleep(STARTUP_DELAY_MS);
 	}
-	return ret;
+	return 0;
 }
 
 static int icm42688_i2c_sample_fetch(const struct device *dev, enum sensor_channel chan)
@@ -215,12 +246,30 @@ static int icm42688_i2c_sample_fetch(const struct device *dev, enum sensor_chann
 	if (ret) {
 		return ret;
 	}
+	/* A sensor that is off, not yet started, or slower than the other one
+	 * reads INVALID_SAMPLE (§14.34 invalid data generation).
+	 */
 	data->temp = (int16_t)sys_get_be16(&buf[0]);
+	data->temp_valid = data->temp != INVALID_SAMPLE;
+	data->accel_valid = true;
+	data->gyro_valid = true;
 	for (int i = 0; i < 3; i++) {
 		data->accel[i] = (int16_t)sys_get_be16(&buf[2 + 2 * i]);
 		data->gyro[i] = (int16_t)sys_get_be16(&buf[8 + 2 * i]);
+		data->accel_valid &= data->accel[i] != INVALID_SAMPLE;
+		data->gyro_valid &= data->gyro[i] != INVALID_SAMPLE;
 	}
-	return 0;
+
+	switch (chan) {
+	case SENSOR_CHAN_ACCEL_XYZ:
+		return data->accel_valid ? 0 : -EAGAIN;
+	case SENSOR_CHAN_GYRO_XYZ:
+		return data->gyro_valid ? 0 : -EAGAIN;
+	case SENSOR_CHAN_DIE_TEMP:
+		return data->temp_valid ? 0 : -EAGAIN;
+	default:
+		return (data->accel_valid || data->gyro_valid) ? 0 : -EAGAIN;
+	}
 }
 
 static void accel_to_ms2(const struct icm42688_i2c_config *cfg, int16_t raw,
@@ -247,6 +296,31 @@ static int icm42688_i2c_channel_get(const struct device *dev, enum sensor_channe
 {
 	const struct icm42688_i2c_config *cfg = dev->config;
 	struct icm42688_i2c_data *data = dev->data;
+
+	bool valid;
+
+	switch (chan) {
+	case SENSOR_CHAN_ACCEL_X:
+	case SENSOR_CHAN_ACCEL_Y:
+	case SENSOR_CHAN_ACCEL_Z:
+	case SENSOR_CHAN_ACCEL_XYZ:
+		valid = data->accel_valid;
+		break;
+	case SENSOR_CHAN_GYRO_X:
+	case SENSOR_CHAN_GYRO_Y:
+	case SENSOR_CHAN_GYRO_Z:
+	case SENSOR_CHAN_GYRO_XYZ:
+		valid = data->gyro_valid;
+		break;
+	case SENSOR_CHAN_DIE_TEMP:
+		valid = data->temp_valid;
+		break;
+	default:
+		return -ENOTSUP;
+	}
+	if (!valid) {
+		return -ENODATA;
+	}
 
 	switch (chan) {
 	case SENSOR_CHAN_ACCEL_X:
@@ -317,6 +391,9 @@ static int icm42688_i2c_trigger_set(const struct device *dev, const struct senso
 		return ret;
 	}
 	data->drdy_handler = handler;
+	/* sensor_trigger_set() stores the caller's trigger as a pointer, not a
+	 * copy, so handlers can use CONTAINER_OF on it.
+	 */
 	data->drdy_trigger = trig;
 	ret = reg_write(dev, 0, B0(REG_INT_SOURCE0), handler ? BIT_UI_DRDY_INT1_EN : 0);
 	if (ret || handler == NULL) {
@@ -358,6 +435,10 @@ static int icm42688_i2c_init(const struct device *dev)
 	if (!i2c_is_ready_dt(&cfg->i2c)) {
 		LOG_ERR("I2C bus not ready");
 		return -ENODEV;
+	}
+	ret = icm42688_i2c_check_config(cfg);
+	if (ret) {
+		return ret;
 	}
 	data->bank = UINT8_MAX; /* unknown after an MCU-only reset */
 	k_msleep(POR_DELAY_MS);

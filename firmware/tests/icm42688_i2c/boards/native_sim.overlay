@@ -21,4 +21,34 @@
 		compatible = "invensense,icm42688p-i2c";
 		reg = <0x69>;
 	};
+
+	/* Valid low-power start-up: accelerometer LP at 50 Hz, gyroscope off.
+	 * The emulator powers this part up with I3C_BUS_MODE set.
+	 */
+	lp_imu: icm42688@6a {
+		compatible = "invensense,icm42688p-i2c";
+		reg = <0x6a>;
+		accel-pwr-mode = <ICM42688_DT_ACCEL_LP>;
+		accel-odr = <ICM42688_DT_ACCEL_ODR_50>;
+		accel-fs = <ICM42688_DT_ACCEL_FS_2>;
+		gyro-pwr-mode = <ICM42688_DT_GYRO_OFF>;
+		gyro-odr = <ICM42688_DT_GYRO_ODR_100>;
+		gyro-fs = <ICM42688_DT_GYRO_FS_2000>;
+	};
+
+	/* LP mode does not support 1 kHz; init must fail. */
+	lp_fast_imu: icm42688@6b {
+		compatible = "invensense,icm42688p-i2c";
+		reg = <0x6b>;
+		accel-pwr-mode = <ICM42688_DT_ACCEL_LP>;
+		accel-odr = <ICM42688_DT_ACCEL_ODR_1000>;
+	};
+
+	/* LN mode does not support 6.25 Hz; init must fail. */
+	ln_slow_imu: icm42688@6c {
+		compatible = "invensense,icm42688p-i2c";
+		reg = <0x6c>;
+		accel-pwr-mode = <ICM42688_DT_ACCEL_LN>;
+		accel-odr = <ICM42688_DT_ACCEL_ODR_6_25>;
+	};
 };

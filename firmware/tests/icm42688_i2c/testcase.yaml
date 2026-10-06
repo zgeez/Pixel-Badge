@@ -2,7 +2,8 @@
 #
 # ICM-42688-P I2C driver against a register-level emulator. Proves the driver
 # logic (bus access, bank selection, reset/identity checks, I2C-mode
-# configuration, conversions, data-ready path), not the real part.
+# configuration and order, power-mode/ODR validation, invalid samples,
+# conversions, data-ready path), not the real part.
 
 tests:
   drivers.icm42688_i2c:

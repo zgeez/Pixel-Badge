@@ -9,7 +9,8 @@ config ICM42688_I2C
 	help
 	  Project driver for the ICM-42688-P on I2C. Zephyr's icm4268x driver
 	  in NCS v3.4.1 supports SPI only; to use SPI instead, move the node to
-	  an SPI bus with the "invensense,icm42688" compatible.
+	  an SPI bus with compatible = "invensense,icm42688",
+	  "invensense,icm4268x" (the driver binds to "invensense,icm4268x").
 
 config ICM42688_I2C_TRIGGER
 	bool "Data-ready interrupt"
