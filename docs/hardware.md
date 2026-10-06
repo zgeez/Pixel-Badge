@@ -99,7 +99,7 @@ Selection is not validation: nothing below has been measured on Rev A.
 | Microphone | Knowles SPH0641LM4H-1 | Conditional (lifecycle check) |
 | 32.768 kHz crystal | Micro Crystal CM7V-T1A, 9 pF | Selected |
 | USB ESD | TI TPD4E05U06 (D+, D−, CC1, CC2) | Selected |
-| Battery | Adafruit 328, protected 2500 mAh LiPo; JST B2B-PH-SM4-TB header | Selected; header polarity to verify |
+| Battery | Adafruit 328, protected 2500 mAh LiPo; JST B2B-PH-SM4-TB header | Selected; header pin 1 = BAT−, pin 2 = BAT+ (Adafruit convention) |
 | USB-C receptacle, buttons, power switch, matrix LED | — | Mechanical / prototype gates |
 
 ## Rev A requirements
@@ -155,8 +155,9 @@ Selection is not validation: nothing below has been measured on Rev A.
   (vendor), 1.5 A maximum continuous discharge, charging 0–45 °C, 3.0 V cell
   cut-off, protection IC over-discharge at 2.3 V. 50.5 × 62.5 × 8.1 mm max and
   50 g: keep rear components out from under it, and keep the NFC coil, module
-  antenna and magnets clear. The pack drawing labels its plug "reverse":
-  verify the header polarity against the pack before layout.
+  antenna and magnets clear. Header pin 1 = BAT−, pin 2 = BAT+ as on Adafruit's
+  charger boards; mark + and − on the silkscreen and meter-check each pack
+  before its first connection.
 - LED part, pitch, peak current, current-setting resistor, brightness cap, NFC
   tuning, and exact outline remain dependent on prototype evidence. A build or
   clean ERC result does not validate any of them.

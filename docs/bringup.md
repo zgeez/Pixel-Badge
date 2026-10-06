@@ -10,7 +10,8 @@ Board: ____  Serial/batch: ____  Firmware commit: ____  Date: ____
 
 - [ ] Visual inspection (solder bridges, missing/rotated parts, polarity marks)
 - [ ] Resistance from each supply rail to ground
-- [ ] Battery connector polarity
+- [ ] Battery connector polarity: meter the pack plug before first connection
+      (red wire must land on header pin 2, BAT+)
 - [ ] Protected pack identity/specifications verified, or dedicated cell
       protection circuit reviewed; charger alone is insufficient
 - [ ] Assembly matches BOM and placement

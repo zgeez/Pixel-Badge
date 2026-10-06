@@ -10701,7 +10701,7 @@
 				)
 			)
 		)
-		(property "Note" "POLARITY PROVISIONAL: pin 1 = BAT-, pin 2 = BAT+ until verified against the JST drawing and the Adafruit 328 pack (open decision)"
+		(property "Note" "Pin 1 = BAT-, pin 2 = BAT+ per Adafruit's own charger design (Micro-Lipo USB-C CN2: pin 1 GND, pin 2 VBAT) and Adafruit's statement that product 328 matches its boards; meter-check the pack before first connection"
 			(at 33.02 165.1 0)
 			(hide yes)
 			(effects
@@ -12255,7 +12255,7 @@
 			)
 		)
 	)
-	(text "USB-C, charger and battery (Rev A) - design notes\n\nUSB-C sink, USB 2.0, no PD: independent 5.1k Rd on CC1/CC2; TPD4E05U06 on D+, D-, CC1, CC2.\nCC sense: firmware reads CC1/CC2 via SAADC (ratio 0.107) and raises the BQ25620 input limit only on\na valid >= 1.5 A advertisement; SDP/unknown sources stay at 100 mA until USB enumeration.\n\nBQ25620 (SLUSEG2D): switching charger with NVDC power path, BC1.2 on D+/D-, I2C 0x6B on I2C1.\nPOR: ICHG 1040 mA +/-5.5% (0.98-1.10 A), VREG 4.200 V; watchdog expiry halves ICHG.\nPack: Adafruit 328 (2500 mAh, <= 1.2 A charge, 0-45 C charge, PCM 4.28 V / 2.30 V).\nPG drives the 3V3 enable (power_tree, Q203): USB present -> charging-only firmware mode.\nCE low (R313) keeps charging enabled with no firmware; INT/STAT open drain to 3V3.\n\nBattery polarity on J302 is PROVISIONAL until verified. Nothing on this sheet is measured."
+	(text "USB-C, charger and battery (Rev A) - design notes\n\nUSB-C sink, USB 2.0, no PD: independent 5.1k Rd on CC1/CC2; TPD4E05U06 on D+, D-, CC1, CC2.\nCC sense: firmware reads CC1/CC2 via SAADC (ratio 0.107) and raises the BQ25620 input limit only on\na valid >= 1.5 A advertisement; SDP/unknown sources stay at 100 mA until USB enumeration.\n\nBQ25620 (SLUSEG2D): switching charger with NVDC power path, BC1.2 on D+/D-, I2C 0x6B on I2C1.\nPOR: ICHG 1040 mA +/-5.5% (0.98-1.10 A), VREG 4.200 V; watchdog expiry halves ICHG.\nPack: Adafruit 328 (2500 mAh, <= 1.2 A charge, 0-45 C charge, PCM 4.28 V / 2.30 V).\nPG drives the 3V3 enable (power_tree, Q203): USB present -> charging-only firmware mode.\nCE low (R313) keeps charging enabled with no firmware; INT/STAT open drain to 3V3.\n\nJ302 polarity follows Adafruit's design (pin 1 BAT-, pin 2 BAT+); meter-check each pack before first connection.\nNothing on this sheet is measured."
 		(exclude_from_sim no)
 		(at 228.6 177.8 0)
 		(effects

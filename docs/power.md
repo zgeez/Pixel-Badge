@@ -150,8 +150,10 @@ Rev A requires independent hardware battery protection. The selected pack is
 
 The protection board's over-discharge threshold (2.3 V) is below the cell's
 rated 3.0 V cut-off, so firmware load shedding must act well above it. The
-pack drawing labels its plug "reverse"; the board connector polarity must be
-verified against the pack before layout.
+board header uses pin 1 = BAT− and pin 2 = BAT+, as in Adafruit's own charger
+boards (product 328 is stated to match them; the "reverse plug" note on the
+cell drawing describes that reversal). Meter-check each pack before its first
+connection.
 
 The BQ25620 is a charger and power-path controller; its protections do not
 replace a dedicated battery protector covering the full discharge path.

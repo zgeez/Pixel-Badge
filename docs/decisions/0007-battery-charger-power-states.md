@@ -57,7 +57,8 @@ charging-only state, and temperature thresholds. Charge time and runtime are
 not claimed until measured; 2500 mAh is more energy, not a runtime result. The
 pack is 50.5 × 62.5 × 8.1 mm and 50 g, which constrains rear component
 placement, the NFC coil and antenna clearance, and wearability. The battery
-plug polarity must be verified against the pack before layout.
+header follows Adafruit's pinout (pin 1 BAT−, pin 2 BAT+); each pack is
+meter-checked before its first connection.
 
 ## References
 
