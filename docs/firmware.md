@@ -45,9 +45,12 @@ NCS v3.4.1's `icm4268x` driver supports SPI only. The project driver reuses
 that driver's register map and devicetree property encoding, applies the
 datasheet's I²C settings (DS-000347 §12.3), and supports data-ready interrupts.
 It rejects accelerometer ODRs the selected power mode cannot run, sets ODR and
-full scale before turning the sensors on, and reports invalid samples (-32768,
-for a sensor that is off or has no new data) as `-EAGAIN` from fetch and
-`-ENODATA` from `channel_get` instead of as data. Moving the part to SPI only
+full scale before turning the sensors on, and reports a sensor that has no
+sample since reset (data registers at -32768: sensor off or still starting) as
+`-EAGAIN` from fetch and `-ENODATA` from `channel_get` instead of as data. It
+does not detect repeated samples: with unequal ODRs the slower sensor's
+registers hold its last sample, so consumers that need each sample once use
+matching ODRs or, later, the FIFO. Moving the part to SPI only
 changes the bus node and uses `compatible = "invensense,icm42688",
 "invensense,icm4268x"`. Wake-on-motion
 is not implemented yet. The other directories are empty; interfaces will be

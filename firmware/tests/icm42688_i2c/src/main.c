@@ -86,7 +86,9 @@ ZTEST(icm42688_i2c, test_invalid_samples)
 {
 	struct sensor_value v[3];
 
-	/* Everything invalid, as after power-on or with both sensors off. */
+	/* Everything invalid, as from reset until the first sample or with both
+	 * sensors off.
+	 */
 	for (uint8_t r = B0(REG_TEMP_DATA1); r <= B0(REG_GYRO_DATA_Z0); r += 2) {
 		set_be16(r, INT16_MIN);
 	}
@@ -94,7 +96,7 @@ ZTEST(icm42688_i2c, test_invalid_samples)
 	zassert_equal(sensor_channel_get(imu, SENSOR_CHAN_ACCEL_XYZ, v), -ENODATA);
 	zassert_equal(sensor_channel_get(imu, SENSOR_CHAN_DIE_TEMP, v), -ENODATA);
 
-	/* Accel and temperature valid; gyro has no new sample (lower ODR). */
+	/* Accel and temperature sampled; gyro off or still starting up. */
 	set_be16(B0(REG_TEMP_DATA1), 0);
 	set_be16(B0(REG_TEMP_DATA1) + 2, 0);
 	set_be16(B0(REG_TEMP_DATA1) + 4, 0);

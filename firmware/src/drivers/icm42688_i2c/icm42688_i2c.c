@@ -44,8 +44,10 @@ LOG_MODULE_REGISTER(icm42688_i2c, CONFIG_SENSOR_LOG_LEVEL);
 #define DRIVE_CONFIG_I2C 0x09
 /* INTF_CONFIG0: reset value 0x30 (big-endian data) with UI_SIFS_CFG = 10,
  * which disables the SPI interface while the part is used on I2C.
- * FIFO_HOLD_LAST_DATA_EN stays 0, so an invalid sample reads -32768 and a
- * valid -32768 is reported as -32766 (§14.34).
+ * FIFO_HOLD_LAST_DATA_EN stays 0, so a sensor's data registers read -32768
+ * from reset until its first sample and a valid -32768 is reported as -32766.
+ * After the first sample the registers hold the last valid sample until a new
+ * one arrives (§12.8, §14.34).
  */
 #define INTF_CONFIG0_I2C 0x32
 #define INVALID_SAMPLE   INT16_MIN
@@ -246,8 +248,9 @@ static int icm42688_i2c_sample_fetch(const struct device *dev, enum sensor_chann
 	if (ret) {
 		return ret;
 	}
-	/* A sensor that is off, not yet started, or slower than the other one
-	 * reads INVALID_SAMPLE (§14.34 invalid data generation).
+	/* A sensor that is off or has not produced its first sample since reset
+	 * reads INVALID_SAMPLE. This is not a freshness check: with unequal ODRs
+	 * the slower sensor's registers repeat its last sample (§12.8).
 	 */
 	data->temp = (int16_t)sys_get_be16(&buf[0]);
 	data->temp_valid = data->temp != INVALID_SAMPLE;

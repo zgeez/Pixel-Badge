@@ -4,7 +4,8 @@
  * Register-level ICM-42688-P emulator: five register banks selected through
  * BANK_SEL, soft reset with RESET_DONE, read-to-clear INT_STATUS, and the
  * reset values the driver relies on (TDK DS-000347 Rev 1.2). Sensor data
- * registers power up holding the invalid-sample value -32768 (§14.34).
+ * registers power up holding -32768, which the part reports until each
+ * sensor's first sample (§12.8).
  * The instance at address 0x69 reports WHO_AM_I 0x00 so the identity check
  * can be tested; the instance at 0x6A powers up with INTF_CONFIG4.I3C_BUS_MODE
  * set so clearing it can be tested.
