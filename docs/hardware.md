@@ -2,8 +2,8 @@
 
 Status: **schematic capture in progress**. Rev A architecture is defined; the
 KiCad project lives in [`hardware/`](../hardware/README.md). The regulators/
-power-tree and USB/charger/battery sheets are drawn; the other sheets are not,
-and no layout exists yet.
+power-tree, USB/charger/battery, MCU module and debug sheets are drawn; the
+other sheets are not, and no layout exists yet.
 Items marked provisional may change. Electrical values come from primary datasheets and are recorded in
 [references.md](references.md) as parts are confirmed.
 
@@ -88,7 +88,8 @@ Selection is not validation: nothing below has been measured on Rev A.
 
 | Function | Part | Status |
 |---|---|---|
-| MCU module | Raytac MDBT53-P1M | Selected |
+| MCU module | Raytac MDBT53-P1M, Raytac Ver.E §8.1.2 reference circuit (normal voltage, DC/DC) | Selected; drawn |
+| Module DC/DC inductors | 2 × TDK MLZ1608M100WT000 (10 µH, 0603) | Selected; drawn |
 | Charger / power path | TI BQ25620 (switching, I²C, BC1.2) | Selected; drawn; ≈ 1 A charge |
 | Logic rail (3.3 V) | TI TPS63802, Murata DFE201612E-R47M (0.47 µH) | Selected; drawn |
 | LED rail | TI TPS61023, Coilcraft XEL4030-102ME (1.0 µH) | Selected; VLED setting provisional |
@@ -97,7 +98,8 @@ Selection is not validation: nothing below has been measured on Rev A.
 | NFC tag | NXP NT3H2111W0FHKH (XQFN-8) | Selected; coil tuning prototype-dependent |
 | IMU | TDK ICM-42688-P on I²C | Conditional (real-part verification pending) |
 | Microphone | Knowles SPH0641LM4H-1 | Conditional (lifecycle check) |
-| 32.768 kHz crystal | Micro Crystal CM7V-T1A, 9 pF | Selected |
+| 32.768 kHz crystal | Micro Crystal CM7V-T1A, 9 pF | Selected; drawn |
+| SWD header | ARM Cortex 10-pin, 2 × 5, 1.27 mm SMD (hanxia HX PZ1.27-2x5P TP), for the nRF5340 DK debug out | Selected; drawn; footprint checked against the vendor land pattern |
 | USB ESD | TI TPD4E05U06 (D+, D−, CC1, CC2) | Selected |
 | Battery | Adafruit 328, protected 2500 mAh LiPo; JST B2B-PH-SM4-TB header | Selected; header pin 1 = BAT−, pin 2 = BAT+ (Adafruit convention) |
 | USB-C receptacle, buttons, power switch, matrix LED | — | Mechanical / prototype gates |
@@ -151,6 +153,23 @@ Selection is not validation: nothing below has been measured on Rev A.
   RS ≤ 70 kΩ, which meets the package's recommended specification. The Rev A
   devicetree must set the nRF5340 internal load capacitance to 9 pF (the DK
   uses 7 pF); external load-capacitor footprints are fitted but not populated.
+- Module supply follows Raytac Ver.E §8.1.2: VDD = VDDH = 3V3 with 4.7 µF,
+  10 µH + 1 µF on DCC/DECR and DCCD/DECD, and module VBUS through 2.2 Ω with
+  4.7 µF. Nordic's nRF5340 reference BOM lists 10 µH, ±20%, 0603 inductors at
+  50 mA and 80 mA without stating the rating basis. The TDK MLZ1608M100WT000
+  is specified at 90 mA maximum for at most a 50% inductance drop (its 250 mA
+  figure is a typical 20 °C temperature-rise reference). Its suitability is a
+  document comparison; regulator ripple and stability are checked at bring-up.
+  USB D+/D− reach the module through 0 Ω links; Raytac's figure shows 27 Ω
+  series resistors, so the links can take them if USB testing calls for it.
+- Debugging uses the nRF5340 DK's debug out (P19) through a 10-pin 1.27 mm
+  flat cable; the badge grounds pin 3, which selects the external target.
+  Nordic requires the target voltage to match the DK, and a DK on USB alone
+  runs at 3 V. For the 3.3 V badge, the DK's nRF5340 is supplied with 3.3 V on
+  P21 (SW10 VEXT->nRF on, SW9 at VDD; 1.7–3.6 V allowed), which also sets
+  the DK's voltage follower, with USB still connected for the debugger. P19
+  pin 1 only supplies power when DK solder bridge SB47 is shorted; it stays
+  open, because the badge drives its own 3.3 V on that pin.
 - Pack (Adafruit 328; PKCELL LIPO785060 specification): 1.2 A maximum charge
   (vendor), 1.5 A maximum continuous discharge, charging 0–45 °C, 3.0 V cell
   cut-off, protection IC over-discharge at 2.3 V. 50.5 × 62.5 × 8.1 mm max and

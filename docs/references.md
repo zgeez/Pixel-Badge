@@ -15,13 +15,23 @@ on a specific document, cite the document revision and section.
   for dedicated VBUS/main-supply requirements, decoupling, USB operating limits,
   and source resistance;
   [Reference circuitry](https://docs.nordicsemi.com/r/bundle/ps_nrf5340/page/chapters/ref_circuitry.html?contentId=VghuZK7iL3DXXXwg0apSEA)
-  for supply configurations and recommended VBUS series conditioning.
+  for supply configurations and recommended VBUS series conditioning, and its
+  BOM tables for the DC/DC inductors (10 µH, 50 mA and 80 mA, ±20%, 0603;
+  accessed 2026-10-06).
 - [nRF5340 SAADC](https://docs.nordicsemi.com/r/bundle/ps_nrf5340/page/saadc.html)
   (latest Product Specification HTML; accessed 2026-10-04), **Digital output**,
   **Reference**, **Acquisition time/Table 2** and **Electrical specification**:
   ADC errors/calibration, VSS–VDD analog-input limits, gain/reference and
   source-resistance/acquisition constraints for battery sensing.
-- [nRF5340 DK Hardware user guide](https://docs.nordicsemi.com/bundle/ug_nrf5340_dk/page/ug/dk/intro.html)
+- [nRF5340 DK Hardware user guide](https://docs.nordicsemi.com/bundle/ug_nrf5340_dk/page/ug/dk/intro.html);
+  [Programming external boards](https://docs.nordicsemi.com/r/bundle/ug_nrf5340_dk/page/ug/dk/ext_programming_support_p19.html)
+  (P19 10-pin debug out: pin 3 to GND selects the external target, the board's
+  voltage must match the DK, 3 V when the DK is USB powered, pin 1 supplies
+  power only with SB47 shorted);
+  [nRF5340 SoC direct supply](https://docs.nordicsemi.com/r/bundle/ug_nrf5340_dk/page/ug/dk/direct_supply.html)
+  (P21, SW10 VEXT->nRF, 1.7–3.6 V, also drives the voltage follower) and
+  [VDD power sources](https://docs.nordicsemi.com/r/bundle/ug_nrf5340_dk/page/ug/dk/vdd_power_sources.html)
+  (accessed 2026-10-06)
 
 ## Raytac MDBT53-P1M
 
@@ -114,6 +124,7 @@ provisional parts do not imply final part selection or hardware validation.
 | DFE201612E-R47M=P2 (TPS63802 inductor) | 0.47 µH ±20%, DCR 26 mΩ max, 5.5 A (−30% L), 4.5 A (40 °C rise) | Murata reference specification J(E)TE243A-0006B-01 | — |
 | ICM-42688-P (conditional IMU) | Pinout (Table 9), I²C address and 1 MHz limit, I²C driver settings §12.3, INT_ASYNC_RESET §12.6, registers §§13–15 | TDK InvenSense DS-000347 | Rev.1.2 |
 | AO3401A / AO3400A | Row and VBAT high-side switch; VBAT and CC-sense N-MOSFETs; IDSS, VGS(th), RDS(on), SOT-23 pinout | Alpha & Omega AO3401A and AO3400A datasheets | Rev.3.1 (December 2023 / July 2023) |
+| MLZ1608M100WT000 (module DC/DC inductors) | 10 µH ±20% (2 MHz), DCR 1.05 Ω ±30%; Isat 90 mA max (current at which inductance has fallen by up to 50%); Itemp 250 mA typ, a reference value for a 20 °C rise, not a rating; inductance vs DC bias curve | TDK *Inductors for decoupling circuits, Multilayer ferrite, MLZ series, MLZ1608 type* | 20201224 |
 | CM7V-T1A 32.768 kHz, 9 pF (selected crystal) | CL, RS, C0, drive level against the Raytac crystal specification | Micro Crystal CM7V-T1A datasheet | Version 8.0, 10.2016 |
 | Adafruit 328 / PKCELL LIPO785060 (selected pack) | Capacity, charge and discharge limits, temperature ranges, dimensions, plug | [Adafruit product 328](https://www.adafruit.com/product/328); [PKCELL LIPO785060 2500 mAh specification](https://cdn-shop.adafruit.com/product-files/328/LP785060+2500mAh+3.7V+20190510.pdf) | Valid 2019-05-10 (accessed 2026-10-05) |
 | Ricoh R5478N101CD (pack protection IC) | Over-charge/over-discharge/excess-current thresholds and delays | Ricoh R5475N/R5478N datasheet EA-291-121009 (selection guide) | EA-291-121009 |

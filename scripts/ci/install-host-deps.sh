@@ -35,5 +35,9 @@ apt() {
 
 apt update -qq
 apt install -y -qq --no-install-recommends "${PACKAGES[@]}"
-g++ --version | head -n 1
-make --version | head -n 1
+# Print the first line of each version. Capturing the full output avoids
+# SIGPIPE: `head` exits early and, under pipefail, would fail the script.
+for tool in g++ make; do
+	version="$("${tool}" --version)"
+	echo "${version%%$'\n'*}"
+done
