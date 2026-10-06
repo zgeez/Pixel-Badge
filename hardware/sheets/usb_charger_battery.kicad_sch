@@ -9038,7 +9038,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "5.23k"
+		(property "Value" "10k"
 			(at 292.1 133.35 0)
 			(effects
 				(font
@@ -9083,7 +9083,7 @@
 				)
 			)
 		)
-		(property "MPN" "0402WGF5231TCE"
+		(property "MPN" "0402WGF1002TCE"
 			(at 289.56 132.08 0)
 			(hide yes)
 			(effects
@@ -9092,7 +9092,7 @@
 				)
 			)
 		)
-		(property "LCSC" "C25907"
+		(property "LCSC" "C25744"
 			(at 289.56 132.08 0)
 			(hide yes)
 			(effects
@@ -9101,7 +9101,7 @@
 				)
 			)
 		)
-		(property "Note" "RT1 (SLUSEG2D 8.3.5.4.2)"
+		(property "Note" "RT1: with R310 open, default HOT <= 45 C and COLD about 0 C worst case"
 			(at 289.56 132.08 0)
 			(hide yes)
 			(effects
@@ -9172,7 +9172,7 @@
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
-		(dnp no)
+		(dnp yes)
 		(uuid "80056375-0bef-4daf-bbb1-6771f25b2e34")
 		(property "Reference" "R310"
 			(at 307.34 130.81 0)
@@ -9183,7 +9183,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "30.1k"
+		(property "Value" "DNP"
 			(at 307.34 133.35 0)
 			(effects
 				(font
@@ -9219,34 +9219,7 @@
 				)
 			)
 		)
-		(property "Manufacturer" "UNI-ROYAL(Uniroyal Elec)"
-			(at 304.8 132.08 0)
-			(hide yes)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "MPN" "0402WGF3012TCE"
-			(at 304.8 132.08 0)
-			(hide yes)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "LCSC" "C29402"
-			(at 304.8 132.08 0)
-			(hide yes)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Note" "RT2"
+		(property "Note" "RT2 position, open: fitting 30.1k restores TI's 0-60 C network"
 			(at 304.8 132.08 0)
 			(hide yes)
 			(effects
@@ -10068,7 +10041,7 @@
 				)
 			)
 		)
-		(property "Note" "CE low: charging enabled without firmware; MCU drives high to pause"
+		(property "Note" "CE high: charging off until firmware configures the charger and drives CE low"
 			(at 213.36 165.1 0)
 			(hide yes)
 			(effects
@@ -10134,8 +10107,8 @@
 		(uuid "e36e9519-cf8e-41ed-857b-3ee7d095e984")
 	)
 	(symbol
-		(lib_id "power:GND")
-		(at 213.36 171.45 0)
+		(lib_id "power:+3V3")
+		(at 213.36 171.45 180)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom no)
@@ -10151,7 +10124,7 @@
 				)
 			)
 		)
-		(property "Value" "GND"
+		(property "Value" "+3V3"
 			(at 213.36 175.26 0)
 			(effects
 				(font
@@ -10177,7 +10150,7 @@
 				)
 			)
 		)
-		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
+		(property "Description" "Power symbol creates a global label with name \"+3V3\""
 			(at 213.36 171.45 0)
 			(hide yes)
 			(effects
@@ -12255,7 +12228,7 @@
 			)
 		)
 	)
-	(text "USB-C, charger and battery (Rev A) - design notes\n\nUSB-C sink, USB 2.0, no PD: independent 5.1k Rd on CC1/CC2; TPD4E05U06 on D+, D-, CC1, CC2.\nCC sense: firmware reads CC1/CC2 via SAADC (ratio 0.107) and raises the BQ25620 input limit only on\na valid >= 1.5 A advertisement; SDP/unknown sources stay at 100 mA until USB enumeration.\n\nBQ25620 (SLUSEG2D): switching charger with NVDC power path, BC1.2 on D+/D-, I2C 0x6B on I2C1.\nPOR: ICHG 1040 mA +/-5.5% (0.98-1.10 A), VREG 4.200 V; watchdog expiry halves ICHG.\nPack: Adafruit 328 (2500 mAh, <= 1.2 A charge, 0-45 C charge, PCM 4.28 V / 2.30 V).\nPG drives the 3V3 enable (power_tree, Q203): USB present -> charging-only firmware mode.\nCE low (R313) keeps charging enabled with no firmware; INT/STAT open drain to 3V3.\n\nJ302 polarity follows Adafruit's design (pin 1 BAT-, pin 2 BAT+); meter-check each pack before first connection.\nNothing on this sheet is measured."
+	(text "USB-C, charger and battery (Rev A) - design notes\n\nUSB-C sink, USB 2.0, no PD: independent 5.1k Rd on CC1/CC2; TPD4E05U06 on D+, D-, CC1, CC2.\nCC sense: firmware reads CC1/CC2 via SAADC (ratio 0.107) and raises the BQ25620 input limit only on\na valid >= 1.5 A advertisement; SDP/unknown sources stay at 100 mA until USB enumeration.\n\nBQ25620 (SLUSEG2D): switching charger with NVDC power path, BC1.2 on D+/D-, I2C 0x6B on I2C1.\nPOR: ICHG 1040 mA +/-5.5% (0.98-1.10 A), VREG 4.200 V; watchdog expiry halves ICHG.\nPack: Adafruit 328 (2500 mAh, <= 1.2 A charge, 0-45 C charge, PCM 4.28 V / 2.30 V).\nPG drives the 3V3 enable (power_tree, Q203): USB present -> charging-only firmware mode.\nCE pulled high (R313): no charging until firmware has set IINDPM and the TS limits, then drives CE low;\nMCU reset releases CE. INT/STAT open drain to 3V3.\nTS: R309 10k, R310 open -> POR comparators HOT <= 45 C, COLD about 0 C (worst case, NTC +/-1%, B +/-1%).\n\nJ302 polarity follows Adafruit's design (pin 1 BAT-, pin 2 BAT+); meter-check each pack before first connection.\nNothing on this sheet is measured."
 		(exclude_from_sim no)
 		(at 228.6 177.8 0)
 		(effects
