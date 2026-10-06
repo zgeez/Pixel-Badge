@@ -28,5 +28,89 @@
     "page_layout_descr_file": ""
   },
   "sheets": [],
-  "text_variables": {}
+  "text_variables": {},
+  "erc": {
+    "erc_exclusions": [
+      [
+        "isolated_pin_label|1955800|1168400|148b54b9-e523-4ebc-97f4-6c70ef9604a0|00000000-0000-0000-0000-000000000000|/fefc8d4a-8637-4143-b210-9149e35f9884/00b5b2b1-95e1-4b24-8397-e1e574e55fe6||",
+        "Pending: BTN_ACTION connects to the User Interface sheet, not drawn yet. Remove when that sheet is drawn."
+      ],
+      [
+        "isolated_pin_label|1955800|1117600|34df1420-4b8d-45ef-8816-5813c368431d|00000000-0000-0000-0000-000000000000|/fefc8d4a-8637-4143-b210-9149e35f9884/00b5b2b1-95e1-4b24-8397-e1e574e55fe6||",
+        "Pending: BTN_MODE connects to the User Interface sheet, not drawn yet. Remove when that sheet is drawn."
+      ],
+      [
+        "isolated_pin_label|1955800|1092200|accd2313-df5e-4f5f-b2be-f4ab883719fc|00000000-0000-0000-0000-000000000000|/fefc8d4a-8637-4143-b210-9149e35f9884/00b5b2b1-95e1-4b24-8397-e1e574e55fe6||",
+        "Pending: IMU_CS_FB connects to the IMU sheet, not drawn yet. Remove when that sheet is drawn."
+      ],
+      [
+        "isolated_pin_label|1092200|1117600|6146b25c-7707-4014-96bf-98ae4a1f4d17|00000000-0000-0000-0000-000000000000|/fefc8d4a-8637-4143-b210-9149e35f9884/00b5b2b1-95e1-4b24-8397-e1e574e55fe6||",
+        "Pending: IMU_INT1 connects to the IMU sheet, not drawn yet. Remove when that sheet is drawn."
+      ],
+      [
+        "isolated_pin_label|1092200|1397000|a1c361e6-8a84-4aaa-a258-357cbe582447|00000000-0000-0000-0000-000000000000|/fefc8d4a-8637-4143-b210-9149e35f9884/00b5b2b1-95e1-4b24-8397-e1e574e55fe6||",
+        "Pending: IMU_INT2 connects to the IMU sheet, not drawn yet. Remove when that sheet is drawn."
+      ],
+      [
+        "isolated_pin_label|1092200|914400|e48571e8-97a5-4d5f-8808-ecbdbd25d853|00000000-0000-0000-0000-000000000000|/fefc8d4a-8637-4143-b210-9149e35f9884/00b5b2b1-95e1-4b24-8397-e1e574e55fe6||",
+        "Pending: IMU_SDO_FB connects to the IMU sheet, not drawn yet. Remove when that sheet is drawn."
+      ],
+      [
+        "isolated_pin_label|1092200|1193800|1c6221dc-468f-432a-becc-3be717ed90b0|00000000-0000-0000-0000-000000000000|/fefc8d4a-8637-4143-b210-9149e35f9884/00b5b2b1-95e1-4b24-8397-e1e574e55fe6||",
+        "Pending: MTX_ARM connects to the Matrix Column Drivers / Matrix Row Drivers and Safety sheet, not drawn yet. Remove when that sheet is drawn."
+      ],
+      [
+        "isolated_pin_label|1092200|1219200|41b0d7fc-e1dd-447a-9f6c-f184462f1d04|00000000-0000-0000-0000-000000000000|/fefc8d4a-8637-4143-b210-9149e35f9884/00b5b2b1-95e1-4b24-8397-e1e574e55fe6||",
+        "Pending: MTX_BLANK connects to the Matrix Column Drivers / Matrix Row Drivers and Safety sheet, not drawn yet. Remove when that sheet is drawn."
+      ],
+      [
+        "isolated_pin_label|1092200|1270000|d2a3dab8-a846-4f0a-9e84-06d1b0f1b71b|00000000-0000-0000-0000-000000000000|/fefc8d4a-8637-4143-b210-9149e35f9884/00b5b2b1-95e1-4b24-8397-e1e574e55fe6||",
+        "Pending: MTX_LAT connects to the Matrix Column Drivers / Matrix Row Drivers and Safety sheet, not drawn yet. Remove when that sheet is drawn."
+      ],
+      [
+        "isolated_pin_label|1092200|1295400|1b0bf870-938c-471d-ad3e-673661283b72|00000000-0000-0000-0000-000000000000|/fefc8d4a-8637-4143-b210-9149e35f9884/00b5b2b1-95e1-4b24-8397-e1e574e55fe6||",
+        "Pending: MTX_MISO connects to the Matrix Column Drivers / Matrix Row Drivers and Safety sheet, not drawn yet. Remove when that sheet is drawn."
+      ],
+      [
+        "isolated_pin_label|1092200|1320800|27f710ae-6b30-420f-9b41-4fd2f9588f93|00000000-0000-0000-0000-000000000000|/fefc8d4a-8637-4143-b210-9149e35f9884/00b5b2b1-95e1-4b24-8397-e1e574e55fe6||",
+        "Pending: MTX_MOSI connects to the Matrix Column Drivers / Matrix Row Drivers and Safety sheet, not drawn yet. Remove when that sheet is drawn."
+      ],
+      [
+        "isolated_pin_label|1092200|1143000|edd3d2f5-0771-4676-9337-18763792a444|00000000-0000-0000-0000-000000000000|/fefc8d4a-8637-4143-b210-9149e35f9884/00b5b2b1-95e1-4b24-8397-e1e574e55fe6||",
+        "Pending: MTX_SAFE_SENSE connects to the Matrix Column Drivers / Matrix Row Drivers and Safety sheet, not drawn yet. Remove when that sheet is drawn."
+      ],
+      [
+        "isolated_pin_label|1422400|1651000|2b6a9a2f-7719-40d6-8963-f3b5858c1882|00000000-0000-0000-0000-000000000000|/fefc8d4a-8637-4143-b210-9149e35f9884/00b5b2b1-95e1-4b24-8397-e1e574e55fe6||",
+        "Pending: MTX_SCK connects to the Matrix Column Drivers / Matrix Row Drivers and Safety sheet, not drawn yet. Remove when that sheet is drawn."
+      ],
+      [
+        "isolated_pin_label|1092200|1092200|a05a8ba3-cbaf-44ae-823a-1911fb314eac|00000000-0000-0000-0000-000000000000|/fefc8d4a-8637-4143-b210-9149e35f9884/00b5b2b1-95e1-4b24-8397-e1e574e55fe6||",
+        "Pending: NFC_FD connects to the NFC sheet, not drawn yet. Remove when that sheet is drawn."
+      ],
+      [
+        "isolated_pin_label|1955800|1016000|ce5da3e2-0420-4e3a-aad4-b809191ae9dd|00000000-0000-0000-0000-000000000000|/fefc8d4a-8637-4143-b210-9149e35f9884/00b5b2b1-95e1-4b24-8397-e1e574e55fe6||",
+        "Pending: NFC_PWR connects to the NFC sheet, not drawn yet. Remove when that sheet is drawn."
+      ],
+      [
+        "isolated_pin_label|1955800|1422400|3c8ccb0a-48c6-499a-83f1-602f26e7eed4|00000000-0000-0000-0000-000000000000|/fefc8d4a-8637-4143-b210-9149e35f9884/00b5b2b1-95e1-4b24-8397-e1e574e55fe6||",
+        "Pending: NFC_SCL connects to the NFC sheet, not drawn yet. Remove when that sheet is drawn."
+      ],
+      [
+        "isolated_pin_label|1955800|1371600|aeb9a7f4-ad8b-4f63-88e6-da492b9e4fb5|00000000-0000-0000-0000-000000000000|/fefc8d4a-8637-4143-b210-9149e35f9884/00b5b2b1-95e1-4b24-8397-e1e574e55fe6||",
+        "Pending: NFC_SDA connects to the NFC sheet, not drawn yet. Remove when that sheet is drawn."
+      ],
+      [
+        "isolated_pin_label|1092200|685800|66495085-acc6-498b-83ce-9746cf12a240|00000000-0000-0000-0000-000000000000|/fefc8d4a-8637-4143-b210-9149e35f9884/00b5b2b1-95e1-4b24-8397-e1e574e55fe6||",
+        "Pending: PDM_CLK connects to the Microphone sheet, not drawn yet. Remove when that sheet is drawn."
+      ],
+      [
+        "isolated_pin_label|1092200|711200|0af30889-00f9-4b51-85ab-3efd6e3c4e62|00000000-0000-0000-0000-000000000000|/fefc8d4a-8637-4143-b210-9149e35f9884/00b5b2b1-95e1-4b24-8397-e1e574e55fe6||",
+        "Pending: PDM_DIN connects to the Microphone sheet, not drawn yet. Remove when that sheet is drawn."
+      ],
+      [
+        "isolated_pin_label|1955800|1219200|341db289-e13c-4116-9b88-53f449deb456|00000000-0000-0000-0000-000000000000|/fefc8d4a-8637-4143-b210-9149e35f9884/00b5b2b1-95e1-4b24-8397-e1e574e55fe6||",
+        "Pending: STATUS_LED connects to the User Interface sheet, not drawn yet. Remove when that sheet is drawn."
+      ]
+    ]
+  }
 }

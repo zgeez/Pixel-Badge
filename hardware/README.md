@@ -1,8 +1,8 @@
 # Hardware
 
 KiCad 10.0.6 project for the Rev A badge PCB. Schematic capture is in
-progress: the regulators/power-tree and USB/charger/battery sheets are drawn;
-the other sheets are still empty. See [docs/hardware.md](../docs/hardware.md) for the architecture.
+progress: the regulators/power-tree, USB/charger/battery, MCU module and debug
+sheets are drawn; the other sheets are still empty. See [docs/hardware.md](../docs/hardware.md) for the architecture.
 
 ## Layout
 
@@ -44,7 +44,10 @@ make hardware
 
 ERC errors and warnings both fail the check. A violation that has been reviewed
 and accepted is excluded in KiCad with a comment explaining why; it is then
-not counted. `python scripts/ci/check_hardware.py --self-test` confirms the
+not counted. While sheets are still being drawn, a label whose other end
+belongs on an undrawn sheet is excluded with a "Pending" comment naming that
+sheet; the exclusion is removed when the sheet is drawn.
+`python scripts/ci/check_hardware.py --self-test` confirms the
 check fails on an injected violation. The script requires KiCad 10.0.6 and
 finds `kicad-cli` through `KICAD_CLI`, `PATH`, or the default Windows install
 path. The check is local only for now; a CI job will be added once the
