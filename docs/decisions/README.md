@@ -9,15 +9,17 @@ in the other documents in `docs/` and are marked TBD or provisional.
 1. Copy [template.md](template.md) to `NNNN-short-title.md` (next number,
    zero-padded).
 2. Fill it in with status `Proposed` and open a pull request.
-3. Change the status to `Accepted` when approved and merged.
+3. When the owner approves the decision, change the status to `Accepted` in
+   the same pull request; the decision takes effect when that pull request is
+   merged.
 4. Do not rewrite accepted ADRs; supersede them with a new ADR and update the
    old one's status.
 
 ## Index
 
 The records below capture the owner-selected Rev A scope and architecture.
-They were accepted when the pull request that introduced them was approved and
-merged, following the process above. Acceptance records a design choice, not
+Each was approved by the owner in the pull request that introduced it and
+takes effect when that pull request is merged, following the process above. Acceptance records a design choice, not
 measured validation; prototype-dependent values remain provisional within each
 decision.
 
