@@ -201,7 +201,8 @@ Acceptance criteria: TBD.
 
 ### 7. IMU
 
-Purpose: verify orientation and motion response driving the fluid simulation.
+Purpose: verify orientation and motion response driving the fluid simulation
+and the display rotation.
 
 The ICM-42688-P I²C driver has passed only build and emulator tests. On real
 hardware (a breakout before Rev A where possible, then Rev A), verify: I²C
@@ -210,6 +211,11 @@ configuration read-back including the I²C-mode settings, accelerometer and
 gyroscope readings against known orientations and rotation, the INT1
 data-ready interrupt at the configured rate, and wake-on-motion once
 implemented. Record any I²C failure that triggers the SPI fallback.
+
+Display rotation: in all four 90° orientations the name and animation views
+turn upright without visible flicker or repeated flipping on small movements
+or when the badge lies flat, and QR mode keeps the orientation it entered
+with until it is left.
 
 Acceptance criteria: TBD.
 
@@ -263,8 +269,18 @@ Acceptance criteria: TBD.
 
 ### 11. Mechanical wearability
 
-Purpose: verify attachment retention on clothing, comfort, thickness, and that
-the battery is not mechanically stressed.
+Purpose: verify attachment retention, comfort, thickness, and that the battery
+is not mechanically stressed, for both mountings and both orientations
+([ADR 0009](decisions/0009-dual-orientation-dual-mounting.md)):
+
+- Magnet mount, landscape and portrait, on a thin shirt, a blazer and a
+  jacket: walking, sitting, bending; record the garment and any detachment.
+- Lanyard, landscape and portrait hanging: the badge hangs level, the
+  attachment point does not cover USB-C, the power switch, the NFC coil or
+  the antenna, and a pull on the lanyard does not load the PCB.
+- Assembled thickness against the regional targets: ≈ 12 mm over the LED
+  field, ≈ 13.5 mm over the electronics region, ≈ 14.5 mm at USB-C and
+  ≈ 16.5 mm at the SWD header (local edge exceptions).
 
 Acceptance criteria: TBD.
 
