@@ -27,6 +27,8 @@ design opens on any machine without local path changes.
 | Symbol `ICM-42688-P` (footprint: KiCad `LGA-14_3x2.5mm_P0.5mm_LayoutBorder3x4y`) | Drawn from TDK DS-000347 Rev 1.2 Table 9; KiCad footprint pad centres (±1.1625, ±0.9125 mm) and numbering checked against §10.2 |
 | Symbol `NT3H2111W0FHKH`, footprint `NXP_XQFN-8_SOT902-3` | Drawn from NXP NT3H2111_2211 Rev. 3.6: pins from Table 3; lands from the reflow footprint (Figure 32): 0.40 × 0.22 mm, paste 0.025 mm inside, no land in the 0.5 mm centre area |
 | Footprint `Knowles_LGA-5_3.5x2.65mm_Hole0.8mm` | KiCad Knowles LGA-5 (pads and ring checked against the SPH0641LM4H-1 Rev D land pattern) with the acoustic hole enlarged from 0.5 to 0.8 mm (Knowles: 0.6–1.0 mm) |
+| Symbol `TLC59283` (footprint: KiCad `Texas_RGE0024C_VQFN-24-1EP_4x4mm_P0.5mm_EP2.1x2.1mm_ThermalVias`) | Drawn from TI SBVS199C Table 4-1 (RGE pin numbers); KiCad footprint is TI's RGE0024C package |
+| Symbol `SN74LVC1G123` | Single-unit symbol from TI SCES586E Table 4-1 (DCT SSOP-8); KiCad's version splits the supply pins into a second unit |
 | Footprint `SW_XUNPU_TS-1088` | From the XUNPU TS-1088 PCB welding drawing: two 1.05 × 2.00 mm pads, 3.40/5.50 mm |
 | Symbol `BQ25620`, footprint `Texas_RYK0018A` | Drawn from TI SLUSEG2D: pins and types from Table 6-1 (BQ25620 column: pin 4 D−, pin 5 D+); pads from the RYK0018A land pattern example (drawing 4226526/A 02/2021), including the four L-shaped corner pads (two pads each), body 3.0 × 2.5 mm |
 | Footprint `L_Coilcraft_XEL4030` | Coilcraft Document 1321-3 recommended land pattern (0.98 × 3.4 mm pads, 2.37 mm centres) |
