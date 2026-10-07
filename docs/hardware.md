@@ -125,7 +125,7 @@ Selection is not validation: nothing below has been measured on Rev A.
 | 32.768 kHz crystal | Micro Crystal CM7V-T1A, 9 pF | Selected; drawn |
 | SWD header | ARM Cortex 10-pin, 2 × 5, 1.27 mm SMD (hanxia HX PZ1.27-2x5P TP), for the nRF5340 DK debug out | Selected; drawn; footprint checked against the vendor land pattern |
 | USB ESD | TI TPD4E05U06 (D+, D−, CC1, CC2) | Selected |
-| Battery | Adafruit 328, protected 2500 mAh LiPo; JST B2B-PH-SM4-TB header | Selected; header pin 1 = BAT−, pin 2 = BAT+ (Adafruit convention) |
+| Battery | Adafruit 328, protected 2500 mAh LiPo; JST S2B-PH-K-S(LF)(SN) through-hole side-entry header, inserted from the rear and hand-soldered from the front by default | Selected; header pin 1 = BAT−, pin 2 = BAT+ (Adafruit convention) |
 | USB-C receptacle | HRO TYPE-C-31-M-12 (16-pin USB 2.0) | Selected; drawn |
 | Buttons | 2 × XUNPU TS-1088-AR02016 (top-actuated, 2.0 mm) | Selected; drawn; placement per ADR 0008 |
 | Power switch | C&K PCM12SMTR (right-angle SPDT slide) | Selected; drawn |
