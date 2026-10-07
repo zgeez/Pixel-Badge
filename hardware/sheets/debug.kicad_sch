@@ -6,9 +6,10 @@
 	(paper "A3")
 	(title_block
 		(title "Debug")
+		(date "2026-10-07")
 		(rev "A")
 		(comment 1 "Smart LED Badge Rev A")
-		(comment 2 "Draft: schematic capture in progress, not for fabrication")
+		(comment 2 "Schematic frozen for layout after review 2026-10-07; not for fabrication until the release gate")
 	)
 	(lib_symbols
 		(symbol "Connector:Conn_ARM_JTAG_SWD_10"

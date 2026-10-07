@@ -21,7 +21,8 @@ Board: ____  Serial/batch: ____  Firmware commit: ____  Date: ____
 - [ ] First power from current-limited bench supply
 - [ ] Each rail voltage
 - [ ] Idle current
-- [ ] Charger behavior: no charging until firmware drives CE low; reset TS
+- [ ] Charger behavior: no charging until firmware drives CHG_EN high, in MCU
+      reset, or with the logic rail off; reset TS
       thresholds stop charging below about 0 °C and above 45 °C
 - [ ] CC1/CC2 each have separate 5.1 kΩ Rd; C-to-C VBUS/charging attachment in
       both orientations, including switch-off and battery-absent states

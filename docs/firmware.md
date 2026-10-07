@@ -108,7 +108,7 @@ application-core devicetree follows the Rev A schematic:
 - 32.768 kHz crystal with the internal 9 pF load; DC/DC on VREGMAIN and
   VREGRADIO.
 
-Board signals without a Zephyr driver (charger CE/INT/STAT, power switch,
+Board signals without a Zephyr driver (charger enable CHG_EN, INT, STAT, power switch,
 NFC power and field detect, LED-rail enable, VBAT measurement switch) are
 `zephyr,user` GPIOs. The network core owns no pins. The build scripts pass
 `BOARD_ROOT` so sysbuild finds the board, and CI builds both cores:

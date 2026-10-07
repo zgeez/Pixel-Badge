@@ -1,7 +1,7 @@
 # Hardware
 
-KiCad 10.0.6 project for the Rev A badge PCB. Schematic capture is in
-progress: all sheets are drawn; schematic review and freeze are next. See [docs/hardware.md](../docs/hardware.md) for the architecture.
+KiCad 10.0.6 project for the Rev A badge PCB. The schematic is frozen for
+layout (review 2026-10-07); later changes go through a recorded decision. See [docs/hardware.md](../docs/hardware.md) for the architecture.
 
 ## Layout
 

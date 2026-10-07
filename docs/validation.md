@@ -78,7 +78,7 @@ state) and ON, at several battery voltages: it must stay ≤ 1.2 A (the pack
 limit), with the input limit set as the policy requires. Record charger and
 board-NTC temperatures and any thermal regulation during a full charge; record
 the empty-to-full time only as a measurement. With the charger at its reset
-settings (CE driven low by a test build that does not configure it), and
+settings (CHG_EN driven high by a test build that does not configure it), and
 again after an I²C watchdog expiry with firmware's settings, drive the TS pin with a resistance decade or a heated/cooled NTC and check
 that charging stops below about 0 °C and above 45 °C board temperature; then
 repeat with firmware's thresholds.
@@ -103,9 +103,14 @@ charge inhibit after plug-in until the readings have settled for a measured
 time; or a sensing change (an NTC bonded to the pack, or a pack with a
 thermistor).
 Check that charging stays off from
-plug-in until firmware drives CE low, that an MCU reset stops charging, and
-measure the input current on an SDP host before firmware has configured the
-charger (≤ 100 mA).
+plug-in until firmware drives CHG_EN high, that an MCU reset stops charging,
+and that charging stays off with USB present and the logic rail held off
+(R209 link open or EN_3V3 held low); measure the input current on an SDP host
+before firmware has configured the charger (≤ 100 mA).
+VBUS attach (USB 2.0 inrush requirement, power.md): on the same source,
+capture attach current and VBUS droop for the badge and for a 10 µF ∥ 44 Ω
+reference load; the badge must not draw more attach charge. If it does,
+fit the documented C402/R401 values and repeat.
 Measure the average battery current with all pixels lit at the configured
 peak current and maximum brightness at the lowest operating VBAT and at the
 highest VLED setting; it must stay ≤ 1.5 A (the cell's continuous rating).
@@ -319,9 +324,10 @@ before logic is affected), watchdog recovery, and settings/firmware recovery.
 
 Required battery-measurement and load-shed procedure:
 
-- Review the selected pack/protector and regulator limits, divider/switch
-  calculations, ADC configuration/error budget and **PROPOSED** threshold,
-  hysteresis, sampling and reaction-time policy before schematic freeze.
+- The pack/protector and regulator limits, divider/switch calculations, ADC
+  configuration/error budget and **PROPOSED** threshold policy were reviewed at
+  the schematic freeze ([power.md](power.md#battery-state-measurement)); this
+  procedure measures them.
 - With a current-limited battery simulator, sweep the intended VBAT range and
   compare ADC readings with a calibrated meter at VBAT/sense test points. Test
   loaded and relaxed states, USB present/absent, startup and switch-off leakage/
