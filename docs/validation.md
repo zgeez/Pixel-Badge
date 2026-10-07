@@ -103,6 +103,11 @@ Purpose: verify refresh rate, row timing, blanking, absence of visible flicker
 or ghosting, and that the matrix switches off if the scan stalls.
 
 Planned method: logic analyzer/oscilloscope on drive signals; camera checks.
+Measure the scan-stall timeout: stop MTX_LAT and time SAFE rising after the last
+latch, at room temperature and at the hot and cold ends of use. The calculated
+bound is 0.76–1.41 ms (TI's 1.0–1.1 ms at 10 kΩ / 0.1 µF, 1% resistor, X7R ±10%
+and ±15% over temperature); capacitor DC bias only shortens it. The longest value
+is the single-row fault exposure to compare with the LED's pulse rating.
 
 Acceptance criteria: TBD.
 

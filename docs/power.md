@@ -237,14 +237,17 @@ I_column,max = 1.08 × the R_IREF setting (TLC59283 IOLC 32.9–37.7 mA at a
 SBVS199C Figure 5-9, and the logic load are checked at bring-up). Holding
 I_BAT ≤ 1.5 A gives `I_column ≤ 0.1 V·A / VLED,max`:
 
-| VLED maximum | Column-current cap | R_IREF (E96, 1%) |
+| VLED maximum | Nominal column-current setting | R_IREF (E96, 1%) |
 |---|---|---|
 | 5.33 V (5.2 V trim, VREF high) | 18.0 mA | 2.94 kΩ |
 | 4.89 V (4.77 V setting, VREF high) | 19.8 mA | 2.67 kΩ |
 
 A 25 mA cap would allow 1.8–2.0 A, so it does not protect the cell. Rev A uses
-the first row: **18.0 mA, R_IREF 2.94 kΩ 1%**, which holds over the full VLED
-trim range. The final peak current at or below that cap remains
+the first row: **18.0 mA nominal, R_IREF 2.94 kΩ 1%**. With driver and resistor
+tolerance the column current can reach about 19.4 mA (1.08 × 18.0 mA at 25 °C),
+which is the value the limit above uses, so it holds over the full VLED trim range. Each driver's R_IREF has a fitted 0 Ω in series, so adjustment can
+only raise the resistance and lower the current; nothing may be fitted in
+parallel with it. The final peak current at or below that setting remains
 prototype-dependent.
 
 ## Battery-state measurement
