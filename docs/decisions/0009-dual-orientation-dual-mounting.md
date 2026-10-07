@@ -1,6 +1,6 @@
 # 0009: Portrait and landscape wear; magnetic and lanyard mounting
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-07
 - Deciders: Project owner
 

@@ -1,6 +1,6 @@
 # 0010: Single-sided assembly with all components on the front
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-07
 - Deciders: Project owner
 
