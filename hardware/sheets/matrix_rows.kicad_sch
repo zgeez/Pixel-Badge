@@ -3598,7 +3598,7 @@
 			(embedded_fonts no)
 		)
 	)
-	(text "Matrix row drivers and scan-stall safety (Rev A) - design notes\n\nRow chain: TLC chain SOUT (MTX_MISO), MTX_SCK, MTX_LAT and SAFE cross into the VLED domain through U701\n(SN74LVC8T245, VCCA 3V3, VCCB VLED, DIR high = A to B). Its VCC isolation and Ioff keep 3V3 signals off the\nunpowered 595s when the LED rail is off. 4 x SN74HC595 on VLED (VCC 2-6 V) shift 32 row bits behind the 32 column\nbits; one LAT edge updates rows and columns together. QA..QH drive AO3401A gates (S = VLED, D = ROWn) with 10k\npull-ups to VLED, so rows are off whenever the 595 outputs are Hi-Z. Row pull-downs are DNP options.\n\nScan-stall safety (REQ-L5), CPU-independent: U706 SN74LVC1G123 is retriggered by every MTX_LAT rising edge\n(A low, CLR = MTX_ARM). Q stays high while latches keep arriving. tw: TI spec 1.0-1.1 ms at Rext 10k / Cext 0.1 uF; with R 1%, C709 X7R\n+/-10% initial and +/-15% over temperature 0.76-1.41 ms (DC bias only shortens it); measure on Rev A.\nThe 1G123 has only a Q output, so U707 inverts it: SAFE = NOT Q (net MTX_SAFE_SENSE, read by P0.21).\nSAFE high (stall, reset, MTX_ARM low) forces BLANK_TLC via U708 and tri-states the 595 outputs (OE_V), so all\nrows and columns turn off. MTX_BLANK pulled up and MTX_ARM pulled down keep the matrix dark with the MCU off.\nResidual: a firmware fault that keeps latching the same row is not caught here (column cap limits current).\nNothing measured."
+	(text "Matrix row drivers and scan-stall safety (Rev A) - design notes\n\nRow chain: TLC chain SOUT (MTX_MISO), MTX_SCK, MTX_LAT and SAFE cross into the VLED domain through U701\n(SN74LVC8T245, VCCA 3V3, VCCB VLED, DIR high = A to B). Its VCC isolation and Ioff keep 3V3 signals off the\nunpowered 595s when the LED rail is off. 4 x SN74HC595 on VLED (VCC 2-6 V) shift 32 row bits behind the 32 column\nbits; one LAT edge updates rows and columns together. QA..QH drive AO3401A gates (S = VLED, D = ROWn) with 10k\npull-ups to VLED, so rows are off whenever the 595 outputs are Hi-Z. Row pull-downs are DNP options.\n\nScan-stall safety (REQ-L5), CPU-independent: U706 SN74LVC1G123 is retriggered by every MTX_LAT rising edge\n(A low, CLR = MTX_ARM). Q stays high while latches keep arriving. tw: TI guarantees 1.0-1.1 ms at Rext 10k / Cext 0.1 uF (Switching Characteristics 5.8/5.9, VCC 3.3 V,\n-40 to 125 C). Scaling with R (1%) and C709 (X7R +/-10%, +/-15% temperature) as tw ~ R x C gives 0.76-1.41 ms\n(DC bias only shortens it); measure on Rev A.\nThe 1G123 has only a Q output, so U707 inverts it: SAFE = NOT Q (net MTX_SAFE_SENSE, read by P0.21).\nSAFE high (stall, reset, MTX_ARM low) forces BLANK_TLC via U708 and tri-states the 595 outputs (OE_V), so all\nrows and columns turn off. R705 pulls OE_V up to VLED, so the 595s stay off if U701 isolates\n(3V3 gone while VLED is still up). MTX_BLANK pulled up and MTX_ARM pulled down keep the matrix dark with the MCU off.\nResidual: a firmware fault that keeps latching the same row is not caught here (column cap limits current).\nNothing measured."
 		(exclude_from_sim no)
 		(at 50.8 360.68 0)
 		(effects
@@ -27961,6 +27961,162 @@
 				(path "/fefc8d4a-8637-4143-b210-9149e35f9884/81d3bb65-b627-4404-95d7-5959776da8f4"
 					(reference "R701")
 					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:R")
+		(at 101.6 139.7 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "a48f6cd0-ea2d-4d73-8efe-beea75381361")
+		(property "Reference" "R705"
+			(at 104.14 138.43 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "100k"
+			(at 104.14 140.97 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
+			(at 101.6 139.7 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 101.6 139.7 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Resistor"
+			(at 101.6 139.7 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer" "UNI-ROYAL(Uniroyal Elec)"
+			(at 101.6 139.7 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MPN" "0402WGF1003TCE"
+			(at 101.6 139.7 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC" "C25741"
+			(at 101.6 139.7 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Note" "OE_V pull-up: keeps the 595 outputs off (Hi-Z, rows pulled off) when U701 is in VCC isolation (3V3 gone while VLED is still up)"
+			(at 101.6 139.7 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "a0f46dc8-f611-441a-8d80-1bb1d038b2a5")
+		)
+		(pin "2"
+			(uuid "4f5c853c-6ae8-4192-8a92-99f6c4cded1e")
+		)
+		(instances
+			(project "smart-led-badge"
+				(path "/fefc8d4a-8637-4143-b210-9149e35f9884/81d3bb65-b627-4404-95d7-5959776da8f4"
+					(reference "R705")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(wire
+		(pts
+			(xy 101.6 135.89) (xy 101.6 133.35)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "2f48399f-ee81-4eb3-9409-34764e9d5dd1")
+	)
+	(label "OE_V"
+		(at 101.6 133.35 90)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "5c1fb137-e698-4a33-b42a-c01c9a876c58")
+	)
+	(wire
+		(pts
+			(xy 101.6 143.51) (xy 101.6 146.05)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "7614260e-69ea-4586-9d62-9ac9412883b1")
+	)
+	(global_label "VLED"
+		(shape passive)
+		(at 101.6 146.05 270)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "8a10ae6e-9b61-4138-9d96-3e9c9048261f")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 101.6 146.05 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
 				)
 			)
 		)
