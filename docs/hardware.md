@@ -2,9 +2,8 @@
 
 Status: **schematic capture in progress**. Rev A architecture is defined; the
 KiCad project lives in [`hardware/`](../hardware/README.md). The regulators/
-power-tree, USB/charger/battery, MCU module, debug, user-interface, IMU,
-microphone and NFC sheets are drawn; the matrix and test-point sheets are not,
-and no layout exists yet.
+schematic sheets are all drawn (schematic review and freeze pending), and no
+layout exists yet.
 Items marked provisional may change. Electrical values come from primary datasheets and are recorded in
 [references.md](references.md) as parts are confirmed.
 
@@ -43,7 +42,11 @@ scheme is not the badge design.
 - **Matrix:** 32×32 white SMD LEDs, 2.0 mm pitch (provisional, pending QR
   validation), 1:32 multiplexing (provisional). Two TI TLC59283 constant-current
   column drivers and high-side row switches (provisional); refresh timed by nRF5340
-  peripherals; drive current adjustable on Rev A.
+  peripherals; column current set by R_IREF to 18.0 mA nominal (up to about
+  19.4 mA with driver and resistor tolerance at 25 °C, the figure the battery
+  limit uses) and adjustable downward only. If the scan stops, a retriggerable
+  one-shot blanks the columns and disables the rows without the CPU, after
+  0.76–1.41 ms by calculation (to be measured).
 - **NFC:** external passive tag (NXP NT3H2111W0FHKH, XQFN-8, NTAG I²C plus) so the
   link works with the badge off or the battery empty; on its own I²C bus with a
   firmware-switched supply. PCB coil about 30 × 25 mm, 6 turns, designed per NXP
@@ -96,8 +99,8 @@ Selection is not validation: nothing below has been measured on Rev A.
 | Charger / power path | TI BQ25620 (switching, I²C, BC1.2) | Selected; drawn; ≈ 1 A charge |
 | Logic rail (3.3 V) | TI TPS63802, Murata DFE201612E-R47M (0.47 µH) | Selected; drawn |
 | LED rail | TI TPS61023, Coilcraft XEL4030-102ME (1.0 µH) | Selected; VLED setting provisional |
-| Column drivers | 2 × TI TLC59283RGER (QFN-24) | Selected; IREF/peak current prototype-dependent |
-| Row control | 4 × SN74HC595, SN74LVC8T245 translator, 32 × AO3401A, SN74LVC1G123 + SN74LVC1G32 safety blanking | Selected |
+| Column drivers | 2 × TI TLC59283RGER (QFN-24), R_IREF 2.94 kΩ + series 0 Ω option | Selected; drawn; 18.0 mA nominal setting (about 19.4 mA worst case at 25 °C); peak current prototype-dependent |
+| Row control | 4 × SN74HC595 (OE pulled up to VLED), SN74LVC8T245 translator, 32 × AO3401A with 10 kΩ gate pull-ups, SN74LVC1G123 + SN74LVC1G04 + SN74LVC1G32 scan-stall blanking | Selected; drawn |
 | NFC tag | NXP NT3H2111W0FHKH (XQFN-8) | Selected; drawn; footprint per NXP's reflow footprint; coil tuning prototype-dependent |
 | IMU | TDK ICM-42688-P on I²C | Conditional (real-part verification pending); drawn |
 | Microphone | Knowles SPH0641LM4H-1, 0.8 mm PCB acoustic hole | Conditional (lifecycle check); drawn |
@@ -109,7 +112,7 @@ Selection is not validation: nothing below has been measured on Rev A.
 | Buttons | 2 × XUNPU TS-1088-AR02016 (top-actuated, 2.0 mm) | Selected; drawn; placement per ADR 0008 |
 | Power switch | C&K PCM12SMTR (right-angle SPDT slide) | Selected; drawn |
 | Status LED | Red 0603 (KT-0603R) with 1 kΩ | Selected; drawn |
-| Matrix LED | — | Prototype gate |
+| Matrix LED | 1024 × KT-0603W (0603 white), 2.0 mm pitch | Candidate; drawn; part and pitch are a prototype gate |
 
 ## Rev A requirements
 

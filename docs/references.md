@@ -129,6 +129,13 @@ provisional parts do not imply final part selection or hardware validation.
 | PCM12SMTR (power switch) | SPDT terminal functions and PC mounting pattern | C&K PCM series | 27 Aug 2019 |
 | TS-1088-AR02016 (buttons) | Body, height 2.0 mm, 160 gf; PCB welding drawing (pads 1.05 × 2.00 mm, 3.40/5.50 mm) | XUNPU TS-1088 drawing | — |
 | KT-0603R (status LED) | Red 0603, Vf 1.8–2.4 V at 20 mA (distributor listing) | Hubei KENTO listing (LCSC C2286) | — |
+| TLC59283 RGE package | Pin functions (Table 4-1, RGE column), thermal pad not connected inside, RGE0024C outline and land pattern (4224376/C) | TI TLC59283, SBVS199C | Rev.C, January 2024 |
+| SN74LVC8T245 (row-chain translator) | Function table (OE low, DIR high = A to B), VCC isolation below 100 mV, Ioff, unused inputs | TI SN74LVC8T245, SCES584D | Rev.D, May 2026 |
+| SN74HC595 (row registers) | Pinout, VCC 2–6 V, output drive at 4.5 V, timing | TI SN74HC595, SCLS041J | Rev.J, October 2021 |
+| SN74LVC1G123 (scan-stall monostable) | Pin functions (Q output only), B rising-edge retrigger with A low and CLR high, tw 1.0–1.1 ms guaranteed at Rext 10 kΩ / Cext 0.1 µF (Switching Characteristics §§5.8–5.9, MIN/MAX at VCC 3.3 V ± 0.3 V, −40 to 125 °C) | TI SN74LVC1G123, SCES586E | Rev.E, March 2024 |
+| SN74LVC1G04 / SN74LVC1G32 (SAFE inverter, BLANK OR) | DBV pin functions | TI SCES214AF / SCES219W | October 2025 / August 2026 |
+| 4D03WGJ0103T5E (gate pull-ups) | 4 × 10 kΩ isolated, convex terminals, 0603 × 4 | UNI-ROYAL chip resistor array specification | — |
+| KT-0603W (matrix LED candidate) | White 0603, Vf 2.6–3.1 V at 5 mA (distributor listing; no pulse rating) | Hubei KENTO listing (LCSC C2290) | — |
 | AO3401A / AO3400A | Row and VBAT high-side switch; VBAT and CC-sense N-MOSFETs; IDSS, VGS(th), RDS(on), SOT-23 pinout | Alpha & Omega AO3401A and AO3400A datasheets | Rev.3.1 (December 2023 / July 2023) |
 | MLZ1608M100WT000 (module DC/DC inductors) | 10 µH ±20% (2 MHz), DCR 1.05 Ω ±30%; Isat 90 mA max (current at which inductance has fallen by up to 50%); Itemp 250 mA typ, a reference value for a 20 °C rise, not a rating; inductance vs DC bias curve | TDK *Inductors for decoupling circuits, Multilayer ferrite, MLZ series, MLZ1608 type* | 20201224 |
 | CM7V-T1A 32.768 kHz, 9 pF (selected crystal) | CL, RS, C0, drive level against the Raytac crystal specification | Micro Crystal CM7V-T1A datasheet | Version 8.0, 10.2016 |

@@ -63,7 +63,7 @@ flowchart LR
 |---|---|---|
 | MCU | Raytac MDBT53-P1M (nRF5340), external 32.768 kHz crystal | Selected |
 | Display | 32×32 white SMD LEDs, binary pixels, discrete global brightness levels | Pitch 2.0 mm and 1:32 multiplexing provisional pending prototype testing |
-| Matrix drive | 2 × TLC59283 constant-current column sinks; SN74HC595 row registers behind an SN74LVC8T245 translator driving AO3401A high-side row switches; refresh timed by hardware peripherals; monostable + OR gate force blanking if the scan stalls | Parts selected; peak current and IREF prototype-dependent |
+| Matrix drive | 2 × TLC59283 constant-current column sinks; SN74HC595 row registers behind an SN74LVC8T245 translator driving AO3401A high-side row switches; refresh timed by hardware peripherals; a retriggerable monostable, inverter and OR gate force blanking and turn the rows off if the scan stalls | Parts selected and drawn; 18.0 mA nominal column setting (about 19.4 mA worst case); peak current prototype-dependent |
 | BLE | Module antenna at a board edge/corner; configuration via companion app | Selected |
 | NFC | External passive NFC tag (NXP NT3H2111W0FHKH, XQFN-8) with PCB coil on its own switched I²C bus; public RF reads, protected RF writes, MCU I²C updates | Part selected; coil tuning and provisioning bytes provisional |
 | Sensors | TDK ICM-42688-P 6-axis IMU on I²C with interrupts (project I²C driver; SPI fallback provided); Knowles SPH0641LM4H-1 PDM microphone | IMU conditional on real-part verification; microphone conditional on lifecycle check |

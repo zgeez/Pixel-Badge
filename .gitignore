@@ -15,6 +15,7 @@ fp-info-cache
 *.lck
 \#auto_saved_files#
 _autosave-*
+.history/
 
 # Fabrication outputs are CI/release artifacts, not sources
 *.gbr
