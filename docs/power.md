@@ -31,15 +31,19 @@ for Rd ±10%; tSinkAdj 60 ms; BC1.2 detection by the charger on D+/D−):
 | USB suspended | Suspend current |
 
 The BQ25620 runs BC1.2 detection itself at plug-in and sets 500 mA for an SDP
-or unknown adapter. Its CE input is pulled up to 3V3, so it does not charge
-until firmware has configured it: firmware sets IINDPM to 100 mA, reads the
-detection result, sets the temperature thresholds and only then drives CE low.
-Until then the input carries the logic load only (the LED rail is held off),
-not charge current; that this stays below 100 mA is checked at bring-up. An
-MCU reset releases CE and stops charging. If the charger's I²C watchdog
-expires, it re-enables charging at half ICHG; it does not reset IINDPM or the
-temperature thresholds (SLUSEG2D §8.6), and both the reset and the firmware
-thresholds stay within the cell's range (below).
+or unknown adapter. Its CE input is pulled up to SYS (R313) and pulled low only
+through Q303 while the MCU drives CHG_EN (P0.29) high; R316 holds CHG_EN low
+otherwise. The charger therefore does not charge until firmware has configured
+it (IINDPM 100 mA, detection result read, temperature thresholds set, then
+CHG_EN high), and it stops charging whenever the MCU is in reset, unpowered or
+without 3V3, for example after a logic-rail failure. SYS is present whenever
+the battery or USB is, and CE is rated to 6 V. Until charging is enabled the
+input carries the logic load only (the LED rail is held off); that this stays
+below 100 mA is checked at bring-up. If the charger's I²C watchdog expires, it
+re-enables charging at half ICHG; it does not reset IINDPM or the temperature
+thresholds (SLUSEG2D §8.6), so firmware's thresholds stay in force. The reset
+thresholds (below) reach a COLD limit as low as −1.5 °C in the worst case, so
+they are never relied on: firmware sets its own before enabling charging.
 
 Firmware holds 100 mA until enumeration or a valid CC advertisement. It samples
 CC1 and CC2 at least every 20 ms while VBUS is present, uses the higher reading
@@ -103,19 +107,38 @@ charger branch must not be fed through this module-only series resistor.
 Follow the module-level reference circuit and check the selected supply mode
 against Nordic's specification. DECUSB is a bare-SoC decoupling pin, not an
 exposed pin in Raytac's §2.5 module pin table; do not invent a module pad for it.
-Confirm the module's internal USB-regulator decoupling coverage with Raytac
-before schematic sign-off, alongside the external VBUS circuit. Select final
-capacitor voltage rating, tolerance and effective capacitance, resistor rating,
-and transient/ESD parts from their primary specifications. Check the combined
-USB input capacitance/inrush and source-resistance limits. A fitted 0 Ω test
-link is a measurement provision, not protection or off-state isolation.
+The USB regulator's decoupling is inside the module: Raytac exposes no DECUSB
+pad and its §8.1.2 reference circuit has no external DECUSB capacitor, so Rev A
+relies on Raytac's module design for it. This is accepted for the freeze
+without written confirmation from Raytac (requested separately); USB
+enumeration at bring-up does not prove it.
+
+**VBUS attach capacitance.** USB Type-C R2.5 requires a sink to meet the USB
+2.0 inrush requirement: no more than the equivalent of 10 µF at attach, or
+surge limiting that matches it. VBUS sees C303 (1 µF, 50 V), the charger's PMID
+capacitor C304 (10 µF, 25 V; charged through the reverse-blocking FET's body
+diode at attach) and the module branch C402 (4.7 µF, 16 V, behind R401 2.2 Ω):
+15.7 µF nominal, less at 5 V because of DC bias, by an amount the parts'
+data does not give. TI requires at least 1 µF on VBUS and 10 µF on PMID
+(SLUSEG2D §7.3), so the charger alone is near the limit. Rev A keeps the
+reference values and measures the attach charge and VBUS droop at bring-up
+against a 10 µF ∥ 44 Ω reference load. If it exceeds the limit, C402 becomes
+1 µF and R401 up to 10 Ω (same footprints, no layout change), a recorded
+deviation from Raytac's reference values.
+
+Capacitor ratings: C303 50 V, C304 25 V, C402 16 V, all X5R, above the 5.5 V
+VBUS maximum used here; R401 is a 0603 thick-film resistor carrying the module's
+USB supply current. A fitted 0 Ω test link is a measurement provision, not
+protection or off-state isolation.
 
 Review and then measure USB attachment/removal with the switch on/off, battery
 present/absent, and normal supplies present/absent. Charging must remain possible
 with the switch off. With USB present the logic rail is on (PG path), so the
-module's VBUS and VDD supplies are present together. Resolve any unsupported
-power sequencing or back-power path before releasing the schematic; do not
-assume a test link fixes it. Product USB firmware uses beyond routing the data
+module's VBUS and VDD supplies are present together, except for the 1–2 ms
+before 3V3 rises at attach or after a logic-rail failure. The nRF5340 Product
+Specification pages reviewed (USBREG, power supply) state no sequencing
+restriction between VBUS and VDD, and Raytac's reference circuit uses the same
+connection; this is measured at bring-up rather than assumed. Product USB firmware uses beyond routing the data
 interface remain future work; a diagnostic USB image can validate the hardware
 interface.
 
@@ -334,28 +357,42 @@ battery-qualified recovery. All numbers are PROPOSED.
 These values must still be checked against the selected pack's protection
 cutoff and discharge behavior, as listed below.
 
-Before schematic freeze:
+Schematic-freeze results (2026-10-07; calculations, not measurements):
 
-- Confirm the switch, divider ratio/tolerances and any filter from the selected
-  pack maximum voltage and minimum logic supply. Nordic SAADC **Reference**
-  requires AIN within VSS–VDD even if the gain/reference implies a larger
-  conversion range. Check normal operation, startup, charging and MCU-off states.
-- Disconnect VBAT on the divider's high side by default when logic is off or in
-  reset; hold the ADC node at a defined safe potential. A low-side-only switch
-  can leave VBAT driving the unpowered input. Confirm leakage/back-powering
-  against component specifications; final switch and resistor values are TBD.
-- Choose ADC reference/gain, offset calibration, acquisition time for the
-  divider's source impedance, and settling delay after enabling it (Nordic
-  SAADC **Digital output**, **Reference**, **Acquisition time**). Disable the
-  measurement path after sampling. Budget switch leakage and measurement duty.
-- Provide VBAT and sense-node measurement access; account for probe loading
-  when comparing ADC readings with a calibrated meter. Record an error budget
-  covering ADC/divider errors, leakage, settling, temperature and load noise.
-- Define **PROPOSED** shed/recovery thresholds, hysteresis, sampling interval
-  and reaction time with margin above selected pack/protector cutoff and the
-  regulator's usable input/load limit, allowing for power-path drop, measurement
-  error and load sag. Characterize the actual pack before accepting final values;
-  no final voltage or accuracy threshold is asserted here.
+- **Switch and divider.** AO3401A high-side switch Q201 between the pack and the
+  divider, its gate pulled to VBAT by R218 47 kΩ (off by default) and pulled
+  down by AO3400A Q202 from VBAT_MEAS_EN (R219 100 kΩ pull-down); divider
+  R220/R221 47 kΩ / 47 kΩ 1 %, C208 100 nF at the ADC node (AIN0). At the
+  pack's 4.28 V overcharge limit the node is 2.14 V, inside VSS–VDD in normal
+  operation, charging and startup; with the MCU off the switch is off and R221
+  holds the node at ground.
+- **Leakage and back-powering.** With the switch off, Q201 leakage (≤ 5 µA at
+  55 °C, AOS) through R221 keeps the node ≤ 0.24 V, within the 0.3 V allowed on
+  an unpowered pin; Q202 leakage (≤ 5 µA at 55 °C) through R218 keeps Q201's
+  gate within 0.24 V of VBAT, below its 0.5 V minimum threshold. Battery drain
+  with the switch off is that leakage only; while measuring the divider draws
+  45 µA (≈ 1.1 µA average for a 25 ms window each second).
+- **ADC configuration.** Internal 0.6 V reference, gain 1/4 (2.4 V full scale),
+  12-bit, 10 µs acquisition (devicetree). The 100 nF node capacitor supplies
+  the sampling charge; after enabling the switch the node settles with
+  τ = 23.5 kΩ × 100 nF = 2.35 ms, so firmware waits 25 ms (> 10 τ). Offset
+  calibration (SAADC calibrate task) at start-up and on temperature change; the
+  path is disabled after sampling.
+- **Error budget.** Divider ratio ±1 % (1 % parts, worst case); SAADC gain and
+  offset error are not taken from the nRF5340 specification (not retrieved), so
+  each board is calibrated against a meter at two VBAT points, which removes
+  the static ratio, gain and offset error; the remainder (resistor tempco,
+  noise, reference drift) is estimated at ±0.5 % ≈ ±20 mV at 3.4 V and is
+  measured at bring-up. Probe loading is covered in validation §12.
+- **Proposed shed policy and margin.** Shed at a loaded 3.40 V (PROPOSED):
+  0.40 V above the cell's 3.0 V cut-off and 1.1 V above the protection IC's
+  2.3 V over-discharge level; uncalibrated, a ±1 % ratio plus an assumed ±3 %
+  ADC error (±0.14 V) still leaves 0.26 V to the cell cut-off. The TPS63802
+  keeps 3V3 regulated down to its 1.8 V start / 1.3 V operating input, far
+  below these levels. Final thresholds follow pack characterization.
+
+The remaining uncertainty (SAADC accuracy without per-board calibration, the
+pack's sag) is accepted for the freeze; component values are final.
 
 Firmware must cap brightness and then disable the LED rail before logic becomes
 unstable or protection trips, under the validated operating load envelope.
