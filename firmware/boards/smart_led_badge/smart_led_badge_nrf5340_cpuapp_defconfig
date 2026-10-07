@@ -1,0 +1,12 @@
+# SPDX-License-Identifier: Apache-2.0
+# Modified from Zephyr's raytac_mdbt53_db_40 board for this board.
+
+CONFIG_ARM_MPU=y
+CONFIG_HW_STACK_PROTECTION=y
+CONFIG_ARM_TRUSTZONE_M=y
+CONFIG_GPIO=y
+
+# Debug UART on test pads (P0.22/P0.23); applications may use RTT instead.
+CONFIG_SERIAL=y
+CONFIG_CONSOLE=y
+CONFIG_UART_CONSOLE=y

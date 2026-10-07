@@ -1,0 +1,7 @@
+# Copyright (c) 2019-2020 Nordic Semiconductor ASA
+# SPDX-License-Identifier: Apache-2.0
+# Modified from Zephyr's raytac_mdbt53_db_40 board for this board.
+
+config BOARD_SMART_LED_BADGE
+	select SOC_NRF5340_CPUAPP_QKAA if BOARD_SMART_LED_BADGE_NRF5340_CPUAPP
+	select SOC_NRF5340_CPUNET_QKAA if BOARD_SMART_LED_BADGE_NRF5340_CPUNET

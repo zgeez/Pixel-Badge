@@ -20,6 +20,9 @@
 
 .EXAMPLE
     .\scripts\dev.ps1 build -Pristine
+
+.EXAMPLE
+    .\scripts\dev.ps1 build -Board smart_led_badge/nrf5340/cpuapp -BuildDir build/badge -ExtraConfFile firmware/configs/rev-a-peripherals.conf
 #>
 [CmdletBinding()]
 param(
@@ -29,6 +32,8 @@ param(
 
     [string] $Board = 'nrf5340dk/nrf5340/cpuapp',
     [string] $BuildDir = 'build/nrf5340dk',
+    # Optional Kconfig fragment added to the application image.
+    [string] $ExtraConfFile,
     [string] $NcsVersion = 'v3.4.1',
     [string] $NcsRoot = $(if ($env:NCS_ROOT) { $env:NCS_ROOT } else { 'C:\ncs' }),
     [switch] $Pristine
@@ -147,8 +152,16 @@ function Get-SourceFiles {
 function Invoke-Build {
     Initialize-NcsEnvironment
     $pristineArg = if ($Pristine) { 'always' } else { 'auto' }
-    Invoke-Native west @('build', "--pristine=$pristineArg", '-b', $Board,
-        '-d', (Join-Path $RepoRoot $BuildDir), (Join-Path $RepoRoot 'firmware'))
+    # BOARD_ROOT makes the Rev A board (firmware/boards) visible to sysbuild too.
+    $boardRoot = (Join-Path $RepoRoot 'firmware').Replace('\', '/')
+    $cmakeArgs = @("-DBOARD_ROOT=$boardRoot")
+    if ($ExtraConfFile) {
+        $conf = (Resolve-Path -LiteralPath $ExtraConfFile).Path.Replace('\', '/')
+        $cmakeArgs += "-DEXTRA_CONF_FILE=$conf"
+    }
+    Invoke-Native west (@('build', "--pristine=$pristineArg", '-b', $Board,
+        '-d', (Join-Path $RepoRoot $BuildDir), (Join-Path $RepoRoot 'firmware'),
+        '--') + $cmakeArgs)
 }
 
 function Invoke-Test {

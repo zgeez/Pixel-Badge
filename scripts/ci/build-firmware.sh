@@ -10,5 +10,14 @@ repo_root="$(cd "$(dirname "$0")/../.." && pwd)"
 
 BOARD="${BOARD:-nrf5340dk/nrf5340/cpuapp}"
 BUILD_DIR="${BUILD_DIR:-${repo_root}/build/nrf5340dk}"
+# Optional Kconfig fragment(s) added to the application image.
+EXTRA_CONF_FILE="${EXTRA_CONF_FILE:-}"
 
-west build --pristine=auto -b "${BOARD}" -d "${BUILD_DIR}" "${repo_root}/firmware"
+extra_args=()
+if [ -n "${EXTRA_CONF_FILE}" ]; then
+    extra_args+=("-DEXTRA_CONF_FILE=${EXTRA_CONF_FILE}")
+fi
+
+# BOARD_ROOT makes the Rev A board (firmware/boards) visible to sysbuild too.
+west build --pristine=auto -b "${BOARD}" -d "${BUILD_DIR}" "${repo_root}/firmware" \
+    -- -DBOARD_ROOT="${repo_root}/firmware" ${extra_args[@]+"${extra_args[@]}"}

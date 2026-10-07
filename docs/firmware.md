@@ -95,6 +95,53 @@ make build
 
 Output: `build/nrf5340dk/firmware/zephyr/zephyr.hex`.
 
+### Rev A board
+
+`firmware/boards/smart_led_badge/` defines the Rev A board (Raytac
+MDBT53-P1M, nRF5340), based on Zephyr's `raytac_mdbt53_db_40` board. The
+application-core devicetree follows the Rev A schematic:
+- SPIM4 for the matrix chain, with GPIOs for LAT, BLANK, ARM and SAFE.
+- TWIM1 for the IMU and charger at 400 kHz, and TWIM2 for the NTAG at 100 kHz.
+- PDM microphone; SAADC channels for VBAT, CC1, CC2 and VLED with the gains
+  in [power.md](power.md).
+- Buttons, status LED, UART on the test pads, and USB.
+- 32.768 kHz crystal with the internal 9 pF load; DC/DC on VREGMAIN and
+  VREGRADIO.
+
+Board signals without a Zephyr driver (charger CE/INT/STAT, power switch,
+NFC power and field detect, LED-rail enable, VBAT measurement switch) are
+`zephyr,user` GPIOs. The network core owns no pins. The build scripts pass
+`BOARD_ROOT` so sysbuild finds the board, and CI builds both cores:
+
+```powershell
+.\scripts\dev.ps1 build -Board smart_led_badge/nrf5340/cpuapp -BuildDir build/badge
+```
+
+```sh
+BOARD=smart_led_badge/nrf5340/cpuapp BUILD_DIR=build/badge make build
+```
+
+The application does not use most of these peripherals yet, so its own
+configuration leaves their drivers out. `firmware/configs/rev-a-peripherals.conf`
+enables the I²C, SPI, ADC, PDM, sensor (IMU), input, LED, USB and watchdog
+drivers. CI builds the application core with it too, so driver and devicetree
+integration breaks the build rather than bring-up. It is a compile check, not
+a product configuration. Pass it with `-ExtraConfFile` (path relative to the
+repository root) or `EXTRA_CONF_FILE`:
+
+```powershell
+.\scripts\dev.ps1 build -Board smart_led_badge/nrf5340/cpuapp -BuildDir build/badge-periph -ExtraConfFile firmware/configs/rev-a-peripherals.conf
+```
+
+```sh
+BOARD=smart_led_badge/nrf5340/cpuapp BUILD_DIR=build/badge-periph \
+  EXTRA_CONF_FILE="$PWD/firmware/configs/rev-a-peripherals.conf" make build
+```
+
+The board files are modified from Zephyr's `raytac_mdbt53_db_40` board and
+keep its Apache-2.0 license and copyright notices
+([LICENSES/Apache-2.0.txt](../LICENSES/Apache-2.0.txt)).
+
 ## Tests
 
 Tests use Ztest and run with Twister on the `native_sim` host target. They live

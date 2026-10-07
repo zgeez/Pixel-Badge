@@ -1,0 +1,80 @@
+/*
+ * Copyright (c) 2023 Raytac Corporation
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Smart LED Badge Rev A, network core (BLE controller via IPC). The network
+ * core owns no pins: P1.00/P1.01, which other nRF5340 boards forward to it
+ * for a UART, carry the NTAG I2C bus here. Modified from Zephyr's
+ * raytac_mdbt53_db_40 board for this board; partitions unchanged.
+ */
+
+/dts-v1/;
+#include <nordic/nrf5340_cpunet_qkaa.dtsi>
+
+/ {
+	model = "Smart LED Badge Rev A nRF5340 Network";
+	compatible = "smart-led-badge,rev-a-nrf5340-cpunet";
+
+	chosen {
+		zephyr,sram = &sram1;
+		zephyr,flash = &flash1;
+		zephyr,code-partition = &slot0_partition;
+		zephyr,bt-hci-ipc = &ipc0;
+	};
+
+	aliases {
+		watchdog0 = &wdt0;
+	};
+};
+
+&gpiote {
+	status = "okay";
+};
+
+&timer0 {
+	status = "okay";
+};
+
+&timer1 {
+	status = "okay";
+};
+
+&timer2 {
+	status = "okay";
+};
+
+&flash1 {
+	partitions {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+
+		boot_partition: partition@0 {
+			compatible = "zephyr,mapped-partition";
+			label = "mcuboot";
+			reg = <0x00000000 0xc000>;
+		};
+
+		slot0_partition: partition@c000 {
+			compatible = "zephyr,mapped-partition";
+			label = "image-0";
+			reg = <0x0000c000 0x17000>;
+		};
+
+		slot1_partition: partition@23000 {
+			compatible = "zephyr,mapped-partition";
+			label = "image-1";
+			reg = <0x00023000 0x17000>;
+		};
+
+		storage_partition: partition@3a000 {
+			compatible = "zephyr,mapped-partition";
+			label = "storage";
+			reg = <0x0003a000 0x6000>;
+		};
+	};
+};
+
+/* Include default shared RAM configuration file */
+#include <nordic/nrf5340_shared_sram_partition.dtsi>

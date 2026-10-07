@@ -87,6 +87,32 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      # Rev A board definition (firmware/boards/smart_led_badge): both cores
+      # build, so devicetree or pin-map errors fail CI before hardware exists.
+      - name: Build smart_led_badge/nrf5340/cpuapp
+        run: |
+          export ZEPHYR_BASE="${GITHUB_WORKSPACE}/ncs/zephyr"
+          BOARD=smart_led_badge/nrf5340/cpuapp \
+            BUILD_DIR="${GITHUB_WORKSPACE}/smart-led-badge/build/badge" \
+            bash smart-led-badge/scripts/ci/build-firmware.sh
+
+      # Same board with every peripheral driver enabled, so driver and
+      # devicetree integration is compiled before the application uses it.
+      - name: Build smart_led_badge/nrf5340/cpuapp with peripheral drivers
+        run: |
+          export ZEPHYR_BASE="${GITHUB_WORKSPACE}/ncs/zephyr"
+          BOARD=smart_led_badge/nrf5340/cpuapp \
+            BUILD_DIR="${GITHUB_WORKSPACE}/smart-led-badge/build/badge-periph" \
+            EXTRA_CONF_FILE="${GITHUB_WORKSPACE}/smart-led-badge/firmware/configs/rev-a-peripherals.conf" \
+            bash smart-led-badge/scripts/ci/build-firmware.sh
+
+      - name: Build smart_led_badge/nrf5340/cpunet
+        run: |
+          export ZEPHYR_BASE="${GITHUB_WORKSPACE}/ncs/zephyr"
+          BOARD=smart_led_badge/nrf5340/cpunet \
+            BUILD_DIR="${GITHUB_WORKSPACE}/smart-led-badge/build/badge-net" \
+            bash smart-led-badge/scripts/ci/build-firmware.sh
+
   unit-tests:
     name: unit-tests
     runs-on: ubuntu-24.04
