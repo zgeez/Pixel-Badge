@@ -7,7 +7,7 @@
     test    Run the Twister host tests in the CI toolchain container (Docker).
     format  Format application C/C++ sources in place with clang-format.
     check   Check formatting, lint YAML, and check repository hygiene.
-    hardware  Run KiCad ERC and export schematic PDF/BOM (requires KiCad 10.0.6).
+    hardware  Run KiCad ERC and the pin/pad check, export schematic PDF/BOM (requires KiCad 10.0.6).
     clean   Remove the build/ directory.
 
     The nRF Connect SDK at -NcsRoot\-NcsVersion and the toolchain it requires

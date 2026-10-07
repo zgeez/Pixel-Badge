@@ -37,8 +37,8 @@ design opens on any machine without local path changes.
 
 ## Checks
 
-Run ERC on the full hierarchy and export the schematic PDF and BOM to
-`build/hardware/`:
+Run ERC on the full hierarchy, check symbol pins against footprint pads, and
+export the schematic PDF and BOM to `build/hardware/`:
 
 ```powershell
 .\scripts\dev.ps1 hardware
@@ -53,8 +53,18 @@ and accepted is excluded in KiCad with a comment explaining why; it is then
 not counted. While sheets are still being drawn, a label whose other end
 belongs on an undrawn sheet is excluded with a "Pending" comment naming that
 sheet; the exclusion is removed when the sheet is drawn.
-`python scripts/ci/check_hardware.py --self-test` confirms the
-check fails on an injected violation. The script requires KiCad 10.0.6 and
+
+The pin/pad check fails when a placed symbol's pin numbers differ from its
+footprint's numbered copper pads (unnumbered pads are mechanical tabs or paste
+apertures). It compares pad-number sets only, so it catches a footprint with
+missing, extra or differently numbered pads. A footprint with the same pad
+numbers but different geometry (for example SOT-353 instead of SOT-23-5)
+passes, and pin functions are not checked; footprint geometry and pin
+functions are reviewed per part against the datasheet.
+
+`python scripts/ci/check_hardware.py --self-test` confirms that ERC fails on an
+injected dangling wire and the pin/pad check fails on a part given a footprint
+with too few pads. The script requires KiCad 10.0.6 and
 finds `kicad-cli` through `KICAD_CLI`, `PATH`, or the default Windows install
 path. The check is local only for now; a CI job will be added once the
 schematic has real content.
