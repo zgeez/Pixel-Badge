@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: Apache-2.0
+# Modified from Zephyr's raytac_mdbt53_db_40 board for this board.
+identifier: smart_led_badge/nrf5340/cpuapp
+name: Smart-LED-Badge-Rev-A-nRF5340-application-MCU
+type: mcu
+arch: arm
+toolchain:
+  - zephyr
+ram: 448
+flash: 1024
+supported:
+  - adc
+  - gpio
+  - i2c
+  - spi
+  - uart
+  - usb_device
+  - watchdog

@@ -1,0 +1,9 @@
+# SPDX-License-Identifier: Apache-2.0
+# Smart LED Badge Rev A (Raytac MDBT53-P1M, nRF5340). Modified from Zephyr's
+# raytac_mdbt53_db_40 board.
+
+board:
+  name: smart_led_badge
+  full_name: Smart LED Badge Rev A
+  socs:
+    - name: nrf5340

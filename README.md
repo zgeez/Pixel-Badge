@@ -66,4 +66,7 @@ Start with [docs/architecture.md](docs/architecture.md).
 
 ## License
 
-[MIT](LICENSE)
+[MIT](LICENSE), except the Rev A board definition in
+`firmware/boards/smart_led_badge/`, which is modified from Zephyr's
+`raytac_mdbt53_db_40` board and stays under
+[Apache-2.0](LICENSES/Apache-2.0.txt) with its upstream copyright notices.

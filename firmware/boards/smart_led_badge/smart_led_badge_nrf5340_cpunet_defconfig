@@ -1,0 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Modified from Zephyr's raytac_mdbt53_db_40 board for this board.
+
+# The network core owns no pins on this board (no GPIO driver).
+CONFIG_ARM_MPU=y
+CONFIG_HW_STACK_PROTECTION=y
