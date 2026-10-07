@@ -7649,7 +7649,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "smart-led-badge:L_Coilcraft_XEL4030"
+		(property "Footprint" "smart-led-badge:L_Coilcraft_XGL4020"
 			(at 279.4 50.8 0)
 			(hide yes)
 			(show_name no)
@@ -7693,7 +7693,7 @@
 				)
 			)
 		)
-		(property "MPN" "XEL4030-102MEC"
+		(property "MPN" "XGL4020-102MEC"
 			(at 279.4 50.8 0)
 			(hide yes)
 			(show_name no)
@@ -7704,7 +7704,7 @@
 				)
 			)
 		)
-		(property "LCSC" "C5441341"
+		(property "LCSC" "C5357696"
 			(at 279.4 50.8 0)
 			(hide yes)
 			(show_name no)
@@ -7715,7 +7715,7 @@
 				)
 			)
 		)
-		(property "Note" "Same part as L202; Isat 9.0 A vs ~2.4 A peak at 1.5 A input"
+		(property "Note" "Same part as L202; Isat 3.8 A (10 % drop) vs 2.76 A worst-case peak at IINDPM 1.5 A"
 			(at 279.4 50.8 0)
 			(hide yes)
 			(show_name no)

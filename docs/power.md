@@ -220,9 +220,15 @@ stops switching and passes the input through (SLVSF14B §7.3.5), so
 `VLED ≈ max(setting, SYS − drop)`. SYS reaches about VBAT + 50 mV with charging
 done or disabled (SLUSEG2D §8.3.4.1), about 4.25 V on a full pack, so settings
 below about 4.4 V are not regulated. The trim positions cover settings of about
-4.4–5.2 V once the LED is chosen. Coilcraft XEL4030-102ME (1.0 µH; Isat 9.0 A)
-against a calculated 3.66 A peak (VIN 2.9 V, VOUT 5.2 V, 1.12 A = 32 × 35 mA,
-η 0.8, L −30%).
+4.4–5.2 V once the LED is chosen. Coilcraft XGL4020-102MEC (1.0 µH ±20%,
+2.1 mm max; Isat 3.8 / 6.3 / 8.8 A at 10 / 20 / 30% inductance drop, Coilcraft
+Document 1529-1) against a calculated worst-case peak of 2.94 A: VIN 2.9 V,
+VOUT 5.33 V, 0.66 A (32 × 19.4 mA + 5% for temperature, plus logic), η 0.8,
+L 0.72 µH (−20% tolerance, −10% saturation), 0.8 MHz (1.0 MHz typical −20%;
+TI gives no minimum). In current limit (valley 2.7–3.7 A, no maximum given)
+the peak reaches about 7–8 A, still below the 30% drop point. The charger uses
+the same inductor (L301): 2.76 A worst-case peak at the 1.5 A input limit,
+5.2 A if firmware left the 3.2 A power-on limit (1.35–1.65 MHz).
 
 **Battery discharge limit.** The cell's 1.5 A continuous rating bounds the
 display. The worst case is a firmware fault with all 32 columns sinking their

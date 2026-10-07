@@ -98,7 +98,7 @@ Selection is not validation: nothing below has been measured on Rev A.
 | Module DC/DC inductors | 2 × TDK MLZ1608M100WT000 (10 µH, 0603) | Selected; drawn |
 | Charger / power path | TI BQ25620 (switching, I²C, BC1.2) | Selected; drawn; ≈ 1 A charge |
 | Logic rail (3.3 V) | TI TPS63802, Murata DFE201612E-R47M (0.47 µH) | Selected; drawn |
-| LED rail | TI TPS61023, Coilcraft XEL4030-102ME (1.0 µH) | Selected; VLED setting provisional |
+| LED rail | TI TPS61023, Coilcraft XGL4020-102MEC (1.0 µH, 2.1 mm) | Selected; VLED setting provisional |
 | Column drivers | 2 × TI TLC59283RGER (QFN-24), R_IREF 2.94 kΩ + series 0 Ω option | Selected; drawn; 18.0 mA nominal setting (about 19.4 mA worst case at 25 °C); peak current prototype-dependent |
 | Row control | 4 × SN74HC595 (OE pulled up to VLED), SN74LVC8T245 translator, 32 × AO3401A with 10 kΩ gate pull-ups, SN74LVC1G123 + SN74LVC1G04 + SN74LVC1G32 scan-stall blanking | Selected; drawn |
 | NFC tag | NXP NT3H2111W0FHKH (XQFN-8) | Selected; drawn; footprint per NXP's reflow footprint; coil tuning prototype-dependent |
