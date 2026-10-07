@@ -1,6 +1,7 @@
 # 0006: Rev A PCB and mechanical envelope
 
-- Status: Accepted
+- Status: Accepted; edge-accessible buttons and LED-only front superseded by
+  [0008](0008-landscape-front-buttons.md)
 - Date: 2026-10-04
 - Deciders: Project owner
 

@@ -2348,7 +2348,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "Power switch (SPDT, part TBD)"
+		(property "Value" "PCM12SMTR"
 			(at 27.94 66.04 0)
 			(effects
 				(font
@@ -2357,7 +2357,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "Button_Switch_SMD:SW_SPDT_PCM12"
 			(at 33.02 60.96 0)
 			(hide yes)
 			(effects
@@ -2384,7 +2384,34 @@
 				)
 			)
 		)
-		(property "Note" "Mechanical gate: slide switch MPN/footprint not selected"
+		(property "Manufacturer" "C&K"
+			(at 33.02 60.96 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MPN" "PCM12SMTR"
+			(at 33.02 60.96 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC" "C221841"
+			(at 33.02 60.96 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Note" "Right-angle SPDT slide switch on the right edge; terminal 2 common (C&K PCM series); carries uA only"
 			(at 33.02 60.96 0)
 			(hide yes)
 			(effects

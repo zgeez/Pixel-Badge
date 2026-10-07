@@ -1,0 +1,182 @@
+(footprint "SW_XUNPU_TS-1088"
+	(version 20260206)
+	(generator "pcbnew")
+	(generator_version "10.0")
+	(layer "F.Cu")
+	(descr "XUNPU TS-1088 tact switch 3.9x3.0mm, H 2.0mm (TS-1088-AR02016); pads from the vendor PCB welding drawing (1.05 x 2.00 mm, 3.40/5.50 mm)")
+	(tags "switch tactile SMD TS-1088")
+	(property "Reference" "REF**"
+		(at 0 -2.6 0)
+		(layer "F.SilkS")
+		(uuid "4546d2af-b4e8-4428-aba0-2d48016a6e53")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.1)
+			)
+		)
+	)
+	(property "Value" "SW_XUNPU_TS-1088"
+		(at 0 2.6 0)
+		(layer "F.Fab")
+		(uuid "a854d12a-8ce8-4c4f-8235-54bd1cc05bb8")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.1)
+			)
+		)
+	)
+	(property "Datasheet" ""
+		(at 0 0 0)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "423be9cd-f868-4623-8ba2-0a13e5908bbd")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.1)
+			)
+		)
+	)
+	(property "Description" "XUNPU TS-1088 tact switch 3.9x3.0mm, H 2.0mm (TS-1088-AR02016); pads from the vendor PCB welding drawing (1.05 x 2.00 mm, 3.40/5.50 mm)"
+		(at 0 0 0)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "962afdc3-d678-49f3-82bf-7f1f2473ba8b")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.1)
+			)
+		)
+	)
+	(attr smd)
+	(duplicate_pad_numbers_are_jumpers no)
+	(fp_line
+		(start -1.95 -1.5)
+		(end 1.95 -1.5)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.Fab")
+		(uuid "c220bccc-c2a3-47ce-8d24-338862b74242")
+	)
+	(fp_line
+		(start 1.95 -1.5)
+		(end 1.95 1.5)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.Fab")
+		(uuid "7733776c-0d61-4f18-bbd6-bcf663f4b446")
+	)
+	(fp_line
+		(start 1.95 1.5)
+		(end -1.95 1.5)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.Fab")
+		(uuid "9502054a-c22e-48c5-8ce4-05e384385034")
+	)
+	(fp_line
+		(start -1.95 1.5)
+		(end -1.95 -1.5)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.Fab")
+		(uuid "b14c22c3-78bd-4c13-88ca-a168d6e4b715")
+	)
+	(fp_line
+		(start -3.0 -1.75)
+		(end 3.0 -1.75)
+		(stroke
+			(width 0.05)
+			(type solid)
+		)
+		(layer "F.CrtYd")
+		(uuid "a58cdd69-8c77-4f59-8cbe-2d482a713a82")
+	)
+	(fp_line
+		(start 3.0 -1.75)
+		(end 3.0 1.75)
+		(stroke
+			(width 0.05)
+			(type solid)
+		)
+		(layer "F.CrtYd")
+		(uuid "df626572-3ad9-43d1-a151-77f5ef5f1a9c")
+	)
+	(fp_line
+		(start 3.0 1.75)
+		(end -3.0 1.75)
+		(stroke
+			(width 0.05)
+			(type solid)
+		)
+		(layer "F.CrtYd")
+		(uuid "0838fe0b-4f51-44ea-b405-b91193b94f7a")
+	)
+	(fp_line
+		(start -3.0 1.75)
+		(end -3.0 -1.75)
+		(stroke
+			(width 0.05)
+			(type solid)
+		)
+		(layer "F.CrtYd")
+		(uuid "fa946aed-ed94-43da-8f39-3b69cc4d96ba")
+	)
+	(fp_line
+		(start -1.55 -1.6)
+		(end 1.55 -1.6)
+		(stroke
+			(width 0.12)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "d646f994-2cf2-4481-8cef-6757afba64de")
+	)
+	(fp_line
+		(start -1.55 1.6)
+		(end 1.55 1.6)
+		(stroke
+			(width 0.12)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "2218d172-cf77-425f-b3a8-744f42f92295")
+	)
+	(fp_circle
+		(center 0 0)
+		(end 0.9 0)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(fill no)
+		(layer "F.Fab")
+		(uuid "a340a323-f889-4bf9-b6ac-888a5b39844c")
+	)
+	(pad "1" smd roundrect
+		(at -2.225 0)
+		(size 1.05 2.0)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(roundrect_rratio 0.25)
+		(uuid "4f67cd68-9e59-460b-be8e-732bccda9d16")
+	)
+	(pad "2" smd roundrect
+		(at 2.225 0)
+		(size 1.05 2.0)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(roundrect_rratio 0.25)
+		(uuid "6aeadc01-d445-4631-8775-1d5531558656")
+	)
+	(embedded_fonts no)
+)

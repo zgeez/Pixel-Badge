@@ -122,7 +122,13 @@ provisional parts do not imply final part selection or hardware validation.
 | TPS61023 (selected LED boost) | VLED boost with load disconnect; VREF/OVP/EN in §6.5; FB §8.2.2.1; inductor §8.2.2.2; feed-forward §8.2.2.4; DRL0006A land pattern (4223266/F) | [TI TPS61023, SLVSF14B](https://www.ti.com/lit/ds/symlink/tps61023.pdf) | Rev.B, August 2020 |
 | XEL4030-102ME (TPS61023 inductor) | 1.0 µH, DCR 9.78 mΩ max, Isat 9.0 A, Irms 8.4 A (20 °C rise); recommended land pattern | Coilcraft XEL4030, Documents 1321-1 to 1321-3 | Revised 02/19/26 |
 | DFE201612E-R47M=P2 (TPS63802 inductor) | 0.47 µH ±20%, DCR 26 mΩ max, 5.5 A (−30% L), 4.5 A (40 °C rise) | Murata reference specification J(E)TE243A-0006B-01 | — |
-| ICM-42688-P (conditional IMU) | Pinout (Table 9), I²C address and 1 MHz limit, I²C driver settings §12.3, INT_ASYNC_RESET §12.6, registers §§13–15 | TDK InvenSense DS-000347 | Rev.1.2 |
+| ICM-42688-P (conditional IMU) | Pinout (Table 9), application circuit and bypass BOM (§§4.2–4.3), I²C address and 1 MHz limit, I²C driver settings §12.3, INT_ASYNC_RESET §12.6, invalid-data values §12.8, registers §§13–15, LGA-14 package §10.2 | TDK InvenSense DS-000347 | Rev.1.2 |
+| SPH0641LM4H-1 (microphone) | Pinout, SELECT timing (Table 7), application circuit and bypass note, example land pattern and PCB acoustic hole (0.6–1.0 mm) | [Knowles SPH0641LM4H-1 datasheet](https://mm.digikey.com/Volume0/opasdata/d220001/medias/docus/1290/SPH0641LM4H-1.pdf) (Knowles document hosted by Digi-Key) | Rev D |
+| NT3H2111W0FHKH package | XQFN8 SOT902-3 outline (Figure 31) and reflow footprint sot902-3_fr (Figure 32, p. 71) used for the project footprint | NXP NT3H2111_2211 | Rev. 3.6 |
+| TYPE-C-31-M-12 (USB-C receptacle) | Pinout and recommended PCB layout (component side) | HRO drawing TYPE-C-31-M-12 | 2020-12-08 |
+| PCM12SMTR (power switch) | SPDT terminal functions and PC mounting pattern | C&K PCM series | 27 Aug 2019 |
+| TS-1088-AR02016 (buttons) | Body, height 2.0 mm, 160 gf; PCB welding drawing (pads 1.05 × 2.00 mm, 3.40/5.50 mm) | XUNPU TS-1088 drawing | — |
+| KT-0603R (status LED) | Red 0603, Vf 1.8–2.4 V at 20 mA (distributor listing) | Hubei KENTO listing (LCSC C2286) | — |
 | AO3401A / AO3400A | Row and VBAT high-side switch; VBAT and CC-sense N-MOSFETs; IDSS, VGS(th), RDS(on), SOT-23 pinout | Alpha & Omega AO3401A and AO3400A datasheets | Rev.3.1 (December 2023 / July 2023) |
 | MLZ1608M100WT000 (module DC/DC inductors) | 10 µH ±20% (2 MHz), DCR 1.05 Ω ±30%; Isat 90 mA max (current at which inductance has fallen by up to 50%); Itemp 250 mA typ, a reference value for a 20 °C rise, not a rating; inductance vs DC bias curve | TDK *Inductors for decoupling circuits, Multilayer ferrite, MLZ series, MLZ1608 type* | 20201224 |
 | CM7V-T1A 32.768 kHz, 9 pF (selected crystal) | CL, RS, C0, drive level against the Raytac crystal specification | Micro Crystal CM7V-T1A datasheet | Version 8.0, 10.2016 |

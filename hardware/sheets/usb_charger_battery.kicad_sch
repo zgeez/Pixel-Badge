@@ -3674,7 +3674,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "USB-C receptacle (part TBD)"
+		(property "Value" "TYPE-C-31-M-12"
 			(at 35.56 77.47 0)
 			(effects
 				(font
@@ -3683,7 +3683,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "Connector_USB:USB_C_Receptacle_HRO_TYPE-C-31-M-12"
 			(at 33.02 76.2 0)
 			(hide yes)
 			(effects
@@ -3710,7 +3710,34 @@
 				)
 			)
 		)
-		(property "Note" "Mechanical gate: receptacle MPN/footprint not selected (candidate TYPE-C-31-M-12)"
+		(property "Manufacturer" "Korean Hroparts Elec"
+			(at 33.02 76.2 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MPN" "TYPE-C-31-M-12"
+			(at 33.02 76.2 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC" "C165948"
+			(at 33.02 76.2 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Note" "16-pin USB 2.0 receptacle, bottom edge, rear side; footprint checked against the HRO drawing (2020-12-08)"
 			(at 33.02 76.2 0)
 			(hide yes)
 			(effects

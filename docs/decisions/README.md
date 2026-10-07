@@ -28,5 +28,6 @@ decision.
 | [0003](0003-monochrome-display-qr-validation.md) | 32×32 monochrome display and QR-first validation | Accepted |
 | [0004](0004-ble-passive-nfc.md) | BLE configuration and external passive NTAG NFC | Accepted |
 | [0005](0005-usb-c-charge-and-data.md) | USB-C charging and USB 2.0 data architecture | Accepted; partly superseded by 0007 |
-| [0006](0006-rev-a-mechanical-envelope.md) | Rev A PCB and mechanical constraints | Accepted |
+| [0006](0006-rev-a-mechanical-envelope.md) | Rev A PCB and mechanical constraints | Accepted; partly superseded by 0008 |
 | [0007](0007-battery-charger-power-states.md) | 2500 mAh pack, BQ25620 switching charger, USB-powered charging state (amends 0005) | Accepted |
+| [0008](0008-landscape-front-buttons.md) | Landscape wear; buttons on the front below the LED field when they fit (amends 0006) | Accepted |
