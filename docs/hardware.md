@@ -1,9 +1,10 @@
 # Hardware
 
-Status: **schematic capture in progress**. Rev A architecture is defined; the
-KiCad project lives in [`hardware/`](../hardware/README.md). The regulators/
-schematic sheets are all drawn (schematic review and freeze pending), and no
-layout exists yet.
+Status: **schematic frozen for layout** (review 2026-10-07). Rev A architecture
+is defined; the KiCad project lives in [`hardware/`](../hardware/README.md).
+Changes after the freeze go through a recorded decision; the matrix LED
+footprint follows the final LED part. No layout exists yet, and nothing has
+been built or measured.
 Items marked provisional may change. Electrical values come from primary datasheets and are recorded in
 [references.md](references.md) as parts are confirmed.
 
