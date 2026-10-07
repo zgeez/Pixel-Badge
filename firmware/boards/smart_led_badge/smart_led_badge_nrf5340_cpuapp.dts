@@ -58,7 +58,7 @@
 	/*
 	 * Board signals used by project drivers. Defaults with the MCU in reset
 	 * come from board resistors: MTX_BLANK high, MTX_ARM low, LED_EN low,
-	 * VBAT_MEAS_EN low, CHG_CE high (charging off).
+	 * VBAT_MEAS_EN low, CHG_EN low (charging off).
 	 */
 	zephyr,user {
 		mtx-lat-gpios = <&gpio0 11 GPIO_ACTIVE_HIGH>;
@@ -67,7 +67,7 @@
 		mtx-safe-gpios = <&gpio0 21 GPIO_ACTIVE_HIGH>;   /* input: high = matrix forced off */
 		led-en-gpios = <&gpio0 20 GPIO_ACTIVE_HIGH>;     /* TPS61023 EN (LED rail) */
 		vbat-meas-en-gpios = <&gpio0 24 GPIO_ACTIVE_HIGH>;
-		chg-ce-gpios = <&gpio0 29 GPIO_ACTIVE_LOW>;      /* active = charging enabled */
+		chg-en-gpios = <&gpio0 29 GPIO_ACTIVE_HIGH>;     /* CHG_EN: active = Q303 pulls CE low, charging allowed */
 		chg-int-gpios = <&gpio0 30 GPIO_ACTIVE_LOW>;
 		chg-stat-gpios = <&gpio1 14 GPIO_ACTIVE_LOW>;
 		pwr-sw-gpios = <&gpio1 15 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>; /* active = switch ON */
