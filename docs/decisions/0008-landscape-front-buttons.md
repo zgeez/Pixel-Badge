@@ -1,6 +1,9 @@
 # 0008: Landscape wear and front-face buttons
 
-- Status: Accepted
+- Status: Accepted; partly superseded by
+  [0009](0009-dual-orientation-dual-mounting.md) (landscape-only wear; button
+  placement unchanged) and [0010](0010-single-sided-assembly.md) (two-sided
+  assembly)
 - Date: 2026-10-06
 - Deciders: Project owner
 

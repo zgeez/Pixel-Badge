@@ -79,7 +79,9 @@ Board: ____  Serial/batch: ____  Firmware commit: ____  Date: ____
 ## Mechanical
 
 - [ ] Fit in enclosure/mount
-- [ ] Magnetic mount retention
+- [ ] Magnetic mount retention, landscape and portrait
+- [ ] Lanyard attachment, landscape and portrait (hangs level; carrier takes the load)
+- [ ] Display rotation follows the badge orientation; QR mode stays locked
 
 ## Issues found
 

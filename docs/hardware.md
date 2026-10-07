@@ -37,8 +37,11 @@ scheme is not the badge design.
 
 ## Rev A architecture
 
-- **Size:** 108 × 72 mm nominal, **112 × 74 mm maximum**; rounded corners;
-  4-layer PCB; black soldermask; LEDs on the front, most components on the rear.
+- **Size:** 108 × 72 mm nominal, **112 × 74 mm maximum**; Rev A uses the
+  112 × 74 mm maximum; rounded corners; 4-layer PCB; black soldermask.
+  Single-sided assembly ([ADR 0010](decisions/0010-single-sided-assembly.md)):
+  the LEDs and all other components are on the front; the rear holds only
+  the battery, its connector body and the carrier.
 - **Matrix:** 32×32 white SMD LEDs, 2.0 mm pitch (provisional, pending QR
   validation), 1:32 multiplexing (provisional). Two TI TLC59283 constant-current
   column drivers and high-side row switches (provisional); refresh timed by nRF5340
@@ -64,7 +67,8 @@ scheme is not the badge design.
 - **Power:** protected 1-cell LiPo pack (Adafruit 328, 2500 mAh, genuine
   JST-PH 2-pin, integrated protection, no thermistor) with a BQ25620
   switching charger (≈ 1 A charge, BC1.2 detection, NVDC power path); a
-  board NTC next to the pack qualifies charging temperature. TPS63802
+  board NTC on the front, at the edge over the pack, qualifies charging
+  temperature (it measures board temperature, not cell temperature). TPS63802
   buck-boost logic rail (3.3 V) enabled by the power switch or, for a
   charging-only state, by USB presence; TPS61023 boost LED rail with load
   disconnect, enabled by firmware. See [power.md](power.md).
@@ -78,15 +82,29 @@ scheme is not the badge design.
   driver passes build and emulator tests; real-part I²C, interrupt and
   wake-on-motion checks pending), with SPI-fallback links; Knowles
   SPH0641LM4H-1 PDM microphone (lifecycle not yet confirmed).
-- **User interface:** worn landscape; two top-actuated buttons on the front below
-  the LED field when they fit, otherwise on the bottom edge
-  ([ADR 0008](decisions/0008-landscape-front-buttons.md)); power
-  switch on an edge; one status LED on the rear.
+- **User interface:** worn landscape or portrait, with the displayed content
+  rotated by firmware from the IMU's orientation
+  ([ADR 0009](decisions/0009-dual-orientation-dual-mounting.md)); two
+  top-actuated buttons on the front below the LED field (landscape layout)
+  when they fit, otherwise on the edge below the field
+  ([ADR 0008](decisions/0008-landscape-front-buttons.md)), marked with
+  orientation-independent symbols; power switch on an edge; one status LED
+  on the front.
 - **RF:** module-integrated antenna at a board edge/corner with the keep-out the
   module vendor specifies; NFC coil in a separate region; battery and magnets
   kept clear of both.
-- **Mechanical:** rear 3D-printed carrier for the battery and attachment magnets,
-  mounted to the PCB; target total thickness ≈ 12 mm.
+- **Mechanical:** rear 3D-printed carrier, mounted to the PCB, holding the
+  battery and the attachment magnets and taking the lanyard load through
+  attachment points for landscape and portrait hanging
+  ([ADR 0009](decisions/0009-dual-orientation-dual-mounting.md)), with a vent
+  channel for the microphone's PCB acoustic hole. Nothing on the rear besides
+  the battery and the connector body: no parts, test points, exposed pads or
+  protruding leads under the pack (inner copper and tented vias only), and an
+  insulating layer between board and pack. Thickness targets (calculated,
+  not measured): ≈ 12 mm over the LED field (11.4–12.0 mm), ≈ 13.5 mm over the
+  electronics region (12.1–13.5 mm), local edge exceptions ≈ 14.5 mm at USB-C
+  and ≈ 16.5 mm at the SWD header
+  ([ADR 0010](decisions/0010-single-sided-assembly.md)).
 
 ## Selected Rev A components
 
@@ -98,7 +116,7 @@ Selection is not validation: nothing below has been measured on Rev A.
 | Module DC/DC inductors | 2 × TDK MLZ1608M100WT000 (10 µH, 0603) | Selected; drawn |
 | Charger / power path | TI BQ25620 (switching, I²C, BC1.2) | Selected; drawn; ≈ 1 A charge |
 | Logic rail (3.3 V) | TI TPS63802, Murata DFE201612E-R47M (0.47 µH) | Selected; drawn |
-| LED rail | TI TPS61023, Coilcraft XEL4030-102ME (1.0 µH) | Selected; VLED setting provisional |
+| LED rail | TI TPS61023, Coilcraft XGL4020-102MEC (1.0 µH, 2.1 mm) | Selected; VLED setting provisional |
 | Column drivers | 2 × TI TLC59283RGER (QFN-24), R_IREF 2.94 kΩ + series 0 Ω option | Selected; drawn; 18.0 mA nominal setting (about 19.4 mA worst case at 25 °C); peak current prototype-dependent |
 | Row control | 4 × SN74HC595 (OE pulled up to VLED), SN74LVC8T245 translator, 32 × AO3401A with 10 kΩ gate pull-ups, SN74LVC1G123 + SN74LVC1G04 + SN74LVC1G32 scan-stall blanking | Selected; drawn |
 | NFC tag | NXP NT3H2111W0FHKH (XQFN-8) | Selected; drawn; footprint per NXP's reflow footprint; coil tuning prototype-dependent |
@@ -107,7 +125,7 @@ Selection is not validation: nothing below has been measured on Rev A.
 | 32.768 kHz crystal | Micro Crystal CM7V-T1A, 9 pF | Selected; drawn |
 | SWD header | ARM Cortex 10-pin, 2 × 5, 1.27 mm SMD (hanxia HX PZ1.27-2x5P TP), for the nRF5340 DK debug out | Selected; drawn; footprint checked against the vendor land pattern |
 | USB ESD | TI TPD4E05U06 (D+, D−, CC1, CC2) | Selected |
-| Battery | Adafruit 328, protected 2500 mAh LiPo; JST B2B-PH-SM4-TB header | Selected; header pin 1 = BAT−, pin 2 = BAT+ (Adafruit convention) |
+| Battery | Adafruit 328, protected 2500 mAh LiPo; JST S2B-PH-K-S(LF)(SN) through-hole side-entry header, inserted from the rear and hand-soldered from the front by default | Selected; header pin 1 = BAT−, pin 2 = BAT+ (Adafruit convention) |
 | USB-C receptacle | HRO TYPE-C-31-M-12 (16-pin USB 2.0) | Selected; drawn |
 | Buttons | 2 × XUNPU TS-1088-AR02016 (top-actuated, 2.0 mm) | Selected; drawn; placement per ADR 0008 |
 | Power switch | C&K PCM12SMTR (right-angle SPDT slide) | Selected; drawn |
@@ -183,9 +201,12 @@ Selection is not validation: nothing below has been measured on Rev A.
 - Pack (Adafruit 328; PKCELL LIPO785060 specification): 1.2 A maximum charge
   (vendor), 1.5 A maximum continuous discharge, charging 0–45 °C, 3.0 V cell
   cut-off, protection IC over-discharge at 2.3 V. 50.5 × 62.5 × 8.1 mm max and
-  50 g: keep rear components out from under it, and keep the NFC coil, module
-  antenna and magnets clear. Header pin 1 = BAT−, pin 2 = BAT+ as on Adafruit's
-  charger boards; mark + and − on the silkscreen and meter-check each pack
+  50 g: keep the NFC coil, module antenna and magnets clear of it. The
+  header (JST S2B-PH-K-S, through-hole side entry, 4.8 mm tall) has its body
+  on the rear next to the pack's lead exit and its pins soldered from the
+  front outside the LED field; it is hand-soldered after assembly unless the
+  assembler confirms rear insertion. Pin 1 = BAT−, pin 2 = BAT+
+  as on Adafruit's charger boards; mark + and − on the silkscreen and meter-check each pack
   before its first connection.
 - LED part, pitch, peak current, current-setting resistor, brightness cap, NFC
   tuning, and exact outline remain dependent on prototype evidence. A build or

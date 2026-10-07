@@ -81,7 +81,28 @@ the empty-to-full time only as a measurement. With the charger at its reset
 settings (CE driven low by a test build that does not configure it), and
 again after an I²C watchdog expiry with firmware's settings, drive the TS pin with a resistance decade or a heated/cooled NTC and check
 that charging stops below about 0 °C and above 45 °C board temperature; then
-repeat with firmware's thresholds. Check that charging stays off from
+repeat with firmware's thresholds.
+Board-NTC qualification (release gate before charging is approved): the NTC
+is on the front and measures board temperature, not cell temperature
+([ADR 0010](decisions/0010-single-sided-assembly.md)), so a warm board can sit
+next to a cold cell. With a thermocouple taped to the pack:
+
+- Cold cell, warm board: soak the pack at or below 0 °C and at 2–5 °C,
+  connect it to a board at room temperature, plug in USB, and log the cell
+  and board-NTC temperatures until the charger would start. Charging must not
+  start while the cell is below 0 °C.
+- Transitions: move the badge from a cold environment indoors and back, and
+  charge from cold, logging the worst-case offset and lag between cell and
+  board-NTC readings (including charger self-heating).
+- Hot side: cell near 45 °C with a cooler board; charging must stop.
+
+If the board reading can allow charging while the cell is below 0 °C or above
+45 °C, charging is not approved until one fallback is in place and re-tested:
+firmware COLD/HOT limits moved inward by the measured offset plus margin; a
+charge inhibit after plug-in until the readings have settled for a measured
+time; or a sensing change (an NTC bonded to the pack, or a pack with a
+thermistor).
+Check that charging stays off from
 plug-in until firmware drives CE low, that an MCU reset stops charging, and
 measure the input current on an SDP host before firmware has configured the
 charger (≤ 100 mA).
@@ -90,6 +111,13 @@ peak current and maximum brightness at the lowest operating VBAT and at the
 highest VLED setting; it must stay ≤ 1.5 A (the cell's continuous rating).
 Measure VLED across the full battery range to confirm the pass-through
 envelope.
+Inductor current (release gate for L202 and L301): with a current probe,
+measure the TPS61023 switching frequency at the lowest VIN, and the peak and
+ripple inductor current at maximum LED load, at start-up and with the LED
+rail overloaded into current limit; measure the BQ25620 inductor current at
+the 1.5 A input limit. The calculated figures in [power.md](power.md) are
+estimates, not bounds; record any operating point where the current exceeds
+the XGL4020's 10% (3.8 A) or 30% (8.8 A) inductance-drop rating.
 Verify the power states: no USB and switch OFF leaves the logic rail off;
 USB with switch OFF starts the charging-only state with the LED rail off;
 removing USB with the switch OFF turns the logic rail off. Record the pack
@@ -201,7 +229,8 @@ Acceptance criteria: TBD.
 
 ### 7. IMU
 
-Purpose: verify orientation and motion response driving the fluid simulation.
+Purpose: verify orientation and motion response driving the fluid simulation
+and the display rotation.
 
 The ICM-42688-P I²C driver has passed only build and emulator tests. On real
 hardware (a breakout before Rev A where possible, then Rev A), verify: I²C
@@ -210,6 +239,11 @@ configuration read-back including the I²C-mode settings, accelerometer and
 gyroscope readings against known orientations and rotation, the INT1
 data-ready interrupt at the configured rate, and wake-on-motion once
 implemented. Record any I²C failure that triggers the SPI fallback.
+
+Display rotation: in all four 90° orientations the name and animation views
+turn upright without visible flicker or repeated flipping on small movements
+or when the badge lies flat, and QR mode keeps the orientation it entered
+with until it is left.
 
 Acceptance criteria: TBD.
 
@@ -263,8 +297,18 @@ Acceptance criteria: TBD.
 
 ### 11. Mechanical wearability
 
-Purpose: verify attachment retention on clothing, comfort, thickness, and that
-the battery is not mechanically stressed.
+Purpose: verify attachment retention, comfort, thickness, and that the battery
+is not mechanically stressed, for both mountings and both orientations
+([ADR 0009](decisions/0009-dual-orientation-dual-mounting.md)):
+
+- Magnet mount, landscape and portrait, on a thin shirt, a blazer and a
+  jacket: walking, sitting, bending; record the garment and any detachment.
+- Lanyard, landscape and portrait hanging: the badge hangs level, the
+  attachment point does not cover USB-C, the power switch, the NFC coil or
+  the antenna, and a pull on the lanyard does not load the PCB.
+- Assembled thickness against the regional targets: ≈ 12 mm over the LED
+  field, ≈ 13.5 mm over the electronics region, ≈ 14.5 mm at USB-C and
+  ≈ 16.5 mm at the SWD header (local edge exceptions).
 
 Acceptance criteria: TBD.
 

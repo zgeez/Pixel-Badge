@@ -68,9 +68,9 @@ flowchart LR
 | NFC | External passive NFC tag (NXP NT3H2111W0FHKH, XQFN-8) with PCB coil on its own switched I²C bus; public RF reads, protected RF writes, MCU I²C updates | Part selected; coil tuning and provisioning bytes provisional |
 | Sensors | TDK ICM-42688-P 6-axis IMU on I²C with interrupts (project I²C driver; SPI fallback provided); Knowles SPH0641LM4H-1 PDM microphone | IMU conditional on real-part verification; microphone conditional on lifecycle check |
 | Power | Protected 1-cell LiPo pack (Adafruit 328, 2500 mAh); BQ25620 switching USB-C charger with NVDC power path (≈ 1 A charge, BC1.2 detection) and separate CC1/CC2 Rd; dedicated module USB VBUS supply; TPS63802 3.3 V logic rail powered by the switch or by USB (charging-only mode); switched VBAT-to-SAADC sensing; TPS61023 firmware-switchable LED rail with low-battery load shedding | Parts selected; charging works with switch off; thresholds and VLED provisional |
-| User interface | Two buttons (Mode/Next, Action/Select), physical power switch, one status LED | Selected |
+| User interface | Two buttons (Mode/Next, Action/Select), physical power switch, one status LED; worn landscape or portrait with firmware-rotated content | Selected |
 | Debug | SWD, SEGGER RTT logging, UART test pads, rail and matrix-timing test points | Required on Rev A |
-| Mechanics | 4-layer PCB ≤ 112 × 74 mm (108 × 72 mm nominal), black soldermask, LEDs on the front, rear 3D-printed carrier with battery and magnetic attachment | Outline provisional within the maximum |
+| Mechanics | 4-layer PCB, Rev A outline 112 × 74 mm (the maximum; 108 × 72 mm nominal), black soldermask, single-sided assembly with all components on the front ([ADR 0010](decisions/0010-single-sided-assembly.md)), rear 3D-printed carrier with the battery, magnetic attachment and lanyard attachment points | Outline provisional within the maximum |
 
 ## Engineering priorities
 
@@ -95,7 +95,7 @@ Rev A uses a commercially protected 1-cell LiPo pack (Adafruit 328, 2500 mAh).
 Charger/power-path functions and firmware load shedding do not replace its
 independent overdischarge, overcurrent and short-circuit protection. The cell
 allows up to 1.2 A charge (vendor) and 1.5 A continuous discharge; the pack
-has no thermistor, so a board NTC next to it qualifies charging. No safety or
+has no thermistor, so a board NTC at the edge over the pack qualifies charging. No safety or
 runtime measurements exist. See [power.md](power.md#independent-battery-protection).
 
 The power switch is a signal-level control: with USB attached the logic rail
@@ -107,6 +107,17 @@ to an nRF5340 SAADC input. The regulated logic voltage is not battery state.
 Rev A uses voltage-based load shedding; divider values, acquisition timing,
 error margin, shed/recovery thresholds and discharge characterization remain
 provisional. See [power.md](power.md#battery-state-measurement).
+
+## Display orientation
+
+The badge is worn landscape or portrait, on a magnet mount or a lanyard
+([ADR 0009](decisions/0009-dual-orientation-dual-mounting.md)). The square
+display lets firmware rotate the name, animation and QR views in 90° steps
+from the IMU's gravity vector, with hysteresis and a settling time so the
+image does not flip on small movements; when the reading is ambiguous (for
+example lying flat) the last orientation is kept. QR mode takes the
+orientation once on entry and keeps it until the mode is left, so a scan is
+never interrupted by a rotation.
 
 ## NFC content protection
 
@@ -120,13 +131,16 @@ and subsequent authorized MCU updates.
 ## Open decisions
 
 - LED matrix pitch, LED part, and drive current (after QR testing).
-- Exact board outline within the size limit.
+- Exact board outline details (corner radii, mounting holes) within 112 × 74 mm.
 - NFC coil tuning and provisioning bytes (verified on a development tag; see
   [nfc.md](nfc.md)).
 - IMU: ICM-42688-P on I²C until real-part verification; SPI is the fallback.
 - Microphone lifecycle confirmation.
-- Final button placement (front strip or bottom edge) at outline freeze
-  ([ADR 0008](decisions/0008-landscape-front-buttons.md)).
+- Final button placement (front strip or the edge below the field) at outline
+  freeze ([ADR 0008](decisions/0008-landscape-front-buttons.md)).
+- Carrier, magnet and lanyard geometry for portrait and landscape wear
+  ([ADR 0009](decisions/0009-dual-orientation-dual-mounting.md)); holding
+  force and comfort need prototype validation.
 - Charging temperature qualification with a pack that has no thermistor.
 
 The owner-selected Rev A architecture is recorded in

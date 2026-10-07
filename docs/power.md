@@ -204,7 +204,10 @@ table above; the I²C watchdog does not. Fitting 30.1 kΩ at RT2 restores TI's 0
 network if the board-to-cell offset proves it necessary. The charger's ADC
 reports the reading. **Rev A has no direct cell-temperature sensing:** the NTC
 measures the board next to the cell, which charger heat can make warmer than
-the cell (conservative at HOT, optimistic at COLD).
+the cell (conservative at HOT, optimistic at COLD). Charging is approved only
+after the cold-cell, warm-board and transition tests in
+[validation.md](validation.md#2-electrical-correctness) pass, or a fallback
+(inward-moved limits, a settling inhibit, or sensing on the pack) is in place.
 
 **Logic rail.** TPS63802 buck-boost, 3.30 V (FB 112 kΩ / 20 kΩ, VFB 500 mV),
 Murata DFE201612E-R47M (0.47 µH; Isat 5.5 A at −30% L) against a calculated
@@ -220,9 +223,28 @@ stops switching and passes the input through (SLVSF14B §7.3.5), so
 `VLED ≈ max(setting, SYS − drop)`. SYS reaches about VBAT + 50 mV with charging
 done or disabled (SLUSEG2D §8.3.4.1), about 4.25 V on a full pack, so settings
 below about 4.4 V are not regulated. The trim positions cover settings of about
-4.4–5.2 V once the LED is chosen. Coilcraft XEL4030-102ME (1.0 µH; Isat 9.0 A)
-against a calculated 3.66 A peak (VIN 2.9 V, VOUT 5.2 V, 1.12 A = 32 × 35 mA,
-η 0.8, L −30%).
+4.4–5.2 V once the LED is chosen. Coilcraft XGL4020-102MEC (1.0 µH ±20%,
+2.10 mm max; Isat 3.8 / 6.3 / 8.8 A at 10 / 20 / 30% inductance drop at
+25 °C, Coilcraft Document 1529-1).
+
+The inductor currents below are **calculated estimates with stated
+assumptions, not guaranteed bounds**. TI gives the TPS61023 switching
+frequency (1.0 MHz) and valley current limit (2.7 A minimum, 3.7 A typical)
+without a guaranteed minimum frequency or maximum current limit. With VIN
+2.9 V, VOUT 5.33 V, 0.66 A (32 × 19.4 mA + 5% for temperature [estimate],
+plus logic), η 0.8 and L 0.72 µH (−20% tolerance, −10% saturation), the
+normal-operation peak is 2.66 A at 1.0 MHz and 2.94 A at an assumed 0.8 MHz; it
+would reach the 3.8 A (10% drop) point only if the frequency fell to about
+0.5 MHz. Overload and current-limit peaks are not bounded by the datasheet.
+The charger uses the same inductor (L301): 3.0 A at the 1.5 A input limit
+(efficiency taken as 100% as an upper bound, VBUS 5.5 V, SYS 3.52 V,
+1.35 MHz, the BQ25620's specified minimum), 5.7 A if firmware left the 3.2 A
+power-on input limit.
+
+**Release gate:** on Rev A, measure the TPS61023 switching frequency at
+minimum VIN and the L202 and L301 peak and ripple current at maximum load, at
+start-up and in current limit (LED-rail overload), before the inductors are
+considered qualified ([validation.md](validation.md#2-electrical-correctness)).
 
 **Battery discharge limit.** The cell's 1.5 A continuous rating bounds the
 display. The worst case is a firmware fault with all 32 columns sinking their

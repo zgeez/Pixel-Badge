@@ -847,7 +847,7 @@
 			)
 			(embedded_fonts no)
 		)
-		(symbol "Connector_Generic_MountingPin:Conn_01x02_MountingPin"
+		(symbol "Connector_Generic:Conn_01x02"
 			(pin_names
 				(offset 1.016)
 				(hide yes)
@@ -867,15 +867,14 @@
 					)
 				)
 			)
-			(property "Value" "Conn_01x02_MountingPin"
-				(at 1.27 -5.08 0)
+			(property "Value" "Conn_01x02"
+				(at 0 -5.08 0)
 				(show_name no)
 				(do_not_autoplace no)
 				(effects
 					(font
 						(size 1.27 1.27)
 					)
-					(justify left)
 				)
 			)
 			(property "Footprint" ""
@@ -900,7 +899,7 @@
 					)
 				)
 			)
-			(property "Description" "Generic connectable mounting pin connector, single row, 01x02, script generated (kicad-library-utils/schlib/autogen/connector/)"
+			(property "Description" "Generic connector, single row, 01x02, script generated (kicad-library-utils/schlib/autogen/connector/)"
 				(at 0 0 0)
 				(show_name no)
 				(do_not_autoplace no)
@@ -922,7 +921,7 @@
 					)
 				)
 			)
-			(property "ki_fp_filters" "Connector*:*_1x??-1MP*"
+			(property "ki_fp_filters" "Connector*:*_1x??_*"
 				(at 0 0 0)
 				(show_name no)
 				(do_not_autoplace no)
@@ -933,7 +932,7 @@
 					)
 				)
 			)
-			(symbol "Conn_01x02_MountingPin_1_1"
+			(symbol "Conn_01x02_1_1"
 				(rectangle
 					(start -1.27 1.27)
 					(end 1.27 -3.81)
@@ -967,26 +966,6 @@
 						(type none)
 					)
 				)
-				(polyline
-					(pts
-						(xy -1.016 -4.572) (xy 1.016 -4.572)
-					)
-					(stroke
-						(width 0.1524)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(text "Mounting"
-					(at 0 -4.191 0)
-					(effects
-						(font
-							(size 0.381 0.381)
-						)
-					)
-				)
 				(pin passive line
 					(at -5.08 0 0)
 					(length 3.81)
@@ -1016,24 +995,6 @@
 						)
 					)
 					(number "2"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin passive line
-					(at 0 -7.62 90)
-					(length 3.048)
-					(name "MountPin"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "MP"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -3930,16 +3891,6 @@
 			(type default)
 		)
 		(uuid "4f94e78c-6f45-474e-a5ce-2008e0f6add8")
-	)
-	(wire
-		(pts
-			(xy 33.02 172.72) (xy 33.02 175.26)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "50b7f752-f630-421c-8b38-9abf9e66746b")
 	)
 	(wire
 		(pts
@@ -7386,83 +7337,6 @@
 		)
 	)
 	(symbol
-		(lib_id "power:GND")
-		(at 33.02 175.26 0)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom no)
-		(on_board no)
-		(in_pos_files yes)
-		(dnp no)
-		(uuid "1ca80f71-d78d-4e60-bf96-a31486278c25")
-		(property "Reference" "#PWR331"
-			(at 33.02 171.45 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "GND"
-			(at 33.02 179.07 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" ""
-			(at 33.02 175.26 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 33.02 175.26 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
-			(at 33.02 175.26 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "045882b9-6337-4243-885f-81bcf9f85e34")
-		)
-		(instances
-			(project "smart-led-badge"
-				(path "/fefc8d4a-8637-4143-b210-9149e35f9884/f79dd5bf-1129-4160-8b1f-c78c0c86307a"
-					(reference "#PWR331")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
 		(lib_id "Device:Thermistor_NTC")
 		(at 320.04 132.08 0)
 		(unit 1)
@@ -7775,7 +7649,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "smart-led-badge:L_Coilcraft_XEL4030"
+		(property "Footprint" "smart-led-badge:L_Coilcraft_XGL4020"
 			(at 279.4 50.8 0)
 			(hide yes)
 			(show_name no)
@@ -7819,7 +7693,7 @@
 				)
 			)
 		)
-		(property "MPN" "XEL4030-102MEC"
+		(property "MPN" "XGL4020-102MEC"
 			(at 279.4 50.8 0)
 			(hide yes)
 			(show_name no)
@@ -7830,7 +7704,7 @@
 				)
 			)
 		)
-		(property "LCSC" "C5441341"
+		(property "LCSC" "C5357696"
 			(at 279.4 50.8 0)
 			(hide yes)
 			(show_name no)
@@ -7841,7 +7715,7 @@
 				)
 			)
 		)
-		(property "Note" "Same part as L202; Isat 9.0 A vs ~2.4 A peak at 1.5 A input"
+		(property "Note" "Same part as L202; Isat 3.8 A (10 % drop) vs 3.0 A calculated peak at IINDPM 1.5 A (efficiency 100 %, 1.35 MHz); measure at bring-up"
 			(at 279.4 50.8 0)
 			(hide yes)
 			(show_name no)
@@ -11519,7 +11393,7 @@
 		)
 	)
 	(symbol
-		(lib_id "Connector_Generic_MountingPin:Conn_01x02_MountingPin")
+		(lib_id "Connector_Generic:Conn_01x02")
 		(at 33.02 165.1 0)
 		(unit 1)
 		(body_style 1)
@@ -11551,7 +11425,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Connector_JST:JST_PH_B2B-PH-SM4-TB_1x02-1MP_P2.00mm_Vertical"
+		(property "Footprint" "Connector_JST:JST_PH_S2B-PH-K_1x02_P2.00mm_Horizontal"
 			(at 33.02 165.1 0)
 			(hide yes)
 			(show_name no)
@@ -11573,7 +11447,7 @@
 				)
 			)
 		)
-		(property "Description" "Generic connectable mounting pin connector, single row, 01x02, script generated (kicad-library-utils/schlib/autogen/connector/)"
+		(property "Description" "Generic connector, single row, 01x02, script generated (kicad-library-utils/schlib/autogen/connector/)"
 			(at 33.02 165.1 0)
 			(hide yes)
 			(show_name no)
@@ -11595,7 +11469,7 @@
 				)
 			)
 		)
-		(property "MPN" "B2B-PH-SM4-TB(LF)(SN)"
+		(property "Assembly" "Hand-solder after PCBA by default (THT, inserted from the rear, soldered from the front); assembler only if it confirms rear insertion"
 			(at 33.02 165.1 0)
 			(hide yes)
 			(show_name no)
@@ -11606,7 +11480,7 @@
 				)
 			)
 		)
-		(property "LCSC" "C160352"
+		(property "MPN" "S2B-PH-K-S(LF)(SN)"
 			(at 33.02 165.1 0)
 			(hide yes)
 			(show_name no)
@@ -11617,7 +11491,18 @@
 				)
 			)
 		)
-		(property "Note" "Pin 1 = BAT-, pin 2 = BAT+ per Adafruit's own charger design (Micro-Lipo USB-C CN2: pin 1 GND, pin 2 VBAT) and Adafruit's statement that product 328 matches its boards; meter-check the pack before first connection"
+		(property "LCSC" "C173752"
+			(at 33.02 165.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Note" "Rear side, THT side entry (4.8 mm tall), body beside the pack, soldered from the front outside the LED field; the only rear part besides the battery. Pin 1 = BAT-, pin 2 = BAT+ per Adafruit's own charger design (Micro-Lipo USB-C CN2: pin 1 GND, pin 2 VBAT) and Adafruit's statement that product 328 matches its boards; meter-check the pack before first connection"
 			(at 33.02 165.1 0)
 			(hide yes)
 			(show_name no)
@@ -11633,9 +11518,6 @@
 		)
 		(pin "2"
 			(uuid "1208bb91-52dc-4a2e-83cc-e7aaf09da925")
-		)
-		(pin "MP"
-			(uuid "fb0ed5e1-6c2d-4c7d-8bee-ab5ddec9e8ea")
 		)
 		(instances
 			(project "smart-led-badge"

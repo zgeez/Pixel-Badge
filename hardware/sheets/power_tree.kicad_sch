@@ -2341,7 +2341,7 @@
 		)
 		(uuid "d1a74cc0-209f-4b35-a4b8-59d4e3ece731")
 	)
-	(text "Regulators and power tree (Rev A) - design notes\n\nPower states: EN_3V3 = switch ON (SYS via R201) OR charger PG (Q203). OFF + battery only: EN low,\n3V3 off. OFF + valid USB: PG low -> 3V3 on for the charging-only firmware mode (display off).\nUSB removed with the switch OFF: PG releases, R202 pulls EN low, 3V3 shuts down in hardware.\nEN <= SYS (< 4.6 V) < 6 V abs max. PWR_SW_N (Q204, open drain) reports the switch to the MCU.\n\nTPS63802 (SLVSEU9D): L 0.37-0.57 uH effective. Boost peak at VIN 2.9 V, 0.5 A design load,\nL 0.37 uH, 1.4 MHz: 1.01 A; x1.2 = 1.21 A required. L201 Isat 5.5 A (Murata, -30% L).\n\nTPS61023 (SLVSF14B): worst case VIN 2.9 V, VOUT 5.2 V, IOUT 1.12 A (32 x 35 mA), eta 0.8,\nL 0.7 uH (-30%): IL(DC) 2.51 A, ripple 2.30 A, peak 3.66 A. L202 Isat 9.0 A, Irms 8.4 A (20 C rise).\nVLED setting is PROVISIONAL (LED testing): 4.77 V typ, VREF 580-610 mV; trims R212/R213.\nBoost only: VLED = max(setting, SYS - drop); SYS ~ VBAT + 50 mV, so useful settings are about 4.4-5.2 V.\nLED_EN low (R214) keeps the boost off with true load disconnect.\n\nVBAT measurement: Q201 off unless VBAT_MEAS_EN is high. Ratio 1/2 (4.2 V -> 2.1 V).\nMCU unpowered: AO3401A IDSS <= 5 uA (55 C) x R221 47k = 0.24 V max at VBAT_SENSE, and\nAO3400A IDSS x R218 = 0.24 V on Q201 gate, below the AO3401A 0.5 V minimum threshold.\n\nValues marked PROVISIONAL or DNP are not validated. Nothing on this sheet is measured."
+	(text "Regulators and power tree (Rev A) - design notes\n\nPower states: EN_3V3 = switch ON (SYS via R201) OR charger PG (Q203). OFF + battery only: EN low,\n3V3 off. OFF + valid USB: PG low -> 3V3 on for the charging-only firmware mode (display off).\nUSB removed with the switch OFF: PG releases, R202 pulls EN low, 3V3 shuts down in hardware.\nEN <= SYS (< 4.6 V) < 6 V abs max. PWR_SW_N (Q204, open drain) reports the switch to the MCU.\n\nTPS63802 (SLVSEU9D): L 0.37-0.57 uH effective. Boost peak at VIN 2.9 V, 0.5 A design load,\nL 0.37 uH, 1.4 MHz: 1.01 A; x1.2 = 1.21 A required. L201 Isat 5.5 A (Murata, -30% L).\n\nTPS61023 (SLVSF14B), calculated estimate, not a bound: VIN 2.9 V, VOUT 5.33 V, IOUT 0.66 A (32 x 19.4 mA +5 %, logic),\neta 0.8, L 0.72 uH (-20 % tol, -10 % sat), f 0.8 MHz assumed (TI: 1.0 MHz typ, no min): peak 2.94 A.\nCurrent-limit peaks are not bounded by the datasheet: measure at bring-up (release gate).\nL202 XGL4020-102MEC: Isat 3.8/6.3/8.8 A at 10/20/30 % drop, Irms 8.8 A (Coilcraft 1529-1).\nVLED setting is PROVISIONAL (LED testing): 4.77 V typ, VREF 580-610 mV; trims R212/R213.\nBoost only: VLED = max(setting, SYS - drop); SYS ~ VBAT + 50 mV, so useful settings are about 4.4-5.2 V.\nLED_EN low (R214) keeps the boost off with true load disconnect.\n\nVBAT measurement: Q201 off unless VBAT_MEAS_EN is high. Ratio 1/2 (4.2 V -> 2.1 V).\nMCU unpowered: AO3401A IDSS <= 5 uA (55 C) x R221 47k = 0.24 V max at VBAT_SENSE, and\nAO3400A IDSS x R218 = 0.24 V on Q201 gate, below the AO3401A 0.5 V minimum threshold.\n\nValues marked PROVISIONAL or DNP are not validated. Nothing on this sheet is measured."
 		(exclude_from_sim no)
 		(at 299.72 152.4 0)
 		(effects
@@ -8829,7 +8829,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "smart-led-badge:L_Coilcraft_XEL4030"
+		(property "Footprint" "smart-led-badge:L_Coilcraft_XGL4020"
 			(at 101.6 99.06 0)
 			(hide yes)
 			(show_name no)
@@ -8873,7 +8873,7 @@
 				)
 			)
 		)
-		(property "MPN" "XEL4030-102MEC"
+		(property "MPN" "XGL4020-102MEC"
 			(at 101.6 99.06 0)
 			(hide yes)
 			(show_name no)
@@ -8884,7 +8884,7 @@
 				)
 			)
 		)
-		(property "LCSC" "C5441341"
+		(property "LCSC" "C5357696"
 			(at 101.6 99.06 0)
 			(hide yes)
 			(show_name no)

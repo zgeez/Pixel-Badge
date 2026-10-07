@@ -1,7 +1,10 @@
 # 0006: Rev A PCB and mechanical envelope
 
-- Status: Accepted; edge-accessible buttons and LED-only front superseded by
-  [0008](0008-landscape-front-buttons.md)
+- Status: Accepted; partly superseded by [0008](0008-landscape-front-buttons.md)
+  (edge-accessible buttons, LED-only front),
+  [0009](0009-dual-orientation-dual-mounting.md) (magnetic and lanyard
+  mounting) and [0010](0010-single-sided-assembly.md) (single-sided assembly,
+  regional thickness targets)
 - Date: 2026-10-04
 - Deciders: Project owner
 

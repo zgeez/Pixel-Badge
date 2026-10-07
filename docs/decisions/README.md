@@ -9,15 +9,17 @@ in the other documents in `docs/` and are marked TBD or provisional.
 1. Copy [template.md](template.md) to `NNNN-short-title.md` (next number,
    zero-padded).
 2. Fill it in with status `Proposed` and open a pull request.
-3. Change the status to `Accepted` when approved and merged.
+3. When the owner approves the decision, change the status to `Accepted` in
+   the same pull request; the decision takes effect when that pull request is
+   merged.
 4. Do not rewrite accepted ADRs; supersede them with a new ADR and update the
    old one's status.
 
 ## Index
 
 The records below capture the owner-selected Rev A scope and architecture.
-They were accepted when the pull request that introduced them was approved and
-merged, following the process above. Acceptance records a design choice, not
+Each was approved by the owner in the pull request that introduced it and
+takes effect when that pull request is merged, following the process above. Acceptance records a design choice, not
 measured validation; prototype-dependent values remain provisional within each
 decision.
 
@@ -28,6 +30,8 @@ decision.
 | [0003](0003-monochrome-display-qr-validation.md) | 32×32 monochrome display and QR-first validation | Accepted |
 | [0004](0004-ble-passive-nfc.md) | BLE configuration and external passive NTAG NFC | Accepted |
 | [0005](0005-usb-c-charge-and-data.md) | USB-C charging and USB 2.0 data architecture | Accepted; partly superseded by 0007 |
-| [0006](0006-rev-a-mechanical-envelope.md) | Rev A PCB and mechanical constraints | Accepted; partly superseded by 0008 |
+| [0006](0006-rev-a-mechanical-envelope.md) | Rev A PCB and mechanical constraints | Accepted; partly superseded by 0008, 0009 and 0010 |
 | [0007](0007-battery-charger-power-states.md) | 2500 mAh pack, BQ25620 switching charger, USB-powered charging state (amends 0005) | Accepted |
-| [0008](0008-landscape-front-buttons.md) | Landscape wear; buttons on the front below the LED field when they fit (amends 0006) | Accepted |
+| [0008](0008-landscape-front-buttons.md) | Landscape wear; buttons on the front below the LED field when they fit (amends 0006) | Accepted; partly superseded by 0009 and 0010 |
+| [0009](0009-dual-orientation-dual-mounting.md) | Portrait and landscape wear with firmware rotation; magnetic and lanyard mounting (amends 0006 and 0008) | Accepted |
+| [0010](0010-single-sided-assembly.md) | Single-sided assembly: all components on the front; rear holds the battery, its connector and the carrier; regional thickness targets (amends 0006 and 0008) | Accepted |
