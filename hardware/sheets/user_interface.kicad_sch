@@ -11,870 +11,796 @@
 		(comment 2 "Draft: schematic capture in progress, not for fabrication")
 	)
 	(lib_symbols
-			(symbol "Switch:SW_Push"
-				(pin_numbers
-					(hide yes)
-				)
-				(pin_names
-					(offset 1.016)
-					(hide yes)
-				)
-				(exclude_from_sim no)
-				(in_bom yes)
-				(on_board yes)
-				(in_pos_files yes)
-				(duplicate_pin_numbers_are_jumpers no)
-				(property "Reference" "SW"
-					(at 1.27 2.54 0)
-					(show_name no)
-					(do_not_autoplace no)
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-						(justify left)
-					)
-				)
-				(property "Value" "SW_Push"
-					(at 0 -1.524 0)
-					(show_name no)
-					(do_not_autoplace no)
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-					)
-				)
-				(property "Footprint" ""
-					(at 0 5.08 0)
-					(show_name no)
-					(do_not_autoplace no)
-					(hide yes)
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-					)
-				)
-				(property "Datasheet" ""
-					(at 0 5.08 0)
-					(show_name no)
-					(do_not_autoplace no)
-					(hide yes)
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-					)
-				)
-				(property "Description" "Push button switch, generic, two pins"
-					(at 0 0 0)
-					(show_name no)
-					(do_not_autoplace no)
-					(hide yes)
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-					)
-				)
-				(property "ki_keywords" "switch normally-open pushbutton push-button"
-					(at 0 0 0)
-					(show_name no)
-					(do_not_autoplace no)
-					(hide yes)
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-					)
-				)
-				(symbol "SW_Push_0_1"
-					(circle
-						(center -2.032 0)
-						(radius 0.508)
-						(stroke
-							(width 0)
-							(type default)
-						)
-						(fill
-							(type none)
-						)
-					)
-					(polyline
-						(pts
-							(xy 0 1.27) (xy 0 3.048)
-						)
-						(stroke
-							(width 0)
-							(type default)
-						)
-						(fill
-							(type none)
-						)
-					)
-					(circle
-						(center 2.032 0)
-						(radius 0.508)
-						(stroke
-							(width 0)
-							(type default)
-						)
-						(fill
-							(type none)
-						)
-					)
-					(polyline
-						(pts
-							(xy 2.54 1.27) (xy -2.54 1.27)
-						)
-						(stroke
-							(width 0)
-							(type default)
-						)
-						(fill
-							(type none)
-						)
-					)
-					(pin passive line
-						(at -5.08 0 0)
-						(length 2.54)
-						(name "1"
-							(effects
-								(font
-									(size 1.27 1.27)
-								)
-							)
-						)
-						(number "1"
-							(effects
-								(font
-									(size 1.27 1.27)
-								)
-							)
-						)
-					)
-					(pin passive line
-						(at 5.08 0 180)
-						(length 2.54)
-						(name "2"
-							(effects
-								(font
-									(size 1.27 1.27)
-								)
-							)
-						)
-						(number "2"
-							(effects
-								(font
-									(size 1.27 1.27)
-								)
-							)
-						)
-					)
-				)
-				(embedded_fonts no)
+		(symbol "Device:LED"
+			(pin_numbers
+				(hide yes)
 			)
-			(symbol "power:GND"
-				(power global)
-				(pin_numbers
-					(hide yes)
-				)
-				(pin_names
-					(offset 0)
-					(hide yes)
-				)
-				(exclude_from_sim no)
-				(in_bom yes)
-				(on_board yes)
-				(in_pos_files yes)
-				(duplicate_pin_numbers_are_jumpers no)
-				(property "Reference" "#PWR"
-					(at 0 -6.35 0)
-					(show_name no)
-					(do_not_autoplace no)
-					(hide yes)
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-					)
-				)
-				(property "Value" "GND"
-					(at 0 -3.81 0)
-					(show_name no)
-					(do_not_autoplace no)
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-					)
-				)
-				(property "Footprint" ""
-					(at 0 0 0)
-					(show_name no)
-					(do_not_autoplace no)
-					(hide yes)
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-					)
-				)
-				(property "Datasheet" ""
-					(at 0 0 0)
-					(show_name no)
-					(do_not_autoplace no)
-					(hide yes)
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-					)
-				)
-				(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
-					(at 0 0 0)
-					(show_name no)
-					(do_not_autoplace no)
-					(hide yes)
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-					)
-				)
-				(property "ki_keywords" "global power"
-					(at 0 0 0)
-					(show_name no)
-					(do_not_autoplace no)
-					(hide yes)
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-					)
-				)
-				(symbol "GND_0_1"
-					(polyline
-						(pts
-							(xy 0 0) (xy 0 -1.27) (xy 1.27 -1.27) (xy 0 -2.54) (xy -1.27 -1.27) (xy 0 -1.27)
-						)
-						(stroke
-							(width 0)
-							(type default)
-						)
-						(fill
-							(type none)
-						)
-					)
-				)
-				(symbol "GND_1_1"
-					(pin power_in line
-						(at 0 0 270)
-						(length 0)
-						(name ""
-							(effects
-								(font
-									(size 1.27 1.27)
-								)
-							)
-						)
-						(number "1"
-							(effects
-								(font
-									(size 1.27 1.27)
-								)
-							)
-						)
-					)
-				)
-				(embedded_fonts no)
+			(pin_names
+				(offset 1.016)
+				(hide yes)
 			)
-			(symbol "Device:R"
-				(pin_numbers
-					(hide yes)
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(in_pos_files yes)
+			(duplicate_pin_numbers_are_jumpers no)
+			(property "Reference" "D"
+				(at 0 2.54 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
 				)
-				(pin_names
-					(offset 0)
+			)
+			(property "Value" "LED"
+				(at 0 -2.54 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
 				)
-				(exclude_from_sim no)
-				(in_bom yes)
-				(on_board yes)
-				(in_pos_files yes)
-				(duplicate_pin_numbers_are_jumpers no)
-				(property "Reference" "R"
-					(at 2.032 0 90)
-					(show_name no)
-					(do_not_autoplace no)
-					(effects
-						(font
-							(size 1.27 1.27)
+			)
+			(property "Footprint" ""
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Datasheet" ""
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Description" "Light emitting diode"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Sim.Pins" "1=K 2=A"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "ki_keywords" "LED diode"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "ki_fp_filters" "LED* LED_SMD:* LED_THT:*"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(symbol "LED_0_1"
+				(polyline
+					(pts
+						(xy -3.048 -0.762) (xy -4.572 -2.286) (xy -3.81 -2.286) (xy -4.572 -2.286) (xy -4.572 -1.524)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy -1.778 -0.762) (xy -3.302 -2.286) (xy -2.54 -2.286) (xy -3.302 -2.286) (xy -3.302 -1.524)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy -1.27 0) (xy 1.27 0)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy -1.27 -1.27) (xy -1.27 1.27)
+					)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 1.27 -1.27) (xy 1.27 1.27) (xy -1.27 0) (xy 1.27 -1.27)
+					)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+			)
+			(symbol "LED_1_1"
+				(pin passive line
+					(at -3.81 0 0)
+					(length 2.54)
+					(name "K"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
 						)
 					)
 				)
-				(property "Value" "R"
+				(pin passive line
+					(at 3.81 0 180)
+					(length 2.54)
+					(name "A"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+			)
+			(embedded_fonts no)
+		)
+		(symbol "Device:R"
+			(pin_numbers
+				(hide yes)
+			)
+			(pin_names
+				(offset 0)
+			)
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(in_pos_files yes)
+			(duplicate_pin_numbers_are_jumpers no)
+			(property "Reference" "R"
+				(at 2.032 0 90)
+				(show_name no)
+				(do_not_autoplace no)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Value" "R"
+				(at 0 0 90)
+				(show_name no)
+				(do_not_autoplace no)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Footprint" ""
+				(at -1.778 0 90)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Datasheet" ""
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Description" "Resistor"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "ki_keywords" "R res resistor"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "ki_fp_filters" "R_*"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(symbol "R_0_1"
+				(rectangle
+					(start -1.016 -2.54)
+					(end 1.016 2.54)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+			)
+			(symbol "R_1_1"
+				(pin passive line
+					(at 0 3.81 270)
+					(length 1.27)
+					(name ""
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 0 -3.81 90)
+					(length 1.27)
+					(name ""
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+			)
+			(embedded_fonts no)
+		)
+		(symbol "Switch:SW_Push"
+			(pin_numbers
+				(hide yes)
+			)
+			(pin_names
+				(offset 1.016)
+				(hide yes)
+			)
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(in_pos_files yes)
+			(duplicate_pin_numbers_are_jumpers no)
+			(property "Reference" "SW"
+				(at 1.27 2.54 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify left)
+				)
+			)
+			(property "Value" "SW_Push"
+				(at 0 -1.524 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Footprint" ""
+				(at 0 5.08 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Datasheet" ""
+				(at 0 5.08 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Description" "Push button switch, generic, two pins"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "ki_keywords" "switch normally-open pushbutton push-button"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(symbol "SW_Push_0_1"
+				(circle
+					(center -2.032 0)
+					(radius 0.508)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 0 1.27) (xy 0 3.048)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(circle
+					(center 2.032 0)
+					(radius 0.508)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 2.54 1.27) (xy -2.54 1.27)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(pin passive line
+					(at -5.08 0 0)
+					(length 2.54)
+					(name "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 5.08 0 180)
+					(length 2.54)
+					(name "2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+			)
+			(embedded_fonts no)
+		)
+		(symbol "power:+3V3"
+			(power global)
+			(pin_numbers
+				(hide yes)
+			)
+			(pin_names
+				(offset 0)
+				(hide yes)
+			)
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(in_pos_files yes)
+			(duplicate_pin_numbers_are_jumpers no)
+			(property "Reference" "#PWR"
+				(at 0 -3.81 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Value" "+3V3"
+				(at 0 3.556 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Footprint" ""
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Datasheet" ""
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Description" "Power symbol creates a global label with name \"+3V3\""
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "ki_keywords" "global power"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(symbol "+3V3_0_1"
+				(polyline
+					(pts
+						(xy -0.762 1.27) (xy 0 2.54)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 0 2.54) (xy 0.762 1.27)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 0 0) (xy 0 2.54)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+			)
+			(symbol "+3V3_1_1"
+				(pin power_in line
 					(at 0 0 90)
-					(show_name no)
-					(do_not_autoplace no)
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-					)
-				)
-				(property "Footprint" ""
-					(at -1.778 0 90)
-					(show_name no)
-					(do_not_autoplace no)
-					(hide yes)
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-					)
-				)
-				(property "Datasheet" ""
-					(at 0 0 0)
-					(show_name no)
-					(do_not_autoplace no)
-					(hide yes)
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-					)
-				)
-				(property "Description" "Resistor"
-					(at 0 0 0)
-					(show_name no)
-					(do_not_autoplace no)
-					(hide yes)
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-					)
-				)
-				(property "ki_keywords" "R res resistor"
-					(at 0 0 0)
-					(show_name no)
-					(do_not_autoplace no)
-					(hide yes)
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-					)
-				)
-				(property "ki_fp_filters" "R_*"
-					(at 0 0 0)
-					(show_name no)
-					(do_not_autoplace no)
-					(hide yes)
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-					)
-				)
-				(symbol "R_0_1"
-					(rectangle
-						(start -1.016 -2.54)
-						(end 1.016 2.54)
-						(stroke
-							(width 0.254)
-							(type default)
-						)
-						(fill
-							(type none)
-						)
-					)
-				)
-				(symbol "R_1_1"
-					(pin passive line
-						(at 0 3.81 270)
-						(length 1.27)
-						(name ""
-							(effects
-								(font
-									(size 1.27 1.27)
-								)
-							)
-						)
-						(number "1"
-							(effects
-								(font
-									(size 1.27 1.27)
-								)
+					(length 0)
+					(name ""
+						(effects
+							(font
+								(size 1.27 1.27)
 							)
 						)
 					)
-					(pin passive line
-						(at 0 -3.81 90)
-						(length 1.27)
-						(name ""
-							(effects
-								(font
-									(size 1.27 1.27)
-								)
-							)
-						)
-						(number "2"
-							(effects
-								(font
-									(size 1.27 1.27)
-								)
+					(number "1"
+						(effects
+							(font
+								(size 1.27 1.27)
 							)
 						)
 					)
 				)
-				(embedded_fonts no)
 			)
-			(symbol "power:+3V3"
-				(power global)
-				(pin_numbers
-					(hide yes)
-				)
-				(pin_names
-					(offset 0)
-					(hide yes)
-				)
-				(exclude_from_sim no)
-				(in_bom yes)
-				(on_board yes)
-				(in_pos_files yes)
-				(duplicate_pin_numbers_are_jumpers no)
-				(property "Reference" "#PWR"
-					(at 0 -3.81 0)
-					(show_name no)
-					(do_not_autoplace no)
-					(hide yes)
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-					)
-				)
-				(property "Value" "+3V3"
-					(at 0 3.556 0)
-					(show_name no)
-					(do_not_autoplace no)
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-					)
-				)
-				(property "Footprint" ""
-					(at 0 0 0)
-					(show_name no)
-					(do_not_autoplace no)
-					(hide yes)
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-					)
-				)
-				(property "Datasheet" ""
-					(at 0 0 0)
-					(show_name no)
-					(do_not_autoplace no)
-					(hide yes)
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-					)
-				)
-				(property "Description" "Power symbol creates a global label with name \"+3V3\""
-					(at 0 0 0)
-					(show_name no)
-					(do_not_autoplace no)
-					(hide yes)
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-					)
-				)
-				(property "ki_keywords" "global power"
-					(at 0 0 0)
-					(show_name no)
-					(do_not_autoplace no)
-					(hide yes)
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-					)
-				)
-				(symbol "+3V3_0_1"
-					(polyline
-						(pts
-							(xy -0.762 1.27) (xy 0 2.54)
-						)
-						(stroke
-							(width 0)
-							(type default)
-						)
-						(fill
-							(type none)
-						)
-					)
-					(polyline
-						(pts
-							(xy 0 2.54) (xy 0.762 1.27)
-						)
-						(stroke
-							(width 0)
-							(type default)
-						)
-						(fill
-							(type none)
-						)
-					)
-					(polyline
-						(pts
-							(xy 0 0) (xy 0 2.54)
-						)
-						(stroke
-							(width 0)
-							(type default)
-						)
-						(fill
-							(type none)
-						)
-					)
-				)
-				(symbol "+3V3_1_1"
-					(pin power_in line
-						(at 0 0 90)
-						(length 0)
-						(name ""
-							(effects
-								(font
-									(size 1.27 1.27)
-								)
-							)
-						)
-						(number "1"
-							(effects
-								(font
-									(size 1.27 1.27)
-								)
-							)
-						)
-					)
-				)
-				(embedded_fonts no)
+			(embedded_fonts no)
+		)
+		(symbol "power:GND"
+			(power global)
+			(pin_numbers
+				(hide yes)
 			)
-			(symbol "Device:LED"
-				(pin_numbers
-					(hide yes)
-				)
-				(pin_names
-					(offset 1.016)
-					(hide yes)
-				)
-				(exclude_from_sim no)
-				(in_bom yes)
-				(on_board yes)
-				(in_pos_files yes)
-				(duplicate_pin_numbers_are_jumpers no)
-				(property "Reference" "D"
-					(at 0 2.54 0)
-					(show_name no)
-					(do_not_autoplace no)
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-					)
-				)
-				(property "Value" "LED"
-					(at 0 -2.54 0)
-					(show_name no)
-					(do_not_autoplace no)
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-					)
-				)
-				(property "Footprint" ""
-					(at 0 0 0)
-					(show_name no)
-					(do_not_autoplace no)
-					(hide yes)
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-					)
-				)
-				(property "Datasheet" ""
-					(at 0 0 0)
-					(show_name no)
-					(do_not_autoplace no)
-					(hide yes)
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-					)
-				)
-				(property "Description" "Light emitting diode"
-					(at 0 0 0)
-					(show_name no)
-					(do_not_autoplace no)
-					(hide yes)
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-					)
-				)
-				(property "Sim.Pins" "1=K 2=A"
-					(at 0 0 0)
-					(show_name no)
-					(do_not_autoplace no)
-					(hide yes)
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-					)
-				)
-				(property "ki_keywords" "LED diode"
-					(at 0 0 0)
-					(show_name no)
-					(do_not_autoplace no)
-					(hide yes)
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-					)
-				)
-				(property "ki_fp_filters" "LED* LED_SMD:* LED_THT:*"
-					(at 0 0 0)
-					(show_name no)
-					(do_not_autoplace no)
-					(hide yes)
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-					)
-				)
-				(symbol "LED_0_1"
-					(polyline
-						(pts
-							(xy -3.048 -0.762) (xy -4.572 -2.286) (xy -3.81 -2.286) (xy -4.572 -2.286) (xy -4.572 -1.524)
-						)
-						(stroke
-							(width 0)
-							(type default)
-						)
-						(fill
-							(type none)
-						)
-					)
-					(polyline
-						(pts
-							(xy -1.778 -0.762) (xy -3.302 -2.286) (xy -2.54 -2.286) (xy -3.302 -2.286) (xy -3.302 -1.524)
-						)
-						(stroke
-							(width 0)
-							(type default)
-						)
-						(fill
-							(type none)
-						)
-					)
-					(polyline
-						(pts
-							(xy -1.27 0) (xy 1.27 0)
-						)
-						(stroke
-							(width 0)
-							(type default)
-						)
-						(fill
-							(type none)
-						)
-					)
-					(polyline
-						(pts
-							(xy -1.27 -1.27) (xy -1.27 1.27)
-						)
-						(stroke
-							(width 0.254)
-							(type default)
-						)
-						(fill
-							(type none)
-						)
-					)
-					(polyline
-						(pts
-							(xy 1.27 -1.27) (xy 1.27 1.27) (xy -1.27 0) (xy 1.27 -1.27)
-						)
-						(stroke
-							(width 0.254)
-							(type default)
-						)
-						(fill
-							(type none)
-						)
-					)
-				)
-				(symbol "LED_1_1"
-					(pin passive line
-						(at -3.81 0 0)
-						(length 2.54)
-						(name "K"
-							(effects
-								(font
-									(size 1.27 1.27)
-								)
-							)
-						)
-						(number "1"
-							(effects
-								(font
-									(size 1.27 1.27)
-								)
-							)
-						)
-					)
-					(pin passive line
-						(at 3.81 0 180)
-						(length 2.54)
-						(name "A"
-							(effects
-								(font
-									(size 1.27 1.27)
-								)
-							)
-						)
-						(number "2"
-							(effects
-								(font
-									(size 1.27 1.27)
-								)
-							)
-						)
-					)
-				)
-				(embedded_fonts no)
+			(pin_names
+				(offset 0)
+				(hide yes)
 			)
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(in_pos_files yes)
+			(duplicate_pin_numbers_are_jumpers no)
+			(property "Reference" "#PWR"
+				(at 0 -6.35 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Value" "GND"
+				(at 0 -3.81 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Footprint" ""
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Datasheet" ""
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "ki_keywords" "global power"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(symbol "GND_0_1"
+				(polyline
+					(pts
+						(xy 0 0) (xy 0 -1.27) (xy 1.27 -1.27) (xy 0 -2.54) (xy -1.27 -1.27) (xy 0 -1.27)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+			)
+			(symbol "GND_1_1"
+				(pin power_in line
+					(at 0 0 270)
+					(length 0)
+					(name ""
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+			)
+			(embedded_fonts no)
+		)
 	)
-	(symbol
-		(lib_id "Switch:SW_Push")
-		(at 76.2 76.2 0)
-		(unit 1)
+	(text "User interface (Rev A) - design notes\n\nTwo buttons (Mode/Next, Action/Select; long press allowed) to GND, internal pull-ups; DNP external pull-ups.\nPlacement (OD-27): front face in the strip below the LED field if the land pattern fits with LED and edge clearance;\notherwise side-actuated parts on the bottom edge. Contacts are enclosed under a plastic actuator.\nStatus LED on the rear, GPIO high = on. The power switch SW201 is on the power-tree sheet. Nothing measured."
 		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "6bf0b077-684f-4a71-ae6c-ee9155cf7b88")
-		(property "Reference" "SW1201"
-			(at 71.12 71.12 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
+		(at 50.8 129.54 0)
+		(effects
+			(font
+				(size 1.27 1.27)
 			)
+			(justify left top)
 		)
-		(property "Value" "Mode/Next"
-			(at 71.12 81.28 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
+		(uuid "135c62a8-3687-45ca-992d-2bed1381e053")
+	)
+	(wire
+		(pts
+			(xy 111.76 76.2) (xy 106.68 76.2)
 		)
-		(property "Footprint" "smart-led-badge:SW_XUNPU_TS-1088"
-			(at 76.2 76.2 0)
-			(hide yes)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
+		(stroke
+			(width 0)
+			(type default)
 		)
-		(property "Datasheet" ""
-			(at 76.2 76.2 0)
-			(hide yes)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
+		(uuid "196e1ec8-2f36-460d-8a8b-83176b779326")
+	)
+	(wire
+		(pts
+			(xy 91.44 59.69) (xy 91.44 62.23)
 		)
-		(property "Description" "Push button switch, generic, two pins"
-			(at 76.2 76.2 0)
-			(hide yes)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
+		(stroke
+			(width 0)
+			(type default)
 		)
-		(property "Manufacturer" "XUNPU"
-			(at 76.2 76.2 0)
-			(hide yes)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "MPN" "TS-1088-AR02016"
-			(at 76.2 76.2 0)
-			(hide yes)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "LCSC" "C720477"
-			(at 76.2 76.2 0)
-			(hide yes)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Note" "Front side, strip below the LED field (OD-27); top-actuated, 2.0 mm height, 160 gf"
-			(at 76.2 76.2 0)
-			(hide yes)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "1caae0d7-b51e-4952-b7cc-d377d8e0230d")
-		)
-		(pin "2"
-			(uuid "b4533743-76b2-4135-a0eb-c29c8ca7832a")
-		)
-		(instances
-			(project "smart-led-badge"
-				(path "/fefc8d4a-8637-4143-b210-9149e35f9884/602e5aed-a3a5-4ebd-8b28-10349e2b29c9"
-					(reference "SW1201")
-					(unit 1)
-				)
-			)
-		)
+		(uuid "251a68e3-33c0-4cf4-bbfa-94dd3c9e5226")
 	)
 	(wire
 		(pts
@@ -886,26 +812,85 @@
 		)
 		(uuid "29fce34b-7b77-4798-b03b-fa2db3dcd2a3")
 	)
-	(global_label "BTN_MODE"
-		(shape passive)
-		(at 66.04 76.2 180)
-		(fields_autoplaced yes)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right)
+	(wire
+		(pts
+			(xy 165.1 80.01) (xy 165.1 82.55)
 		)
-		(uuid "512885b9-63e9-4543-9d28-caead957690a")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 66.04 76.2 0)
-			(hide yes)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
+		(stroke
+			(width 0)
+			(type default)
 		)
+		(uuid "3cbdc7e4-4d83-4a55-9d43-6bc77d921b3a")
+	)
+	(wire
+		(pts
+			(xy 121.92 76.2) (xy 127 76.2)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "4bae966e-4c47-4338-9d7c-43740a7d94c7")
+	)
+	(wire
+		(pts
+			(xy 165.1 72.39) (xy 165.1 69.85)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "73c64de1-6c86-4bd2-9055-5aefe94ace98")
+	)
+	(wire
+		(pts
+			(xy 179.07 76.2) (xy 176.53 76.2)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "865ae9eb-ea35-4b8c-8c3f-f78694790e4b")
+	)
+	(wire
+		(pts
+			(xy 186.69 76.2) (xy 189.23 76.2)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "ab8299e2-f1ad-4ebf-aa09-4bbd3f2c3263")
+	)
+	(wire
+		(pts
+			(xy 132.08 52.07) (xy 132.08 49.53)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "ad3151f5-6c8e-4825-b8a0-87f700ba68c2")
+	)
+	(wire
+		(pts
+			(xy 132.08 59.69) (xy 132.08 62.23)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "c81eaf93-9bb4-4d26-b622-b48181837b72")
+	)
+	(wire
+		(pts
+			(xy 91.44 52.07) (xy 91.44 49.53)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "ecfd3442-ed26-4302-a65f-4ac843bbef8a")
 	)
 	(wire
 		(pts
@@ -917,158 +902,48 @@
 		)
 		(uuid "f31433f9-5ef7-4237-afc9-e44395ea5afc")
 	)
-	(symbol
-		(lib_id "power:GND")
-		(at 86.36 76.2 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom no)
-		(on_board no)
-		(dnp no)
-		(uuid "2363851a-77b3-49ee-8593-ab4c777e1409")
-		(property "Reference" "#PWR1201"
-			(at 86.36 72.39 0)
-			(hide yes)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
+	(label "LED_A"
+		(at 165.1 82.55 270)
+		(effects
+			(font
+				(size 1.27 1.27)
 			)
+			(justify right bottom)
 		)
-		(property "Value" "GND"
-			(at 86.36 80.01 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" ""
-			(at 86.36 76.2 0)
-			(hide yes)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 86.36 76.2 0)
-			(hide yes)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
-			(at 86.36 76.2 0)
-			(hide yes)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "e73b6599-8d4a-46bb-9362-8674a6179fdd")
-		)
-		(instances
-			(project "smart-led-badge"
-				(path "/fefc8d4a-8637-4143-b210-9149e35f9884/602e5aed-a3a5-4ebd-8b28-10349e2b29c9"
-					(reference "#PWR1201")
-					(unit 1)
-				)
-			)
-		)
+		(uuid "a641c3c4-d3a4-4890-979d-77c67d6ed32c")
 	)
-	(symbol
-		(lib_id "Device:R")
-		(at 91.44 55.88 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp yes)
-		(uuid "cb1dfa14-18e9-4238-8152-7951d62cb59a")
-		(property "Reference" "R1201"
-			(at 93.98 54.61 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
+	(label "LED_A"
+		(at 189.23 76.2 0)
+		(effects
+			(font
+				(size 1.27 1.27)
 			)
+			(justify left bottom)
 		)
-		(property "Value" "10k"
-			(at 93.98 57.15 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
-			(at 91.44 55.88 0)
-			(hide yes)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 91.44 55.88 0)
-			(hide yes)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "Resistor"
-			(at 91.44 55.88 0)
-			(hide yes)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Note" "External pull-up option; firmware uses the internal pull-up"
-			(at 91.44 55.88 0)
-			(hide yes)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "5174e383-fd55-40cb-86b9-c32d7285b82d")
-		)
-		(pin "2"
-			(uuid "e0afb1dd-8959-4a85-bdb4-084532f8dd11")
-		)
-		(instances
-			(project "smart-led-badge"
-				(path "/fefc8d4a-8637-4143-b210-9149e35f9884/602e5aed-a3a5-4ebd-8b28-10349e2b29c9"
-					(reference "R1201")
-					(unit 1)
-				)
-			)
-		)
+		(uuid "ed07158a-afbc-4753-9c00-8fc667cfed8d")
 	)
-	(wire
-		(pts
-			(xy 91.44 52.07) (xy 91.44 49.53)
+	(global_label "STATUS_LED"
+		(shape passive)
+		(at 165.1 69.85 90)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
 		)
-		(stroke
-			(width 0)
-			(type default)
+		(uuid "1c2daadb-b790-44e1-953a-ec423ba1d25c")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 165.1 69.85 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
 		)
-		(uuid "ecfd3442-ed26-4302-a65f-4ac843bbef8a")
 	)
 	(global_label "BTN_MODE"
 		(shape passive)
@@ -1084,6 +959,8 @@
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
 			(at 91.44 49.53 0)
 			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1091,195 +968,28 @@
 			)
 		)
 	)
-	(wire
-		(pts
-			(xy 91.44 59.69) (xy 91.44 62.23)
+	(global_label "BTN_MODE"
+		(shape passive)
+		(at 66.04 76.2 180)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
 		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "251a68e3-33c0-4cf4-bbfa-94dd3c9e5226")
-	)
-	(symbol
-		(lib_id "power:+3V3")
-		(at 91.44 62.23 180)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom no)
-		(on_board no)
-		(dnp no)
-		(uuid "bf8495ac-1169-4224-8ea7-467c7cafd853")
-		(property "Reference" "#PWR1202"
-			(at 91.44 58.42 0)
+		(uuid "512885b9-63e9-4543-9d28-caead957690a")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 66.04 76.2 0)
 			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
 			)
 		)
-		(property "Value" "+3V3"
-			(at 91.44 66.04 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" ""
-			(at 91.44 62.23 0)
-			(hide yes)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 91.44 62.23 0)
-			(hide yes)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "Power symbol creates a global label with name \"+3V3\""
-			(at 91.44 62.23 0)
-			(hide yes)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "171fd4b9-991b-49eb-a94c-b20016c866df")
-		)
-		(instances
-			(project "smart-led-badge"
-				(path "/fefc8d4a-8637-4143-b210-9149e35f9884/602e5aed-a3a5-4ebd-8b28-10349e2b29c9"
-					(reference "#PWR1202")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Switch:SW_Push")
-		(at 116.84 76.2 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "2fb3298e-ffb8-4681-9f94-3cd3feddfc9e")
-		(property "Reference" "SW1202"
-			(at 111.76 71.12 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Value" "Action/Select"
-			(at 111.76 81.28 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" "smart-led-badge:SW_XUNPU_TS-1088"
-			(at 116.84 76.2 0)
-			(hide yes)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 116.84 76.2 0)
-			(hide yes)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "Push button switch, generic, two pins"
-			(at 116.84 76.2 0)
-			(hide yes)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Manufacturer" "XUNPU"
-			(at 116.84 76.2 0)
-			(hide yes)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "MPN" "TS-1088-AR02016"
-			(at 116.84 76.2 0)
-			(hide yes)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "LCSC" "C720477"
-			(at 116.84 76.2 0)
-			(hide yes)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Note" "Front side, strip below the LED field (OD-27); top-actuated, 2.0 mm height, 160 gf"
-			(at 116.84 76.2 0)
-			(hide yes)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "4cbb098c-40a7-4088-bc9b-7768c9c948ef")
-		)
-		(pin "2"
-			(uuid "bdb92a72-5a95-4f60-bcbf-0e63572c9cf6")
-		)
-		(instances
-			(project "smart-led-badge"
-				(path "/fefc8d4a-8637-4143-b210-9149e35f9884/602e5aed-a3a5-4ebd-8b28-10349e2b29c9"
-					(reference "SW1202")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(wire
-		(pts
-			(xy 111.76 76.2) (xy 106.68 76.2)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "196e1ec8-2f36-460d-8a8b-83176b779326")
 	)
 	(global_label "BTN_ACTION"
 		(shape passive)
@@ -1295,175 +1005,14 @@
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
 			(at 106.68 76.2 0)
 			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
 			)
 		)
-	)
-	(wire
-		(pts
-			(xy 121.92 76.2) (xy 127.0 76.2)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "4bae966e-4c47-4338-9d7c-43740a7d94c7")
-	)
-	(symbol
-		(lib_id "power:GND")
-		(at 127.0 76.2 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom no)
-		(on_board no)
-		(dnp no)
-		(uuid "8ebf08d4-3cf7-4872-a1ff-76b7032ba7c7")
-		(property "Reference" "#PWR1203"
-			(at 127.0 72.39 0)
-			(hide yes)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "GND"
-			(at 127.0 80.01 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" ""
-			(at 127.0 76.2 0)
-			(hide yes)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 127.0 76.2 0)
-			(hide yes)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
-			(at 127.0 76.2 0)
-			(hide yes)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "4a5adf33-acb9-4843-8cd7-45438a4df2e8")
-		)
-		(instances
-			(project "smart-led-badge"
-				(path "/fefc8d4a-8637-4143-b210-9149e35f9884/602e5aed-a3a5-4ebd-8b28-10349e2b29c9"
-					(reference "#PWR1203")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Device:R")
-		(at 132.08 55.88 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp yes)
-		(uuid "7d4bd9f1-c2a5-4ea3-8f73-558c22861bb5")
-		(property "Reference" "R1202"
-			(at 134.62 54.61 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Value" "10k"
-			(at 134.62 57.15 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
-			(at 132.08 55.88 0)
-			(hide yes)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 132.08 55.88 0)
-			(hide yes)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "Resistor"
-			(at 132.08 55.88 0)
-			(hide yes)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Note" "External pull-up option; firmware uses the internal pull-up"
-			(at 132.08 55.88 0)
-			(hide yes)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "7326410d-ba7c-42f3-a646-fb36ff908126")
-		)
-		(pin "2"
-			(uuid "f9077c9a-fb71-4436-a52e-496e5247e246")
-		)
-		(instances
-			(project "smart-led-badge"
-				(path "/fefc8d4a-8637-4143-b210-9149e35f9884/602e5aed-a3a5-4ebd-8b28-10349e2b29c9"
-					(reference "R1202")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(wire
-		(pts
-			(xy 132.08 52.07) (xy 132.08 49.53)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "ad3151f5-6c8e-4825-b8a0-87f700ba68c2")
 	)
 	(global_label "BTN_ACTION"
 		(shape passive)
@@ -1479,6 +1028,8 @@
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
 			(at 132.08 49.53 0)
 			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1486,28 +1037,22 @@
 			)
 		)
 	)
-	(wire
-		(pts
-			(xy 132.08 59.69) (xy 132.08 62.23)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "c81eaf93-9bb4-4d26-b622-b48181837b72")
-	)
 	(symbol
 		(lib_id "power:+3V3")
 		(at 132.08 62.23 180)
 		(unit 1)
+		(body_style 1)
 		(exclude_from_sim no)
 		(in_bom no)
 		(on_board no)
+		(in_pos_files yes)
 		(dnp no)
 		(uuid "04132001-895b-40a4-bc52-209cf51c6685")
 		(property "Reference" "#PWR1204"
 			(at 132.08 58.42 0)
 			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1516,6 +1061,8 @@
 		)
 		(property "Value" "+3V3"
 			(at 132.08 66.04 0)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1525,6 +1072,8 @@
 		(property "Footprint" ""
 			(at 132.08 62.23 0)
 			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1534,6 +1083,8 @@
 		(property "Datasheet" ""
 			(at 132.08 62.23 0)
 			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1543,6 +1094,8 @@
 		(property "Description" "Power symbol creates a global label with name \"+3V3\""
 			(at 132.08 62.23 0)
 			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1565,13 +1118,17 @@
 		(lib_id "Device:R")
 		(at 165.1 76.2 0)
 		(unit 1)
+		(body_style 1)
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
+		(in_pos_files yes)
 		(dnp no)
 		(uuid "16b9c561-4e71-486b-8464-11045023af9b")
 		(property "Reference" "R1203"
 			(at 167.64 74.93 0)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1581,6 +1138,8 @@
 		)
 		(property "Value" "1k"
 			(at 167.64 77.47 0)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1591,6 +1150,8 @@
 		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
 			(at 165.1 76.2 0)
 			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1600,6 +1161,8 @@
 		(property "Datasheet" ""
 			(at 165.1 76.2 0)
 			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1609,6 +1172,8 @@
 		(property "Description" "Resistor"
 			(at 165.1 76.2 0)
 			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1618,6 +1183,8 @@
 		(property "Manufacturer" "UNI-ROYAL(Uniroyal Elec)"
 			(at 165.1 76.2 0)
 			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1627,6 +1194,8 @@
 		(property "MPN" "0402WGF1001TCE"
 			(at 165.1 76.2 0)
 			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1636,6 +1205,8 @@
 		(property "LCSC" "C11702"
 			(at 165.1 76.2 0)
 			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1645,6 +1216,8 @@
 		(property "Note" "About 1.3 mA at 3.3 V (Vf about 1.9 V at low current)"
 			(at 165.1 76.2 0)
 			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1666,68 +1239,21 @@
 			)
 		)
 	)
-	(wire
-		(pts
-			(xy 165.1 72.39) (xy 165.1 69.85)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "73c64de1-6c86-4bd2-9055-5aefe94ace98")
-	)
-	(global_label "STATUS_LED"
-		(shape passive)
-		(at 165.1 69.85 90)
-		(fields_autoplaced yes)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left)
-		)
-		(uuid "1c2daadb-b790-44e1-953a-ec423ba1d25c")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 165.1 69.85 0)
-			(hide yes)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-	)
-	(wire
-		(pts
-			(xy 165.1 80.01) (xy 165.1 82.55)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "3cbdc7e4-4d83-4a55-9d43-6bc77d921b3a")
-	)
-	(label "LED_A"
-		(at 165.1 82.55 270)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right bottom)
-		)
-		(uuid "a641c3c4-d3a4-4890-979d-77c67d6ed32c")
-	)
 	(symbol
 		(lib_id "Device:LED")
 		(at 182.88 76.2 0)
 		(unit 1)
+		(body_style 1)
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
+		(in_pos_files yes)
 		(dnp no)
 		(uuid "21bbff20-4478-43d1-8ab2-67747600d21a")
 		(property "Reference" "D1201"
 			(at 180.34 72.39 0)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1737,6 +1263,8 @@
 		)
 		(property "Value" "Red"
 			(at 180.34 80.01 0)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1747,6 +1275,8 @@
 		(property "Footprint" "LED_SMD:LED_0603_1608Metric"
 			(at 182.88 76.2 0)
 			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1756,6 +1286,8 @@
 		(property "Datasheet" ""
 			(at 182.88 76.2 0)
 			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1765,6 +1297,8 @@
 		(property "Description" "Light emitting diode"
 			(at 182.88 76.2 0)
 			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1774,6 +1308,8 @@
 		(property "Sim.Pins" "1=K 2=A"
 			(at 182.88 76.2 0)
 			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1783,6 +1319,8 @@
 		(property "Manufacturer" "Hubei KENTO Elec"
 			(at 182.88 76.2 0)
 			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1792,6 +1330,8 @@
 		(property "MPN" "KT-0603R"
 			(at 182.88 76.2 0)
 			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1801,6 +1341,8 @@
 		(property "LCSC" "C2286"
 			(at 182.88 76.2 0)
 			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1810,6 +1352,8 @@
 		(property "Note" "Rear, near an edge; visible with the badge removed"
 			(at 182.88 76.2 0)
 			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1831,28 +1375,224 @@
 			)
 		)
 	)
-	(wire
-		(pts
-			(xy 179.07 76.2) (xy 176.53 76.2)
+	(symbol
+		(lib_id "power:GND")
+		(at 86.36 76.2 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom no)
+		(on_board no)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "2363851a-77b3-49ee-8593-ab4c777e1409")
+		(property "Reference" "#PWR1201"
+			(at 86.36 72.39 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
 		)
-		(stroke
-			(width 0)
-			(type default)
+		(property "Value" "GND"
+			(at 86.36 80.01 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
 		)
-		(uuid "865ae9eb-ea35-4b8c-8c3f-f78694790e4b")
+		(property "Footprint" ""
+			(at 86.36 76.2 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 86.36 76.2 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
+			(at 86.36 76.2 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "e73b6599-8d4a-46bb-9362-8674a6179fdd")
+		)
+		(instances
+			(project "smart-led-badge"
+				(path "/fefc8d4a-8637-4143-b210-9149e35f9884/602e5aed-a3a5-4ebd-8b28-10349e2b29c9"
+					(reference "#PWR1201")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Switch:SW_Push")
+		(at 116.84 76.2 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "2fb3298e-ffb8-4681-9f94-3cd3feddfc9e")
+		(property "Reference" "SW1202"
+			(at 111.76 71.12 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "Action/Select"
+			(at 111.76 81.28 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "smart-led-badge:SW_XUNPU_TS-1088"
+			(at 116.84 76.2 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 116.84 76.2 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Push button switch, generic, two pins"
+			(at 116.84 76.2 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer" "XUNPU"
+			(at 116.84 76.2 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MPN" "TS-1088-AR02016"
+			(at 116.84 76.2 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC" "C720477"
+			(at 116.84 76.2 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Note" "Front side, strip below the LED field (OD-27); top-actuated, 2.0 mm height, 160 gf"
+			(at 116.84 76.2 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "4cbb098c-40a7-4088-bc9b-7768c9c948ef")
+		)
+		(pin "2"
+			(uuid "bdb92a72-5a95-4f60-bcbf-0e63572c9cf6")
+		)
+		(instances
+			(project "smart-led-badge"
+				(path "/fefc8d4a-8637-4143-b210-9149e35f9884/602e5aed-a3a5-4ebd-8b28-10349e2b29c9"
+					(reference "SW1202")
+					(unit 1)
+				)
+			)
+		)
 	)
 	(symbol
 		(lib_id "power:GND")
 		(at 176.53 76.2 0)
 		(unit 1)
+		(body_style 1)
 		(exclude_from_sim no)
 		(in_bom no)
 		(on_board no)
+		(in_pos_files yes)
 		(dnp no)
 		(uuid "360af0f9-c8d3-45cb-af8c-2b42b3b467db")
 		(property "Reference" "#PWR1205"
 			(at 176.53 72.39 0)
 			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1861,6 +1601,8 @@
 		)
 		(property "Value" "GND"
 			(at 176.53 80.01 0)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1870,6 +1612,8 @@
 		(property "Footprint" ""
 			(at 176.53 76.2 0)
 			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1879,6 +1623,8 @@
 		(property "Datasheet" ""
 			(at 176.53 76.2 0)
 			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1888,6 +1634,8 @@
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
 			(at 176.53 76.2 0)
 			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1906,35 +1654,467 @@
 			)
 		)
 	)
-	(wire
-		(pts
-			(xy 186.69 76.2) (xy 189.23 76.2)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "ab8299e2-f1ad-4ebf-aa09-4bbd3f2c3263")
-	)
-	(label "LED_A"
-		(at 189.23 76.2 0)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left bottom)
-		)
-		(uuid "ed07158a-afbc-4753-9c00-8fc667cfed8d")
-	)
-	(text "User interface (Rev A) - design notes\n\nTwo buttons (Mode/Next, Action/Select; long press allowed) to GND, internal pull-ups; DNP external pull-ups.\nPlacement (OD-27): front face in the strip below the LED field if the land pattern fits with LED and edge clearance;\notherwise side-actuated parts on the bottom edge. Contacts are enclosed under a plastic actuator.\nStatus LED on the rear, GPIO high = on. The power switch SW201 is on the power-tree sheet. Nothing measured."
+	(symbol
+		(lib_id "Switch:SW_Push")
+		(at 76.2 76.2 0)
+		(unit 1)
+		(body_style 1)
 		(exclude_from_sim no)
-		(at 50.8 129.54 0)
-		(effects
-			(font
-				(size 1.27 1.27)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "6bf0b077-684f-4a71-ae6c-ee9155cf7b88")
+		(property "Reference" "SW1201"
+			(at 71.12 71.12 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
 			)
-			(justify left top)
 		)
-		(uuid "135c62a8-3687-45ca-992d-2bed1381e053")
+		(property "Value" "Mode/Next"
+			(at 71.12 81.28 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "smart-led-badge:SW_XUNPU_TS-1088"
+			(at 76.2 76.2 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 76.2 76.2 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Push button switch, generic, two pins"
+			(at 76.2 76.2 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer" "XUNPU"
+			(at 76.2 76.2 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MPN" "TS-1088-AR02016"
+			(at 76.2 76.2 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC" "C720477"
+			(at 76.2 76.2 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Note" "Front side, strip below the LED field (OD-27); top-actuated, 2.0 mm height, 160 gf"
+			(at 76.2 76.2 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "1caae0d7-b51e-4952-b7cc-d377d8e0230d")
+		)
+		(pin "2"
+			(uuid "b4533743-76b2-4135-a0eb-c29c8ca7832a")
+		)
+		(instances
+			(project "smart-led-badge"
+				(path "/fefc8d4a-8637-4143-b210-9149e35f9884/602e5aed-a3a5-4ebd-8b28-10349e2b29c9"
+					(reference "SW1201")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:R")
+		(at 132.08 55.88 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp yes)
+		(uuid "7d4bd9f1-c2a5-4ea3-8f73-558c22861bb5")
+		(property "Reference" "R1202"
+			(at 134.62 54.61 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "10k"
+			(at 134.62 57.15 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
+			(at 132.08 55.88 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 132.08 55.88 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Resistor"
+			(at 132.08 55.88 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Note" "External pull-up option; firmware uses the internal pull-up"
+			(at 132.08 55.88 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "7326410d-ba7c-42f3-a646-fb36ff908126")
+		)
+		(pin "2"
+			(uuid "f9077c9a-fb71-4436-a52e-496e5247e246")
+		)
+		(instances
+			(project "smart-led-badge"
+				(path "/fefc8d4a-8637-4143-b210-9149e35f9884/602e5aed-a3a5-4ebd-8b28-10349e2b29c9"
+					(reference "R1202")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:GND")
+		(at 127 76.2 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom no)
+		(on_board no)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "8ebf08d4-3cf7-4872-a1ff-76b7032ba7c7")
+		(property "Reference" "#PWR1203"
+			(at 127 72.39 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "GND"
+			(at 127 80.01 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 127 76.2 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 127 76.2 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
+			(at 127 76.2 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "4a5adf33-acb9-4843-8cd7-45438a4df2e8")
+		)
+		(instances
+			(project "smart-led-badge"
+				(path "/fefc8d4a-8637-4143-b210-9149e35f9884/602e5aed-a3a5-4ebd-8b28-10349e2b29c9"
+					(reference "#PWR1203")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:+3V3")
+		(at 91.44 62.23 180)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom no)
+		(on_board no)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "bf8495ac-1169-4224-8ea7-467c7cafd853")
+		(property "Reference" "#PWR1202"
+			(at 91.44 58.42 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "+3V3"
+			(at 91.44 66.04 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 91.44 62.23 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 91.44 62.23 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"+3V3\""
+			(at 91.44 62.23 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "171fd4b9-991b-49eb-a94c-b20016c866df")
+		)
+		(instances
+			(project "smart-led-badge"
+				(path "/fefc8d4a-8637-4143-b210-9149e35f9884/602e5aed-a3a5-4ebd-8b28-10349e2b29c9"
+					(reference "#PWR1202")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:R")
+		(at 91.44 55.88 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp yes)
+		(uuid "cb1dfa14-18e9-4238-8152-7951d62cb59a")
+		(property "Reference" "R1201"
+			(at 93.98 54.61 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "10k"
+			(at 93.98 57.15 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
+			(at 91.44 55.88 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 91.44 55.88 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Resistor"
+			(at 91.44 55.88 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Note" "External pull-up option; firmware uses the internal pull-up"
+			(at 91.44 55.88 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "5174e383-fd55-40cb-86b9-c32d7285b82d")
+		)
+		(pin "2"
+			(uuid "e0afb1dd-8959-4a85-bdb4-084532f8dd11")
+		)
+		(instances
+			(project "smart-led-badge"
+				(path "/fefc8d4a-8637-4143-b210-9149e35f9884/602e5aed-a3a5-4ebd-8b28-10349e2b29c9"
+					(reference "R1201")
+					(unit 1)
+				)
+			)
+		)
 	)
 )

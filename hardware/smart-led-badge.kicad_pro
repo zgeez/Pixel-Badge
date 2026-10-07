@@ -1,5 +1,6 @@
 {
   "board": {
+    "3dviewports": [],
     "design_settings": {
       "defaults": {},
       "diff_pair_dimensions": [],
@@ -7,30 +8,39 @@
       "rules": {},
       "track_widths": [],
       "via_dimensions": []
-    }
+    },
+    "ipc2581": {
+      "bom_rev": "",
+      "dist": "",
+      "distpn": "",
+      "internal_id": "",
+      "mfg": "",
+      "mpn": "",
+      "sch_revision": "A"
+    },
+    "layer_pairs": [],
+    "layer_presets": [],
+    "viewports": []
   },
   "boards": [],
-  "libraries": {
-    "pinned_footprint_libs": [],
-    "pinned_symbol_libs": []
-  },
-  "meta": {
-    "filename": "smart-led-badge.kicad_pro",
-    "version": 1
-  },
-  "net_settings": {
-    "classes": [],
+  "component_class_settings": {
+    "assignments": [],
     "meta": {
       "version": 0
+    },
+    "sheet_component_classes": {
+      "enabled": false
     }
   },
-  "pcbnew": {
-    "page_layout_descr_file": ""
+  "cvpcb": {
+    "equivalence_files": []
   },
-  "sheets": [],
-  "text_variables": {},
   "erc": {
     "erc_exclusions": [
+      [
+        "isolated_pin_label|1092200|1143000|edd3d2f5-0771-4676-9337-18763792a444|00000000-0000-0000-0000-000000000000|/fefc8d4a-8637-4143-b210-9149e35f9884/00b5b2b1-95e1-4b24-8397-e1e574e55fe6||",
+        "Pending: MTX_SAFE_SENSE connects to the Matrix Column Drivers / Matrix Row Drivers and Safety sheet, not drawn yet. Remove when that sheet is drawn."
+      ],
       [
         "isolated_pin_label|1092200|1193800|1c6221dc-468f-432a-becc-3be717ed90b0|00000000-0000-0000-0000-000000000000|/fefc8d4a-8637-4143-b210-9149e35f9884/00b5b2b1-95e1-4b24-8397-e1e574e55fe6||",
         "Pending: MTX_ARM connects to the Matrix Column Drivers / Matrix Row Drivers and Safety sheet, not drawn yet. Remove when that sheet is drawn."
@@ -52,10 +62,6 @@
         "Pending: MTX_MOSI connects to the Matrix Column Drivers / Matrix Row Drivers and Safety sheet, not drawn yet. Remove when that sheet is drawn."
       ],
       [
-        "isolated_pin_label|1092200|1143000|edd3d2f5-0771-4676-9337-18763792a444|00000000-0000-0000-0000-000000000000|/fefc8d4a-8637-4143-b210-9149e35f9884/00b5b2b1-95e1-4b24-8397-e1e574e55fe6||",
-        "Pending: MTX_SAFE_SENSE connects to the Matrix Column Drivers / Matrix Row Drivers and Safety sheet, not drawn yet. Remove when that sheet is drawn."
-      ],
-      [
         "isolated_pin_label|1422400|1651000|2b6a9a2f-7719-40d6-8963-f3b5858c1882|00000000-0000-0000-0000-000000000000|/fefc8d4a-8637-4143-b210-9149e35f9884/00b5b2b1-95e1-4b24-8397-e1e574e55fe6||",
         "Pending: MTX_SCK connects to the Matrix Column Drivers / Matrix Row Drivers and Safety sheet, not drawn yet. Remove when that sheet is drawn."
       ],
@@ -63,6 +69,469 @@
         "pin_to_pin|1930400|1016000|23ae42d1-8a53-4da7-9680-fffe35ddb7d1|4ad49fa5-5dea-43b3-9ddc-ef661966c69f|/fefc8d4a-8637-4143-b210-9149e35f9884/00b5b2b1-95e1-4b24-8397-e1e574e55fe6|/fefc8d4a-8637-4143-b210-9149e35f9884/00b5b2b1-95e1-4b24-8397-e1e574e55fe6|/fefc8d4a-8637-4143-b210-9149e35f9884/277ab79e-b026-470c-8266-8fd48bcc6b2b",
         "Reviewed: NFC_PWR is the NTAG supply driven by GPIO P1.10 (high drive, by design; DEC-010). The PWR_FLAG marks it as a supply for the NTAG VCC pin."
       ]
+    ],
+    "meta": {
+      "version": 0
+    },
+    "pin_map": [
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        2
+      ],
+      [
+        0,
+        2,
+        0,
+        1,
+        0,
+        0,
+        1,
+        0,
+        2,
+        2,
+        2,
+        2
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        1,
+        0,
+        1,
+        2
+      ],
+      [
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        1,
+        2,
+        1,
+        1,
+        2
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        2
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        2
+      ],
+      [
+        1,
+        1,
+        1,
+        1,
+        1,
+        0,
+        1,
+        1,
+        1,
+        1,
+        1,
+        2
+      ],
+      [
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        2
+      ],
+      [
+        0,
+        2,
+        1,
+        2,
+        0,
+        0,
+        1,
+        0,
+        2,
+        2,
+        2,
+        2
+      ],
+      [
+        0,
+        2,
+        0,
+        1,
+        0,
+        0,
+        1,
+        0,
+        2,
+        0,
+        0,
+        2
+      ],
+      [
+        0,
+        2,
+        1,
+        1,
+        0,
+        0,
+        1,
+        0,
+        2,
+        0,
+        0,
+        2
+      ],
+      [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ]
+    ],
+    "rule_severities": {
+      "bus_definition_conflict": "error",
+      "bus_entry_needed": "error",
+      "bus_to_bus_conflict": "error",
+      "bus_to_net_conflict": "error",
+      "different_unit_footprint": "error",
+      "different_unit_net": "error",
+      "duplicate_reference": "error",
+      "duplicate_sheet_names": "error",
+      "endpoint_off_grid": "warning",
+      "extra_units": "error",
+      "field_name_whitespace": "warning",
+      "footprint_filter": "ignore",
+      "footprint_link_issues": "warning",
+      "four_way_junction": "ignore",
+      "ground_pin_not_ground": "warning",
+      "hier_label_mismatch": "error",
+      "isolated_pin_label": "warning",
+      "label_dangling": "error",
+      "label_multiple_wires": "warning",
+      "lib_symbol_issues": "warning",
+      "lib_symbol_mismatch": "warning",
+      "missing_bidi_pin": "warning",
+      "missing_input_pin": "warning",
+      "missing_power_pin": "error",
+      "missing_unit": "warning",
+      "multiple_net_names": "warning",
+      "net_not_bus_member": "warning",
+      "no_connect_connected": "warning",
+      "no_connect_dangling": "warning",
+      "pin_not_connected": "error",
+      "pin_not_driven": "error",
+      "pin_to_pin": "warning",
+      "power_pin_not_driven": "error",
+      "same_local_global_label": "warning",
+      "similar_label_and_power": "warning",
+      "similar_labels": "warning",
+      "similar_power": "warning",
+      "simulation_model_issue": "ignore",
+      "single_global_label": "ignore",
+      "stacked_pin_name": "warning",
+      "unannotated": "error",
+      "unconnected_wire_endpoint": "warning",
+      "undefined_netclass": "error",
+      "unit_value_mismatch": "error",
+      "unresolved_variable": "error",
+      "wire_dangling": "error"
+    }
+  },
+  "libraries": {
+    "pinned_footprint_libs": [],
+    "pinned_symbol_libs": []
+  },
+  "meta": {
+    "filename": "smart-led-badge.kicad_pro",
+    "version": 3
+  },
+  "net_settings": {
+    "classes": [
+      {
+        "bus_width": 12,
+        "clearance": 0.2,
+        "diff_pair_gap": 0.25,
+        "diff_pair_via_gap": 0.25,
+        "diff_pair_width": 0.2,
+        "line_style": 0,
+        "microvia_diameter": 0.3,
+        "microvia_drill": 0.1,
+        "name": "Default",
+        "pcb_color": "rgba(0, 0, 0, 0.000)",
+        "priority": 2147483647,
+        "schematic_color": "rgba(0, 0, 0, 0.000)",
+        "track_width": 0.2,
+        "tuning_profile": "",
+        "via_diameter": 0.6,
+        "via_drill": 0.3,
+        "wire_width": 6
+      }
+    ],
+    "meta": {
+      "version": 5
+    },
+    "net_colors": null,
+    "netclass_assignments": null,
+    "netclass_patterns": []
+  },
+  "pcbnew": {
+    "last_paths": {
+      "idf": "",
+      "netlist": "",
+      "plot": "",
+      "specctra_dsn": "",
+      "step": "",
+      "vrml": ""
+    },
+    "page_layout_descr_file": ""
+  },
+  "schematic": {
+    "annotate_start_num": 0,
+    "annotation": {
+      "method": 0,
+      "sort_order": 0
+    },
+    "bom_export_filename": "${PROJECTNAME}.csv",
+    "bom_fmt_presets": [],
+    "bom_fmt_settings": {
+      "field_delimiter": ",",
+      "keep_line_breaks": false,
+      "keep_tabs": false,
+      "name": "CSV",
+      "ref_delimiter": ",",
+      "ref_range_delimiter": "",
+      "string_delimiter": "\""
+    },
+    "bom_presets": [],
+    "bom_settings": {
+      "exclude_dnp": false,
+      "fields_ordered": [
+        {
+          "group_by": false,
+          "label": "Reference",
+          "name": "Reference",
+          "show": true
+        },
+        {
+          "group_by": false,
+          "label": "Qty",
+          "name": "${QUANTITY}",
+          "show": true
+        },
+        {
+          "group_by": true,
+          "label": "Value",
+          "name": "Value",
+          "show": true
+        },
+        {
+          "group_by": true,
+          "label": "DNP",
+          "name": "${DNP}",
+          "show": true
+        },
+        {
+          "group_by": true,
+          "label": "Exclude from BOM",
+          "name": "${EXCLUDE_FROM_BOM}",
+          "show": true
+        },
+        {
+          "group_by": true,
+          "label": "Exclude from Board",
+          "name": "${EXCLUDE_FROM_BOARD}",
+          "show": true
+        },
+        {
+          "group_by": true,
+          "label": "Exclude from Simulation",
+          "name": "${EXCLUDE_FROM_SIM}",
+          "show": true
+        },
+        {
+          "group_by": true,
+          "label": "Exclude from Position Files",
+          "name": "${EXCLUDE_FROM_POS_FILES}",
+          "show": true
+        },
+        {
+          "group_by": true,
+          "label": "Footprint",
+          "name": "Footprint",
+          "show": true
+        },
+        {
+          "group_by": false,
+          "label": "Datasheet",
+          "name": "Datasheet",
+          "show": true
+        }
+      ],
+      "filter_string": "",
+      "group_symbols": true,
+      "include_excluded_from_bom": true,
+      "name": "Default Editing",
+      "sort_asc": true,
+      "sort_field": "Reference"
+    },
+    "bus_aliases": {},
+    "connection_grid_size": 50.0,
+    "drawing": {
+      "dashed_lines_dash_length_ratio": 12.0,
+      "dashed_lines_gap_length_ratio": 3.0,
+      "default_line_thickness": 6.0,
+      "default_text_size": 50.0,
+      "field_names": [],
+      "hop_over_size_choice": 0,
+      "intersheets_ref_own_page": false,
+      "intersheets_ref_prefix": "",
+      "intersheets_ref_short": false,
+      "intersheets_ref_show": false,
+      "intersheets_ref_suffix": "",
+      "junction_size_choice": 3,
+      "label_size_ratio": 0.375,
+      "operating_point_overlay_i_precision": 3,
+      "operating_point_overlay_i_range": "~A",
+      "operating_point_overlay_v_precision": 3,
+      "operating_point_overlay_v_range": "~V",
+      "overbar_offset_ratio": 1.23,
+      "pin_symbol_size": 25.0,
+      "text_offset_ratio": 0.15
+    },
+    "legacy_lib_dir": "",
+    "legacy_lib_list": [],
+    "meta": {
+      "version": 1
+    },
+    "page_layout_descr_file": "",
+    "plot_directory": "",
+    "reuse_designators": true,
+    "subpart_first_id": 65,
+    "subpart_id_separator": 0,
+    "top_level_sheets": [
+      {
+        "filename": "smart-led-badge.kicad_sch",
+        "name": "smart-led-badge",
+        "uuid": "fefc8d4a-8637-4143-b210-9149e35f9884"
+      }
+    ],
+    "used_designators": "",
+    "variants": []
+  },
+  "sheets": [
+    [
+      "fefc8d4a-8637-4143-b210-9149e35f9884",
+      "smart-led-badge"
+    ],
+    [
+      "f79dd5bf-1129-4160-8b1f-c78c0c86307a",
+      "USB Charger Battery"
+    ],
+    [
+      "39c04143-b8b4-4779-a96f-137c6ab8396e",
+      "Regulators and Power Tree"
+    ],
+    [
+      "00b5b2b1-95e1-4b24-8397-e1e574e55fe6",
+      "MCU Module"
+    ],
+    [
+      "b62c38ea-faf7-48af-b256-d31a1668b65e",
+      "Debug"
+    ],
+    [
+      "fcccfb76-6a5c-47a8-a508-26116fb7a200",
+      "Matrix Column Drivers"
+    ],
+    [
+      "81d3bb65-b627-4404-95d7-5959776da8f4",
+      "Matrix Row Drivers and Safety"
+    ],
+    [
+      "bfa4d597-9d00-403b-a007-31fb281a21c0",
+      "LED Matrix"
+    ],
+    [
+      "2b5ea0fb-6411-4b41-8224-1525d366da27",
+      "IMU"
+    ],
+    [
+      "aa96d21e-cc37-4bd6-a260-2721aeab775d",
+      "Microphone"
+    ],
+    [
+      "277ab79e-b026-470c-8266-8fd48bcc6b2b",
+      "NFC"
+    ],
+    [
+      "602e5aed-a3a5-4ebd-8b28-10349e2b29c9",
+      "User Interface"
+    ],
+    [
+      "39857c90-bc81-42f1-ad6b-06d5802166c2",
+      "Test Points"
     ]
+  ],
+  "text_variables": {},
+  "tuning_profiles": {
+    "meta": {
+      "version": 0
+    },
+    "tuning_profiles_impedance_geometric": []
   }
 }
