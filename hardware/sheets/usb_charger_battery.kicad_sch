@@ -7715,7 +7715,7 @@
 				)
 			)
 		)
-		(property "Note" "Same part as L202; Isat 3.8 A (10 % drop) vs 2.76 A worst-case peak at IINDPM 1.5 A"
+		(property "Note" "Same part as L202; Isat 3.8 A (10 % drop) vs 3.0 A calculated peak at IINDPM 1.5 A (efficiency 100 %, 1.35 MHz); measure at bring-up"
 			(at 279.4 50.8 0)
 			(hide yes)
 			(show_name no)

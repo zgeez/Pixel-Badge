@@ -90,6 +90,13 @@ peak current and maximum brightness at the lowest operating VBAT and at the
 highest VLED setting; it must stay ≤ 1.5 A (the cell's continuous rating).
 Measure VLED across the full battery range to confirm the pass-through
 envelope.
+Inductor current (release gate for L202 and L301): with a current probe,
+measure the TPS61023 switching frequency at the lowest VIN, and the peak and
+ripple inductor current at maximum LED load, at start-up and with the LED
+rail overloaded into current limit; measure the BQ25620 inductor current at
+the 1.5 A input limit. The calculated figures in [power.md](power.md) are
+estimates, not bounds; record any operating point where the current exceeds
+the XGL4020's 10% (3.8 A) or 30% (8.8 A) inductance-drop rating.
 Verify the power states: no USB and switch OFF leaves the logic rail off;
 USB with switch OFF starts the charging-only state with the LED rail off;
 removing USB with the switch OFF turns the logic rail off. Record the pack
