@@ -6209,7 +6209,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Package_SON:USON-10_2.5x1.0mm_P0.5mm"
+		(property "Footprint" "smart-led-badge:TI_DQA0010A_USON-10_2.5x1.0mm_P0.5mm"
 			(at 111.76 50.8 0)
 			(hide yes)
 			(show_name no)

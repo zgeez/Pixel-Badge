@@ -32,6 +32,7 @@ design opens on any machine without local path changes.
 | Footprint `SW_XUNPU_TS-1088` | From the XUNPU TS-1088 PCB welding drawing: two 1.05 × 2.00 mm pads, 3.40/5.50 mm |
 | Symbol `BQ25620`, footprint `Texas_RYK0018A` | Drawn from TI SLUSEG2D: pins and types from Table 6-1 (BQ25620 column: pin 4 D−, pin 5 D+); pads from the RYK0018A land pattern example (drawing 4226526/A 02/2021), including the four L-shaped corner pads (two pads each), body 3.0 × 2.5 mm |
 | Footprint `L_Coilcraft_XEL4030` | Coilcraft Document 1321-3 recommended land pattern (0.98 × 3.4 mm pads, 2.37 mm centres) |
+| Footprint `TI_DQA0010A_USON-10_2.5x1.0mm_P0.5mm` | TPD4E05U06 lands from TI SLVSBO7O, DQA0010A land pattern and stencil examples (drawing 4220328/A 12/2015): 0.565 × 0.20 mm, pins 3/8 0.565 × 0.40 mm, rows 0.835 mm apart, pin 3/8 paste 0.36 mm wide. Replaces KiCad's generic USON-10 (0.55 × 0.30 mm pads, 0.77 mm rows). Keep other nets out from between pins 3 and 8, where the DQA0010B outline has exposed metal; outline from KiCad's USON-10 |
 | Footprint `L_Murata_DFE201612E` | Murata DFE201612E body and electrodes (spec J(E)TE243A-0006B-01) match DFE201610P, so the pads follow KiCad's `L_Murata_DFE201610P` |
 
 ## Checks
