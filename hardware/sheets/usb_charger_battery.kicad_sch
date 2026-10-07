@@ -3618,7 +3618,7 @@
 			(embedded_fonts no)
 		)
 	)
-	(text "USB-C, charger and battery (Rev A) - design notes\n\nUSB-C sink, USB 2.0, no PD: independent 5.1k Rd on CC1/CC2; TPD4E05U06 on D+, D-, CC1, CC2.\nCC sense: firmware reads CC1/CC2 via SAADC (ratio 0.107) and raises the BQ25620 input limit only on\na valid >= 1.5 A advertisement; SDP/unknown sources stay at 100 mA until USB enumeration.\n\nBQ25620 (SLUSEG2D): switching charger with NVDC power path, BC1.2 on D+/D-, I2C 0x6B on I2C1.\nPOR: ICHG 1040 mA +/-5.5% (0.98-1.10 A), VREG 4.200 V; watchdog expiry halves ICHG.\nPack: Adafruit 328 (2500 mAh, <= 1.2 A charge, 0-45 C charge, PCM 4.28 V / 2.30 V).\nPG drives the 3V3 enable (power_tree, Q203): USB present -> charging-only firmware mode.\nCE pulled high (R313): no charging until firmware has set IINDPM and the TS limits, then drives CE low;\nMCU reset releases CE. INT/STAT open drain to 3V3.\nTS: R309 10k, R310 open -> POR comparators HOT <= 45 C, COLD about 0 C (worst case, NTC +/-1%, B +/-1%).\n\nJ302 polarity follows Adafruit's design (pin 1 BAT-, pin 2 BAT+); meter-check each pack before first connection.\nNothing on this sheet is measured."
+	(text "USB-C, charger and battery (Rev A) - design notes\n\nUSB-C sink, USB 2.0, no PD: independent 5.1k Rd on CC1/CC2; TPD4E05U06 on D+, D-, CC1, CC2.\nCC sense: firmware reads CC1/CC2 via SAADC (ratio 0.107) and raises the BQ25620 input limit only on\na valid >= 1.5 A advertisement; SDP/unknown sources stay at 100 mA until USB enumeration.\n\nBQ25620 (SLUSEG2D): switching charger with NVDC power path, BC1.2 on D+/D-, I2C 0x6B on I2C1.\nPOR: ICHG 1040 mA +/-5.5% (0.98-1.10 A), VREG 4.200 V; watchdog expiry halves ICHG.\nPack: Adafruit 328 (2500 mAh, <= 1.2 A charge, 0-45 C charge, PCM 4.28 V / 2.30 V).\nPG drives the 3V3 enable (power_tree, Q203): USB present -> charging-only firmware mode.\nCE pulled to SYS (R313); Q303 pulls CE low only while P0.29 drives CHG_EN high (R316 pull-down):\nno charging until firmware has set IINDPM and the TS limits, in MCU reset, or with 3V3 absent. INT/STAT open drain to 3V3.\nTS: R309 10k, R310 open -> POR comparators HOT <= 45 C, COLD about 0 C (worst case, NTC +/-1%, B +/-1%).\n\nJ302 polarity follows Adafruit's design (pin 1 BAT-, pin 2 BAT+); meter-check each pack before first connection.\nNothing on this sheet is measured."
 		(exclude_from_sim no)
 		(at 228.6 177.8 0)
 		(effects
@@ -9200,83 +9200,6 @@
 		)
 	)
 	(symbol
-		(lib_id "power:+3V3")
-		(at 213.36 171.45 180)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom no)
-		(on_board no)
-		(in_pos_files yes)
-		(dnp no)
-		(uuid "7414b0e8-14f3-4b58-af65-da262fdece2e")
-		(property "Reference" "#PWR327"
-			(at 213.36 167.64 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "+3V3"
-			(at 213.36 175.26 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" ""
-			(at 213.36 171.45 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 213.36 171.45 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "Power symbol creates a global label with name \"+3V3\""
-			(at 213.36 171.45 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "7481e3b8-8f05-4e04-ab2e-8945fa13c659")
-		)
-		(instances
-			(project "smart-led-badge"
-				(path "/fefc8d4a-8637-4143-b210-9149e35f9884/f79dd5bf-1129-4160-8b1f-c78c0c86307a"
-					(reference "#PWR327")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
 		(lib_id "Connector:TestPoint")
 		(at 167.64 205.74 0)
 		(unit 1)
@@ -11099,7 +11022,7 @@
 				)
 			)
 		)
-		(property "Note" "CE high: charging off until firmware configures the charger and drives CE low"
+		(property "Note" "CE pull-up to SYS: charging off unless Q303 is on (MCU drives CHG_EN high), so a 3V3 failure or MCU reset stops charging"
 			(at 213.36 165.1 0)
 			(hide yes)
 			(show_name no)
@@ -13298,6 +13221,492 @@
 			(project "smart-led-badge"
 				(path "/fefc8d4a-8637-4143-b210-9149e35f9884/f79dd5bf-1129-4160-8b1f-c78c0c86307a"
 					(reference "#PWR319")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(global_label "CHG_CE"
+		(shape passive)
+		(at 200.66 185.42 90)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "6b90fda8-db70-455d-b011-2b78ae47bd7b")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 200.66 185.42 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+	)
+	(global_label "CHG_EN"
+		(shape passive)
+		(at 180.34 190.5 180)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "bb0d4818-629f-4a48-9818-205f17c68b6f")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 180.34 190.5 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+	)
+	(global_label "SYS"
+		(shape passive)
+		(at 213.36 171.45 270)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "9422ccda-df23-4297-b3fe-8bcfc385eb82")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 213.36 171.45 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+	)
+	(wire
+		(pts
+			(xy 193.04 190.5) (xy 180.34 190.5)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "15c6016a-3cb4-4097-9623-4279ccbf1ef3")
+	)
+		(symbol
+		(lib_id "Transistor_FET:AO3400A")
+		(at 198.12 190.5 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "ba403fe9-d55e-42ea-b488-53c0f4946dd9")
+		(property "Reference" "Q303"
+			(at 203.2 189.23 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "AO3400A"
+			(at 203.2 191.77 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Package_TO_SOT_SMD:SOT-23"
+			(at 198.12 190.5 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" "http://www.aosmd.com/pdfs/datasheet/AO3400A.pdf"
+			(at 198.12 190.5 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "30V Vds, 5.7A Id, N-Channel MOSFET, SOT-23"
+			(at 198.12 190.5 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer" "Alpha & Omega Semicon"
+			(at 198.12 190.5 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MPN" "AO3400A"
+			(at 198.12 190.5 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC" "C20917"
+			(at 198.12 190.5 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Note" "Pulls CE low (charging allowed) only while the MCU drives CHG_EN high; off in reset, with 3V3 absent or MCU unpowered"
+			(at 198.12 190.5 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "d64b81d7-bae3-4389-999e-d8bcacc38cb0")
+		)
+		(pin "2"
+			(uuid "bdb59751-4ffd-451a-8e9e-69edc7e81d53")
+		)
+		(pin "3"
+			(uuid "ee37502f-81ab-468c-b034-e4081a23d8cc")
+		)
+		(instances
+			(project "smart-led-badge"
+				(path "/fefc8d4a-8637-4143-b210-9149e35f9884/f79dd5bf-1129-4160-8b1f-c78c0c86307a"
+					(reference "Q303")
+					(unit 1)
+				)
+			)
+		)
+	)
+		(symbol
+		(lib_id "Device:R")
+		(at 180.34 194.31 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "63a3afe4-a390-48f4-8cd3-420ff3f01c32")
+		(property "Reference" "R316"
+			(at 182.88 193.04 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "100k"
+			(at 182.88 195.58 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
+			(at 180.34 194.31 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 180.34 194.31 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Resistor"
+			(at 180.34 194.31 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer" "UNI-ROYAL(Uniroyal Elec)"
+			(at 180.34 194.31 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MPN" "0402WGF1003TCE"
+			(at 180.34 194.31 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC" "C25741"
+			(at 180.34 194.31 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Note" "CHG_EN pull-down: Q303 off (CE high, no charging) while the MCU is off or in reset"
+			(at 180.34 194.31 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "1113ab9a-3aed-4f2b-b760-428bc15234f1")
+		)
+		(pin "2"
+			(uuid "27c039d8-022e-477c-a3fd-bdf9f62d7121")
+		)
+		(instances
+			(project "smart-led-badge"
+				(path "/fefc8d4a-8637-4143-b210-9149e35f9884/f79dd5bf-1129-4160-8b1f-c78c0c86307a"
+					(reference "R316")
+					(unit 1)
+				)
+			)
+		)
+	)
+		(symbol
+		(lib_id "power:GND")
+		(at 200.66 195.58 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom no)
+		(on_board no)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "3e40672a-6353-464c-8995-6375d5610652")
+		(property "Reference" "#PWR333"
+			(at 200.66 191.77 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "GND"
+			(at 200.66 199.39 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 200.66 195.58 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 200.66 195.58 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
+			(at 200.66 195.58 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "12d6279a-448f-44a1-85ed-750a98e9a8a1")
+		)
+		(instances
+			(project "smart-led-badge"
+				(path "/fefc8d4a-8637-4143-b210-9149e35f9884/f79dd5bf-1129-4160-8b1f-c78c0c86307a"
+					(reference "#PWR333")
+					(unit 1)
+				)
+			)
+		)
+	)
+		(symbol
+		(lib_id "power:GND")
+		(at 180.34 198.12 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom no)
+		(on_board no)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "981f310b-604b-4271-9f4f-e7eda5307f21")
+		(property "Reference" "#PWR334"
+			(at 180.34 194.31 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "GND"
+			(at 180.34 201.93 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 180.34 198.12 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 180.34 198.12 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
+			(at 180.34 198.12 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "3fbfe372-7027-4e23-a706-c1ca95e6bd66")
+		)
+		(instances
+			(project "smart-led-badge"
+				(path "/fefc8d4a-8637-4143-b210-9149e35f9884/f79dd5bf-1129-4160-8b1f-c78c0c86307a"
+					(reference "#PWR334")
 					(unit 1)
 				)
 			)

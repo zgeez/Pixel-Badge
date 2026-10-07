@@ -4366,7 +4366,7 @@
 			)
 		)
 	)
-	(global_label "CHG_CE"
+	(global_label "CHG_EN"
 		(shape passive)
 		(at 109.22 73.66 180)
 		(fields_autoplaced yes)
