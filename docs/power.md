@@ -204,7 +204,10 @@ table above; the I²C watchdog does not. Fitting 30.1 kΩ at RT2 restores TI's 0
 network if the board-to-cell offset proves it necessary. The charger's ADC
 reports the reading. **Rev A has no direct cell-temperature sensing:** the NTC
 measures the board next to the cell, which charger heat can make warmer than
-the cell (conservative at HOT, optimistic at COLD).
+the cell (conservative at HOT, optimistic at COLD). Charging is approved only
+after the cold-cell, warm-board and transition tests in
+[validation.md](validation.md#2-electrical-correctness) pass, or a fallback
+(inward-moved limits, a settling inhibit, or sensing on the pack) is in place.
 
 **Logic rail.** TPS63802 buck-boost, 3.30 V (FB 112 kΩ / 20 kΩ, VFB 500 mV),
 Murata DFE201612E-R47M (0.47 µH; Isat 5.5 A at −30% L) against a calculated

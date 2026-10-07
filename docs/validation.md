@@ -81,7 +81,28 @@ the empty-to-full time only as a measurement. With the charger at its reset
 settings (CE driven low by a test build that does not configure it), and
 again after an I²C watchdog expiry with firmware's settings, drive the TS pin with a resistance decade or a heated/cooled NTC and check
 that charging stops below about 0 °C and above 45 °C board temperature; then
-repeat with firmware's thresholds. Check that charging stays off from
+repeat with firmware's thresholds.
+Board-NTC qualification (release gate before charging is approved): the NTC
+is on the front and measures board temperature, not cell temperature
+([ADR 0010](decisions/0010-single-sided-assembly.md)), so a warm board can sit
+next to a cold cell. With a thermocouple taped to the pack:
+
+- Cold cell, warm board: soak the pack at or below 0 °C and at 2–5 °C,
+  connect it to a board at room temperature, plug in USB, and log the cell
+  and board-NTC temperatures until the charger would start. Charging must not
+  start while the cell is below 0 °C.
+- Transitions: move the badge from a cold environment indoors and back, and
+  charge from cold, logging the worst-case offset and lag between cell and
+  board-NTC readings (including charger self-heating).
+- Hot side: cell near 45 °C with a cooler board; charging must stop.
+
+If the board reading can allow charging while the cell is below 0 °C or above
+45 °C, charging is not approved until one fallback is in place and re-tested:
+firmware COLD/HOT limits moved inward by the measured offset plus margin; a
+charge inhibit after plug-in until the readings have settled for a measured
+time; or a sensing change (an NTC bonded to the pack, or a pack with a
+thermistor).
+Check that charging stays off from
 plug-in until firmware drives CE low, that an MCU reset stops charging, and
 measure the input current on an SDP host before firmware has configured the
 charger (≤ 100 mA).
