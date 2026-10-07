@@ -2,8 +2,9 @@
 
 Status: **schematic capture in progress**. Rev A architecture is defined; the
 KiCad project lives in [`hardware/`](../hardware/README.md). The regulators/
-power-tree, USB/charger/battery, MCU module and debug sheets are drawn; the
-other sheets are not, and no layout exists yet.
+power-tree, USB/charger/battery, MCU module, debug, user-interface, IMU,
+microphone and NFC sheets are drawn; the matrix and test-point sheets are not,
+and no layout exists yet.
 Items marked provisional may change. Electrical values come from primary datasheets and are recorded in
 [references.md](references.md) as parts are confirmed.
 
@@ -74,8 +75,10 @@ scheme is not the badge design.
   driver passes build and emulator tests; real-part I²C, interrupt and
   wake-on-motion checks pending), with SPI-fallback links; Knowles
   SPH0641LM4H-1 PDM microphone (lifecycle not yet confirmed).
-- **User interface:** two edge-accessible buttons, edge-accessible power switch,
-  one status LED.
+- **User interface:** worn landscape; two top-actuated buttons on the front below
+  the LED field when they fit, otherwise on the bottom edge
+  ([ADR 0008](decisions/0008-landscape-front-buttons.md), Proposed); power
+  switch on an edge; one status LED on the rear.
 - **RF:** module-integrated antenna at a board edge/corner with the keep-out the
   module vendor specifies; NFC coil in a separate region; battery and magnets
   kept clear of both.
@@ -95,14 +98,18 @@ Selection is not validation: nothing below has been measured on Rev A.
 | LED rail | TI TPS61023, Coilcraft XEL4030-102ME (1.0 µH) | Selected; VLED setting provisional |
 | Column drivers | 2 × TI TLC59283RGER (QFN-24) | Selected; IREF/peak current prototype-dependent |
 | Row control | 4 × SN74HC595, SN74LVC8T245 translator, 32 × AO3401A, SN74LVC1G123 + SN74LVC1G32 safety blanking | Selected |
-| NFC tag | NXP NT3H2111W0FHKH (XQFN-8) | Selected; coil tuning prototype-dependent |
-| IMU | TDK ICM-42688-P on I²C | Conditional (real-part verification pending) |
-| Microphone | Knowles SPH0641LM4H-1 | Conditional (lifecycle check) |
+| NFC tag | NXP NT3H2111W0FHKH (XQFN-8) | Selected; drawn; footprint per NXP's reflow footprint; coil tuning prototype-dependent |
+| IMU | TDK ICM-42688-P on I²C | Conditional (real-part verification pending); drawn |
+| Microphone | Knowles SPH0641LM4H-1, 0.8 mm PCB acoustic hole | Conditional (lifecycle check); drawn |
 | 32.768 kHz crystal | Micro Crystal CM7V-T1A, 9 pF | Selected; drawn |
 | SWD header | ARM Cortex 10-pin, 2 × 5, 1.27 mm SMD (hanxia HX PZ1.27-2x5P TP), for the nRF5340 DK debug out | Selected; drawn; footprint checked against the vendor land pattern |
 | USB ESD | TI TPD4E05U06 (D+, D−, CC1, CC2) | Selected |
 | Battery | Adafruit 328, protected 2500 mAh LiPo; JST B2B-PH-SM4-TB header | Selected; header pin 1 = BAT−, pin 2 = BAT+ (Adafruit convention) |
-| USB-C receptacle, buttons, power switch, matrix LED | — | Mechanical / prototype gates |
+| USB-C receptacle | HRO TYPE-C-31-M-12 (16-pin USB 2.0) | Selected; drawn |
+| Buttons | 2 × XUNPU TS-1088-AR02016 (top-actuated, 2.0 mm) | Selected; drawn; placement per ADR 0008 |
+| Power switch | C&K PCM12SMTR (right-angle SPDT slide) | Selected; drawn |
+| Status LED | Red 0603 (KT-0603R) with 1 kΩ | Selected; drawn |
+| Matrix LED | — | Prototype gate |
 
 ## Rev A requirements
 
