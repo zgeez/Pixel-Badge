@@ -38,36 +38,24 @@
   "erc": {
     "erc_exclusions": [
       [
-        "isolated_pin_label|1092200|1143000|edd3d2f5-0771-4676-9337-18763792a444|00000000-0000-0000-0000-000000000000|/fefc8d4a-8637-4143-b210-9149e35f9884/00b5b2b1-95e1-4b24-8397-e1e574e55fe6||",
-        "Pending: MTX_SAFE_SENSE connects to the Matrix Column Drivers / Matrix Row Drivers and Safety sheet, not drawn yet. Remove when that sheet is drawn."
-      ],
-      [
-        "isolated_pin_label|1092200|1193800|1c6221dc-468f-432a-becc-3be717ed90b0|00000000-0000-0000-0000-000000000000|/fefc8d4a-8637-4143-b210-9149e35f9884/00b5b2b1-95e1-4b24-8397-e1e574e55fe6||",
-        "Pending: MTX_ARM connects to the Matrix Column Drivers / Matrix Row Drivers and Safety sheet, not drawn yet. Remove when that sheet is drawn."
-      ],
-      [
-        "isolated_pin_label|1092200|1219200|41b0d7fc-e1dd-447a-9f6c-f184462f1d04|00000000-0000-0000-0000-000000000000|/fefc8d4a-8637-4143-b210-9149e35f9884/00b5b2b1-95e1-4b24-8397-e1e574e55fe6||",
-        "Pending: MTX_BLANK connects to the Matrix Column Drivers / Matrix Row Drivers and Safety sheet, not drawn yet. Remove when that sheet is drawn."
-      ],
-      [
-        "isolated_pin_label|1092200|1270000|d2a3dab8-a846-4f0a-9e84-06d1b0f1b71b|00000000-0000-0000-0000-000000000000|/fefc8d4a-8637-4143-b210-9149e35f9884/00b5b2b1-95e1-4b24-8397-e1e574e55fe6||",
-        "Pending: MTX_LAT connects to the Matrix Column Drivers / Matrix Row Drivers and Safety sheet, not drawn yet. Remove when that sheet is drawn."
-      ],
-      [
-        "isolated_pin_label|1092200|1295400|1b0bf870-938c-471d-ad3e-673661283b72|00000000-0000-0000-0000-000000000000|/fefc8d4a-8637-4143-b210-9149e35f9884/00b5b2b1-95e1-4b24-8397-e1e574e55fe6||",
-        "Pending: MTX_MISO connects to the Matrix Column Drivers / Matrix Row Drivers and Safety sheet, not drawn yet. Remove when that sheet is drawn."
-      ],
-      [
-        "isolated_pin_label|1092200|1320800|27f710ae-6b30-420f-9b41-4fd2f9588f93|00000000-0000-0000-0000-000000000000|/fefc8d4a-8637-4143-b210-9149e35f9884/00b5b2b1-95e1-4b24-8397-e1e574e55fe6||",
-        "Pending: MTX_MOSI connects to the Matrix Column Drivers / Matrix Row Drivers and Safety sheet, not drawn yet. Remove when that sheet is drawn."
-      ],
-      [
-        "isolated_pin_label|1422400|1651000|2b6a9a2f-7719-40d6-8963-f3b5858c1882|00000000-0000-0000-0000-000000000000|/fefc8d4a-8637-4143-b210-9149e35f9884/00b5b2b1-95e1-4b24-8397-e1e574e55fe6||",
-        "Pending: MTX_SCK connects to the Matrix Column Drivers / Matrix Row Drivers and Safety sheet, not drawn yet. Remove when that sheet is drawn."
-      ],
-      [
         "pin_to_pin|1930400|1016000|23ae42d1-8a53-4da7-9680-fffe35ddb7d1|4ad49fa5-5dea-43b3-9ddc-ef661966c69f|/fefc8d4a-8637-4143-b210-9149e35f9884/00b5b2b1-95e1-4b24-8397-e1e574e55fe6|/fefc8d4a-8637-4143-b210-9149e35f9884/00b5b2b1-95e1-4b24-8397-e1e574e55fe6|/fefc8d4a-8637-4143-b210-9149e35f9884/277ab79e-b026-470c-8266-8fd48bcc6b2b",
         "Reviewed: NFC_PWR is the NTAG supply driven by GPIO P1.10 (high drive, by design; DEC-010). The PWR_FLAG marks it as a supply for the NTAG VCC pin."
+      ],
+      [
+        "pin_to_pin|533400|1041400|da9d874e-2fe7-4b09-9cf7-86fa4f76624a|bdf4cff2-63cf-4cc1-90df-82457da97ecf|/fefc8d4a-8637-4143-b210-9149e35f9884/81d3bb65-b627-4404-95d7-5959776da8f4|/fefc8d4a-8637-4143-b210-9149e35f9884/81d3bb65-b627-4404-95d7-5959776da8f4|/fefc8d4a-8637-4143-b210-9149e35f9884/39c04143-b8b4-4779-a96f-137c6ab8396e",
+        "Reviewed: U701 A5 is an unused translator A input tied to GND as TI requires (SN74LVC8T245 unused inputs); the GND net carries the power-tree PWR_FLAG."
+      ],
+      [
+        "pin_to_pin|533400|1092200|13c551cc-47f5-4729-93f0-acb942464ef2|bdf4cff2-63cf-4cc1-90df-82457da97ecf|/fefc8d4a-8637-4143-b210-9149e35f9884/81d3bb65-b627-4404-95d7-5959776da8f4|/fefc8d4a-8637-4143-b210-9149e35f9884/81d3bb65-b627-4404-95d7-5959776da8f4|/fefc8d4a-8637-4143-b210-9149e35f9884/39c04143-b8b4-4779-a96f-137c6ab8396e",
+        "Reviewed: U701 A6 is an unused translator A input tied to GND as TI requires (SN74LVC8T245 unused inputs); the GND net carries the power-tree PWR_FLAG."
+      ],
+      [
+        "pin_to_pin|533400|1143000|a1cd8d29-29c6-41a2-a02e-9d10dfc0e113|bdf4cff2-63cf-4cc1-90df-82457da97ecf|/fefc8d4a-8637-4143-b210-9149e35f9884/81d3bb65-b627-4404-95d7-5959776da8f4|/fefc8d4a-8637-4143-b210-9149e35f9884/81d3bb65-b627-4404-95d7-5959776da8f4|/fefc8d4a-8637-4143-b210-9149e35f9884/39c04143-b8b4-4779-a96f-137c6ab8396e",
+        "Reviewed: U701 A7 is an unused translator A input tied to GND as TI requires (SN74LVC8T245 unused inputs); the GND net carries the power-tree PWR_FLAG."
+      ],
+      [
+        "pin_to_pin|533400|1193800|dcc806c6-01e5-462a-979f-08a5f2f7c636|bdf4cff2-63cf-4cc1-90df-82457da97ecf|/fefc8d4a-8637-4143-b210-9149e35f9884/81d3bb65-b627-4404-95d7-5959776da8f4|/fefc8d4a-8637-4143-b210-9149e35f9884/81d3bb65-b627-4404-95d7-5959776da8f4|/fefc8d4a-8637-4143-b210-9149e35f9884/39c04143-b8b4-4779-a96f-137c6ab8396e",
+        "Reviewed: U701 A8 is an unused translator A input tied to GND as TI requires (SN74LVC8T245 unused inputs); the GND net carries the power-tree PWR_FLAG."
       ]
     ],
     "meta": {
