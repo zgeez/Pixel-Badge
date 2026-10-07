@@ -16,7 +16,7 @@ help:
 	@echo "make test    - run Twister host tests on $(TEST_PLATFORM)"
 	@echo "make format  - format C/C++ sources in place"
 	@echo "make check   - check formatting, lint YAML, check repository hygiene"
-	@echo "make hardware - KiCad ERC + schematic PDF/BOM export (KiCad 10.0.6)"
+	@echo "make hardware - KiCad ERC, pin/pad check, PDF/BOM export (KiCad 10.0.6)"
 	@echo "make clean   - remove build/"
 
 build:
