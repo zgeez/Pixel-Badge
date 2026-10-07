@@ -100,7 +100,7 @@ Selection is not validation: nothing below has been measured on Rev A.
 | Logic rail (3.3 V) | TI TPS63802, Murata DFE201612E-R47M (0.47 µH) | Selected; drawn |
 | LED rail | TI TPS61023, Coilcraft XEL4030-102ME (1.0 µH) | Selected; VLED setting provisional |
 | Column drivers | 2 × TI TLC59283RGER (QFN-24), R_IREF 2.94 kΩ + series 0 Ω option | Selected; drawn; 18.0 mA nominal setting (about 19.4 mA worst case at 25 °C); peak current prototype-dependent |
-| Row control | 4 × SN74HC595, SN74LVC8T245 translator, 32 × AO3401A with 10 kΩ gate pull-ups, SN74LVC1G123 + SN74LVC1G04 + SN74LVC1G32 scan-stall blanking | Selected; drawn |
+| Row control | 4 × SN74HC595 (OE pulled up to VLED), SN74LVC8T245 translator, 32 × AO3401A with 10 kΩ gate pull-ups, SN74LVC1G123 + SN74LVC1G04 + SN74LVC1G32 scan-stall blanking | Selected; drawn |
 | NFC tag | NXP NT3H2111W0FHKH (XQFN-8) | Selected; drawn; footprint per NXP's reflow footprint; coil tuning prototype-dependent |
 | IMU | TDK ICM-42688-P on I²C | Conditional (real-part verification pending); drawn |
 | Microphone | Knowles SPH0641LM4H-1, 0.8 mm PCB acoustic hole | Conditional (lifecycle check); drawn |
