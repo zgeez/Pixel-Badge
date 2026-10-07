@@ -22,6 +22,8 @@ FORBIDDEN = {
     "build/*": "build output",
     "*/build/*": "build output",
     "twister-out*/*": "test output",
+    ".history/*": "KiCad local history",
+    "*/.history/*": "KiCad local history",
     "*.gbr": "fabrication output (release artifact)",
     "*.gbrjob": "fabrication output (release artifact)",
     "*.drl": "fabrication output (release artifact)",
