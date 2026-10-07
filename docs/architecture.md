@@ -126,7 +126,7 @@ and subsequent authorized MCU updates.
 - IMU: ICM-42688-P on I²C until real-part verification; SPI is the fallback.
 - Microphone lifecycle confirmation.
 - Final button placement (front strip or bottom edge) at outline freeze
-  ([ADR 0008](decisions/0008-landscape-front-buttons.md), Proposed).
+  ([ADR 0008](decisions/0008-landscape-front-buttons.md)).
 - Charging temperature qualification with a pack that has no thermistor.
 
 The owner-selected Rev A architecture is recorded in

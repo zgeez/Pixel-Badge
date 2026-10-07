@@ -77,7 +77,7 @@ scheme is not the badge design.
   SPH0641LM4H-1 PDM microphone (lifecycle not yet confirmed).
 - **User interface:** worn landscape; two top-actuated buttons on the front below
   the LED field when they fit, otherwise on the bottom edge
-  ([ADR 0008](decisions/0008-landscape-front-buttons.md), Proposed); power
+  ([ADR 0008](decisions/0008-landscape-front-buttons.md)); power
   switch on an edge; one status LED on the rear.
 - **RF:** module-integrated antenna at a board edge/corner with the keep-out the
   module vendor specifies; NFC coil in a separate region; battery and magnets

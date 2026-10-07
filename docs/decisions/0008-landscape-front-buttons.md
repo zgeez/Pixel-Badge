@@ -1,6 +1,6 @@
 # 0008: Landscape wear and front-face buttons
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-06
 - Deciders: Project owner
 
