@@ -52,6 +52,15 @@ on a specific document, cite the document revision and section.
   guidance). The package also includes the reflow profile. Check crystal load
   configuration against the chosen crystal and firmware; an example part in
   the package is not a frozen Rev A BOM selection.
+- Raytac R&D, written reply to the project (email, **2026-10-08**): the DECUSB
+  capacitor is included in the MDBT53 modules (no external capacitor needed
+  for the internal USB LDO); C25 (4.7 µF behind R22 2.2 Ω) in the reference
+  circuit is C_VBUS.
+- nRF5340 VBUS source resistance: at most 6 Ω DC including the cable when VDDH
+  is not connected to VBUS, so that VBUS stays above 4.35 V. The nRF5340
+  Product Specification figure as quoted by a user and confirmed by Nordic staff on
+  [DevZone](https://devzone.nordicsemi.com/f/nordic-q-a/129336/thingy-91-x---npm1300-vbusout-and-nrf5340-vbus-source-resistance);
+  the Product Specification table itself was not retrieved for this project.
 
 The manufacturer download endpoints above deliver the documents directly.
 If Raytac replaces a file, locate the named revision via its

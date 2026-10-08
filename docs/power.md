@@ -109,9 +109,11 @@ against Nordic's specification. DECUSB is a bare-SoC decoupling pin, not an
 exposed pin in Raytac's §2.5 module pin table; do not invent a module pad for it.
 The USB regulator's decoupling is inside the module: Raytac exposes no DECUSB
 pad and its §8.1.2 reference circuit has no external DECUSB capacitor, so Rev A
-relies on Raytac's module design for it. This is accepted for the freeze
-without written confirmation from Raytac (requested separately); USB
-enumeration at bring-up does not prove it.
+relies on Raytac's module design for it. Raytac R&D confirmed this in writing
+(2026-10-08): the DECUSB capacitor is inside the MDBT53 modules and no external
+capacitor is needed for the USB regulator. The 4.7 µF capacitor behind 2.2 Ω in
+Raytac's reference circuit (C25/R22 there, C402/R401 here) is the module's
+C_VBUS.
 
 **VBUS attach capacitance.** USB Type-C R2.5 requires a sink to meet the USB
 2.0 inrush requirement: no more than the equivalent of 10 µF at attach, or
@@ -122,9 +124,17 @@ diode at attach) and the module branch C402 (4.7 µF, 16 V, behind R401 2.2 Ω):
 data does not give. TI requires at least 1 µF on VBUS and 10 µF on PMID
 (SLUSEG2D §7.3), so the charger alone is near the limit. Rev A keeps the
 reference values and measures the attach charge and VBUS droop at bring-up
-against a 10 µF ∥ 44 Ω reference load. If it exceeds the limit, C402 becomes
-1 µF and R401 up to 10 Ω (same footprints, no layout change), a recorded
-deviation from Raytac's reference values.
+against a 10 µF ∥ 44 Ω reference load. If it exceeds the limit, the fallback
+changes C402 and R401 (same footprints, no layout change), a recorded deviation
+from Raytac's reference values, within two limits:
+
+- C402 is the module's C_VBUS: a lower value is checked against the nRF5340
+  Product Specification's VBUS decoupling requirement before it is fitted.
+- The nRF5340 allows at most 6 Ω DC source resistance on VBUS, including the
+  cable, when VDDH is not supplied from VBUS (as here), so that VBUS stays above
+  its 4.35 V minimum. R401 therefore stays at or below 4.7 Ω, leaving at least
+  1.3 Ω for the cable, connectors and source; the reference 2.2 Ω leaves 3.8 Ω.
+  Any higher value needs Nordic's or Raytac's written agreement.
 
 Capacitor ratings: C303 50 V, C304 25 V, C402 16 V, all X5R, above the 5.5 V
 VBUS maximum used here; R401 is a 0603 thick-film resistor carrying the module's
