@@ -95,6 +95,24 @@ make build
 
 Output: `build/nrf5340dk/firmware/zephyr/zephyr.hex`.
 
+On the DK, `firmware/boards/nrf5340dk_nrf5340_cpuapp.overlay` puts the Rev A
+pin roles on the DK's pins where it can: SPIM4 on P0.08–P0.10, matrix LAT and
+BLANK on P0.11/P0.12, and I²C1 with SCL on P1.02 and SDA on P1.03. It also adds
+a frame marker on P0.26 for the logic analyzer and removes Buttons 3 and 4
+(their pins carry the matrix SPI). UART1 stays off: its pins are the interface
+MCU's serial port 0 (VCOM0 on the board; RXD P1.00, TXD P1.01, CTS P0.10,
+RTS P0.11), and P0.10/P0.11 are no longer forwarded to the network core, so
+starting it (for Bluetooth, for example) cannot take matrix MISO and LAT away.
+Adding or changing an overlay needs a pristine build (`-Pristine`, or
+`--pristine` with west).
+
+Before matrix work on the DK: the interface MCU leaves its UART pins tri-stated
+until a terminal opens the port and asserts DTR, and then drives them. Close
+every terminal on the DK's J-Link COM ports and log over RTT instead. If one was
+opened, power-cycle the DK by unplugging its USB cable. For captures that do not
+need the debugger, the nRF ONLY switch (SW6) disconnects the interface MCU
+completely, including SWD, so flashing and RTT stop working until it is set back.
+
 ### Rev A board
 
 `firmware/boards/smart_led_badge/` defines the Rev A board (Raytac

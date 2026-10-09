@@ -1,0 +1,91 @@
+/*
+ * SPDX-License-Identifier: MIT
+ *
+ * nRF5340 DK bench: puts the Rev A pin roles on the DK where the DK allows, so
+ * firmware written on the bench moves to the badge with a board change only.
+ *
+ * - SPIM4 on its dedicated high-speed pins P0.08/P0.09/P0.10, as on Rev A. The
+ *   DK board puts it on the Arduino SPI pins (P1.13-P1.15, chip select P1.12),
+ *   which the bench uses for the HUB75 panel.
+ * - Matrix LAT P0.11 and BLANK P0.12 as on Rev A, plus a frame marker on P0.26
+ *   (Arduino A5) for the logic analyzer.
+ * - I2C1 with SCL on P1.02 and SDA on P1.03 as on Rev A; the DK board has them
+ *   the other way round.
+ * - Buttons 3 and 4 (P0.08/P0.09) removed: those pins carry the matrix SPI.
+ *   Leave the buttons unpressed while the matrix runs.
+ * - UART1 stays disabled. Its pins are the interface MCU's serial port 0
+ *   (VCOM0 on the board): RXD P1.00, TXD P1.01, CTS P0.10, RTS P0.11. Logging
+ *   uses RTT.
+ * - The network core no longer gets P0.10/P0.11 forwarded for that port's flow
+ *   control. Otherwise any image that starts the network core (Bluetooth, for
+ *   example) would take matrix MISO and LAT from the application core. P1.00 and
+ *   P1.01 stay forwarded for the network core's UART.
+ */
+
+/ {
+	aliases {
+		/delete-property/ sw2;
+		/delete-property/ sw3;
+	};
+
+	nrf-gpio-forwarder {
+		uart {
+			gpios = <&gpio1 1 0>, <&gpio1 0 0>;
+		};
+	};
+
+	zephyr,user {
+		mtx-lat-gpios = <&gpio0 11 GPIO_ACTIVE_HIGH>;
+		mtx-blank-gpios = <&gpio0 12 GPIO_ACTIVE_HIGH>; /* high = columns blanked */
+		bench-frame-gpios = <&gpio0 26 GPIO_ACTIVE_HIGH>; /* analyzer frame marker */
+	};
+};
+
+/delete-node/ &button2;
+/delete-node/ &button3;
+
+&pinctrl {
+	spi4_default: spi4_default {
+		group1 {
+			psels = <NRF_PSEL(SPIM_SCK, 0, 8)>,
+				<NRF_PSEL(SPIM_MOSI, 0, 9)>,
+				<NRF_PSEL(SPIM_MISO, 0, 10)>;
+		};
+	};
+
+	spi4_sleep: spi4_sleep {
+		group1 {
+			psels = <NRF_PSEL(SPIM_SCK, 0, 8)>,
+				<NRF_PSEL(SPIM_MOSI, 0, 9)>,
+				<NRF_PSEL(SPIM_MISO, 0, 10)>;
+			low-power-enable;
+		};
+	};
+
+	i2c1_default: i2c1_default {
+		group1 {
+			psels = <NRF_PSEL(TWIM_SCL, 1, 2)>,
+				<NRF_PSEL(TWIM_SDA, 1, 3)>;
+		};
+	};
+
+	i2c1_sleep: i2c1_sleep {
+		group1 {
+			psels = <NRF_PSEL(TWIM_SCL, 1, 2)>,
+				<NRF_PSEL(TWIM_SDA, 1, 3)>;
+			low-power-enable;
+		};
+	};
+};
+
+&spi4 {
+	/delete-property/ cs-gpios;
+};
+
+&i2c1 {
+	clock-frequency = <I2C_BITRATE_FAST>;
+};
+
+&uart1 {
+	status = "disabled";
+};
