@@ -9,6 +9,8 @@ layout (review 2026-10-07); later changes go through a recorded decision. See [d
 |---|---|
 | `smart-led-badge.kicad_pro` | KiCad project |
 | `smart-led-badge.kicad_sch` | Root schematic: hierarchy and revision block |
+| `smart-led-badge.kicad_pcb` | Board (layout in progress: placement and matrix routing; not for fabrication) |
+| `smart-led-badge.kicad_dru` | Custom DRC rules (see Board) |
 | `sheets/` | One hierarchical sheet per block (USB/charger/battery, power tree, MCU module, debug, matrix columns, matrix rows and safety, LED matrix, IMU, microphone, NFC, user interface, test points) |
 | `sym-lib-table`, `fp-lib-table` | Project library tables (paths relative to `${KIPRJMOD}`) |
 | `libraries/symbols/` | Project symbol library (`smart-led-badge.kicad_sym`) |
@@ -58,6 +60,38 @@ clearance and carrier checks only:
 | `USB_C_Receptacle_HRO_TYPE-C-31-M-12.step` | 8.94 × 7.3 × 3.26 shell | Footprint outline, HRO height |
 
 Test pads, mounting holes and the PCB coil have no model (nothing is assembled).
+
+## Board
+
+Layout in progress; the values below are the current design, not validated.
+
+- 112 × 74 mm, 3 mm corner radius, 4 layers, 1.6 mm; vias tented on both sides.
+  All parts on the front; the rear carries only the battery and the J302 body.
+- Design-rule minimums sit above the fabricator's published multilayer
+  limits: 0.127 mm track and space, vias from 0.45/0.2 mm, 0.3 mm copper to
+  edge. Silkscreen follows its published legend minimums: 0.15 mm line width
+  and pad clearance, text from 1.0 mm. Reference designators are not printed.
+  The edge-mounted switch SW201 and the module have outlines that run to the
+  board edge (5 DRC warnings, clipped by the fabricator).
+- Decoupling capacitors sit next to the pins they serve: within about 2–5 mm
+  for the regulator, charger and module DC/DC parts. C708 (LED-rail bulk) still
+  needs a place near the bottom row switches.
+- Net classes set routing defaults: `Power_HI` (charger, boost and battery
+  paths) 0.5 mm with 0.6/0.3 mm vias, `Power` (3V3, GND) 0.3 mm, `Row` 0.3 mm,
+  `USB` 0.2 mm, `NFC` 0.4 mm, others 0.15 mm; 0.5/0.3 mm vias by default.
+  The inductor loops get copper pours rather than wider tracks.
+- In1.Cu is a GND plane. It is kept free of tracks under the three switching
+  regulators (U201/L201, U202/L202, U302/L301) and the module; elsewhere tracks
+  may cross it.
+- `smart-led-badge.kicad_dru` waives courtyard overlap between matrix LEDs
+  only: at 45° on a 2.0 mm grid their courtyards overlap by design while the
+  pads keep ≈ 0.7 mm. Every other courtyard and copper check applies.
+- Rule areas: no copper on any layer inside the NFC coil, no pours, tracks or
+  vias over the coil, no parts, pads or tracks on the rear over the battery
+  (tented vias allowed), and the module's antenna keep-out on every layer.
+- Matrix routing: each row is a straight F.Cu track through its 32 anodes;
+  each cathode has a short F.Cu stub to a 0.6/0.3 mm via, and the vias of a
+  column are joined on In2.Cu.
 
 ## Checks
 
