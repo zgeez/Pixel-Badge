@@ -1,0 +1,9 @@
+(version 1)
+
+# OD-34: the 1024 matrix LEDs sit at 45 deg on a 2.0 mm grid. Their courtyards
+# (pads and body + 0.25 mm) overlap by design; pad-to-pad gaps are about 0.71 mm.
+# Only LED-to-LED courtyard overlap inside the matrix is waived; copper
+# clearance and every other courtyard check still apply.
+(rule "Matrix LED courtyard overlap (OD-34)"
+  (condition "A.Reference == 'LD*' && B.Reference == 'LD*'")
+  (constraint courtyard_clearance (min -3mm)))

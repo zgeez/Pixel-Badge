@@ -3885,16 +3885,6 @@
 	)
 	(wire
 		(pts
-			(xy 60.96 205.74) (xy 60.96 208.28)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "4f94e78c-6f45-474e-a5ce-2008e0f6add8")
-	)
-	(wire
-		(pts
 			(xy 167.64 205.74) (xy 167.64 208.28)
 		)
 		(stroke
@@ -4622,16 +4612,6 @@
 			(type default)
 		)
 		(uuid "ed44ee5c-630b-4a5e-91e8-7e84e28e6551")
-	)
-	(wire
-		(pts
-			(xy 76.2 205.74) (xy 76.2 208.28)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "f13e14e1-29af-4c32-b611-0d16076962e0")
 	)
 	(wire
 		(pts
@@ -5683,29 +5663,6 @@
 			)
 		)
 	)
-	(global_label "VBAT"
-		(shape passive)
-		(at 76.2 208.28 270)
-		(fields_autoplaced yes)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right)
-		)
-		(uuid "b1176766-692f-4007-b687-fc282a1a03ca")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 76.2 208.28 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-	)
 	(global_label "I2C1_SCL"
 		(shape passive)
 		(at 213.36 83.82 180)
@@ -5834,29 +5791,6 @@
 		(uuid "c700530a-fdc5-46ba-b062-870edb8bd1fd")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
 			(at 243.84 158.75 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-	)
-	(global_label "SYS"
-		(shape passive)
-		(at 60.96 208.28 270)
-		(fields_autoplaced yes)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right)
-		)
-		(uuid "cc42ec95-64bb-422a-8c62-74cd78086790")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 60.96 208.28 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -6490,7 +6424,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Connector_USB:USB_C_Receptacle_HRO_TYPE-C-31-M-12"
+		(property "Footprint" "smart-led-badge:USB_C_Receptacle_HRO_TYPE-C-31-M-12"
 			(at 33.02 76.2 0)
 			(hide yes)
 			(show_name no)
@@ -8591,7 +8525,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "TestPoint:TestPoint_Pad_D1.0mm"
+		(property "Footprint" "smart-led-badge:TestPoint_Pad_D0.8mm"
 			(at 182.88 205.74 0)
 			(hide yes)
 			(show_name no)
@@ -8842,84 +8776,6 @@
 		)
 	)
 	(symbol
-		(lib_id "Connector:TestPoint")
-		(at 60.96 205.74 0)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp no)
-		(uuid "621e7c86-62b2-4796-aca2-410d79a00f6d")
-		(property "Reference" "TP303"
-			(at 62.23 200.66 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Value" "SYS"
-			(at 62.23 203.2 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" "TestPoint:TestPoint_Pad_D1.0mm"
-			(at 60.96 205.74 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 60.96 205.74 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "test point"
-			(at 60.96 205.74 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "6db98a1a-9652-45d8-a7e9-d200d0a0dc70")
-		)
-		(instances
-			(project "smart-led-badge"
-				(path "/fefc8d4a-8637-4143-b210-9149e35f9884/f79dd5bf-1129-4160-8b1f-c78c0c86307a"
-					(reference "TP303")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
 		(lib_id "Device:R")
 		(at 289.56 132.08 0)
 		(unit 1)
@@ -9077,7 +8933,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "TestPoint:TestPoint_Pad_D1.0mm"
+		(property "Footprint" "smart-led-badge:TestPoint_Pad_D0.8mm"
 			(at 30.48 205.74 0)
 			(hide yes)
 			(show_name no)
@@ -10320,7 +10176,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "TestPoint:TestPoint_Pad_D1.0mm"
+		(property "Footprint" "smart-led-badge:TestPoint_Pad_D0.8mm"
 			(at 45.72 205.74 0)
 			(hide yes)
 			(show_name no)
@@ -11524,84 +11380,6 @@
 			(project "smart-led-badge"
 				(path "/fefc8d4a-8637-4143-b210-9149e35f9884/f79dd5bf-1129-4160-8b1f-c78c0c86307a"
 					(reference "#PWR311")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Connector:TestPoint")
-		(at 76.2 205.74 0)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp no)
-		(uuid "b4e9ca9b-f7f7-439a-bc5d-8010e89c24e3")
-		(property "Reference" "TP304"
-			(at 77.47 200.66 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Value" "VBAT"
-			(at 77.47 203.2 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" "TestPoint:TestPoint_Pad_D1.0mm"
-			(at 76.2 205.74 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 76.2 205.74 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "test point"
-			(at 76.2 205.74 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "4c0b33e9-5b82-4fcd-a282-407990dc34d2")
-		)
-		(instances
-			(project "smart-led-badge"
-				(path "/fefc8d4a-8637-4143-b210-9149e35f9884/f79dd5bf-1129-4160-8b1f-c78c0c86307a"
-					(reference "TP304")
 					(unit 1)
 				)
 			)

@@ -52,6 +52,15 @@ on a specific document, cite the document revision and section.
   guidance). The package also includes the reflow profile. Check crystal load
   configuration against the chosen crystal and firmware; an example part in
   the package is not a frozen Rev A BOM selection.
+- Raytac R&D, written reply to the project (email, **2026-10-08**): the DECUSB
+  capacitor is included in the MDBT53 modules (no external capacitor needed
+  for the internal USB LDO); C25 (4.7 µF behind R22 2.2 Ω) in the reference
+  circuit is C_VBUS.
+- nRF5340 VBUS source resistance: at most 6 Ω DC including the cable when VDDH
+  is not connected to VBUS, so that VBUS stays above 4.35 V. The nRF5340
+  Product Specification figure as quoted by a user and confirmed by Nordic staff on
+  [DevZone](https://devzone.nordicsemi.com/f/nordic-q-a/129336/thingy-91-x---npm1300-vbusout-and-nrf5340-vbus-source-resistance);
+  the Product Specification table itself was not retrieved for this project.
 
 The manufacturer download endpoints above deliver the documents directly.
 If Raytac replaces a file, locate the named revision via its
@@ -135,7 +144,7 @@ provisional parts do not imply final part selection or hardware validation.
 | SN74LVC1G123 (scan-stall monostable) | Pin functions (Q output only), B rising-edge retrigger with A low and CLR high, tw 1.0–1.1 ms guaranteed at Rext 10 kΩ / Cext 0.1 µF (Switching Characteristics §§5.8–5.9, MIN/MAX at VCC 3.3 V ± 0.3 V, −40 to 125 °C) | TI SN74LVC1G123, SCES586E | Rev.E, March 2024 |
 | SN74LVC1G04 / SN74LVC1G32 (SAFE inverter, BLANK OR) | DBV pin functions | TI SCES214AF / SCES219W | October 2025 / August 2026 |
 | 4D03WGJ0103T5E (gate pull-ups) | 4 × 10 kΩ isolated, convex terminals, 0603 × 4 | UNI-ROYAL chip resistor array specification | — |
-| KT-0603W (matrix LED candidate) | White 0603, Vf 2.6–3.1 V at 5 mA (distributor listing; no pulse rating) | Hubei KENTO listing (LCSC C2290) | — |
+| KT-0603W (matrix LED) | Absolute maximums (25 °C): 100 mW, 30 mA DC, 60 mA peak (1/10 duty, 0.1 ms), 5 V reverse, −40 to 85 °C; at 5 mA: 145–360 mcd, Vf 2.6–3.1 V, 120°; typical curves (Vf and intensity vs current, current derating vs temperature); land pattern | Hubei KENTO specification for approval, CICADT 0603-0.6DT white, LCSC C2290 PDF | Rev A.0, 2018-12-06 |
 | AO3401A / AO3400A | Row and VBAT high-side switch; VBAT and CC-sense N-MOSFETs; IDSS, VGS(th), RDS(on), SOT-23 pinout | Alpha & Omega AO3401A and AO3400A datasheets | Rev.3.1 (December 2023 / July 2023) |
 | MLZ1608M100WT000 (module DC/DC inductors) | 10 µH ±20% (2 MHz), DCR 1.05 Ω ±30%; Isat 90 mA max (current at which inductance has fallen by up to 50%); Itemp 250 mA typ, a reference value for a 20 °C rise, not a rating; inductance vs DC bias curve | TDK *Inductors for decoupling circuits, Multilayer ferrite, MLZ series, MLZ1608 type* | 20201224 |
 | CM7V-T1A 32.768 kHz, 9 pF (selected crystal) | CL, RS, C0, drive level against the Raytac crystal specification | Micro Crystal CM7V-T1A datasheet | Version 8.0, 10.2016 |

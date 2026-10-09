@@ -186,4 +186,15 @@
 		(uuid "4a666f09-8162-4a12-916e-59dbb0111eb0")
 	)
 	(embedded_fonts no)
+	(model "${KIPRJMOD}/libraries/3dmodels/Texas_DLA0010A.step"
+		(offset
+			(xyz 0 0 0)
+		)
+		(scale
+			(xyz 1 1 1)
+		)
+		(rotate
+			(xyz 0 0 0)
+		)
+	)
 )

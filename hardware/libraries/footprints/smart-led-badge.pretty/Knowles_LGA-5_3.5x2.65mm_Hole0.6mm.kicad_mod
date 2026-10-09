@@ -1,9 +1,9 @@
-(footprint "Knowles_LGA-5_3.5x2.65mm_Hole0.8mm"
+(footprint "Knowles_LGA-5_3.5x2.65mm_Hole0.6mm"
 	(version 20260206)
 	(generator "pcbnew")
 	(generator_version "10.0")
 	(layer "F.Cu")
-	(descr "Knowles LGA-5 3.5x2.65mm bottom-port microphone (SPH0641LM4H-1); KiCad Knowles_LGA-5_3.5x2.65mm with the acoustic hole set to 0.8 mm (Knowles Rev D: 0.6-1.0 mm)")
+	(descr "Knowles LGA-5 3.5x2.65mm bottom-port microphone (SPH0641LM4H-1); KiCad Knowles_LGA-5_3.5x2.65mm with the acoustic hole set to 0.6 mm (Knowles Rev D: 0.6-1.0 mm; 0.21 mm to the ground ring for the 0.2 mm NPTH-to-copper rule)")
 	(tags "MEMS Microphone LGA")
 	(property "Reference" "REF**"
 		(at 0 -2.8 0)
@@ -16,7 +16,7 @@
 			)
 		)
 	)
-	(property "Value" "Knowles_LGA-5_3.5x2.65mm_Hole0.8mm"
+	(property "Value" "Knowles_LGA-5_3.5x2.65mm_Hole0.6mm"
 		(at 0 3 0)
 		(layer "F.Fab")
 		(uuid "8e903c8a-2b6c-4d4e-a132-ebafc74eb3d4")
@@ -254,8 +254,8 @@
 	)
 	(pad "" np_thru_hole circle
 		(at 0 0.77)
-		(size 0.8 0.8)
-		(drill 0.8)
+		(size 0.6 0.6)
+		(drill 0.6)
 		(layers "*.Cu" "*.Mask")
 		(uuid "22ac4b37-d18c-4564-8fe4-56652d9658d4")
 	)
@@ -303,7 +303,7 @@
 		(uuid "c2addbcf-a0a7-40de-b242-6c71908d48c6")
 	)
 	(embedded_fonts no)
-	(model "${KICAD10_3DMODEL_DIR}/Sensor_Audio.3dshapes/Knowles_LGA-5_3.5x2.65mm.step"
+	(model "${KICAD10_3DMODEL_DIR}/Sensor_Audio.3dshapes/Knowles_SPH0645LM4H-6_3.5x2.65mm.step"
 		(offset
 			(xyz 0 0 0)
 		)

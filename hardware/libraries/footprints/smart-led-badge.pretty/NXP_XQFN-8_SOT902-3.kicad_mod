@@ -220,4 +220,15 @@
 		(uuid "6692497b-b3ee-4028-899d-f09d1e372272")
 	)
 	(embedded_fonts no)
+	(model "${KIPRJMOD}/libraries/3dmodels/NXP_XQFN-8_SOT902-3.step"
+		(offset
+			(xyz 0 0 0)
+		)
+		(scale
+			(xyz 1 1 1)
+		)
+		(rotate
+			(xyz 0 0 0)
+		)
+	)
 )

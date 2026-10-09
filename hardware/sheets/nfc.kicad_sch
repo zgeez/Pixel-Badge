@@ -3558,7 +3558,7 @@
 		(exclude_from_sim no)
 		(in_bom no)
 		(on_board yes)
-		(in_pos_files yes)
+		(in_pos_files no)
 		(dnp no)
 		(uuid "d90f5271-0ec7-4391-977c-41877db50dd4")
 		(property "Reference" "L1101"
@@ -3583,7 +3583,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "smart-led-badge:L_NFC_Coil_30x25mm_6T"
 			(at 50.8 88.9 0)
 			(hide yes)
 			(show_name no)

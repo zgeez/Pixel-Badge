@@ -144,6 +144,16 @@ characteristics, VCC 3.3 V ± 0.3 V, −40 to 125 °C), scaled as tw ∝ R × C 
 capacitor DC bias only shortens it. The longest value
 is the single-row fault exposure to compare with the LED's pulse rating.
 
+LED headroom (qualification gate for the VLED setting and the KT-0603W):
+KENTO specifies forward voltage only at 5 mA; its curves at higher current are
+typical, so the headroom at the operating point is measured, not calculated.
+With a full row lit, measure the actual column current and the voltage at every
+TLC59283 output, at the lowest VLED the hardware can produce (lowest setting,
+regulator tolerance, lowest battery) and at the cold end of use. Every output
+must stay at or above the 0.8 V design headroom with its current in
+regulation. If not, raise VLED within the TPS61023 and 74HC595 limits or lower
+the peak current, and repeat.
+
 Acceptance criteria: TBD.
 
 ### 4. Current and power

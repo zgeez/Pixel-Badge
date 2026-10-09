@@ -2,9 +2,9 @@
 
 Status: **schematic frozen for layout** (review 2026-10-07). Rev A architecture
 is defined; the KiCad project lives in [`hardware/`](../hardware/README.md).
-Changes after the freeze go through a recorded decision; the matrix LED
-footprint follows the final LED part. No layout exists yet, and nothing has
-been built or measured.
+Changes after the freeze go through a recorded decision. Layout is in
+progress (placement and LED matrix routing); nothing has been built or
+measured.
 Items marked provisional may change. Electrical values come from primary datasheets and are recorded in
 [references.md](references.md) as parts are confirmed.
 
@@ -131,7 +131,7 @@ Selection is not validation: nothing below has been measured on Rev A.
 | Buttons | 2 × XUNPU TS-1088-AR02016 (top-actuated, 2.0 mm) | Selected; drawn; placement per ADR 0008 |
 | Power switch | C&K PCM12SMTR (right-angle SPDT slide) | Selected; drawn |
 | Status LED | Red 0603 (KT-0603R) with 1 kΩ | Selected; drawn |
-| Matrix LED | 1024 × KT-0603W (0603 white), 2.0 mm pitch | Candidate; drawn; part and pitch are a prototype gate |
+| Matrix LED | 1024 × KT-0603W (0603 white), 2.0 mm pitch | Selected on the manufacturer datasheet; drawn. Its absolute maximum ratings cover the 18–19.4 mA peak at 1/32 duty. Forward voltage is specified only at 5 mA (higher-current curves are typical), so LED headroom at the actual column current, minimum VLED and low temperature is a Rev A qualification gate ([validation](validation.md#3-matrix-timing-flicker-and-ghosting)). Brightness and bin uniformity are measured on Rev A; the 2.0 mm pitch is accepted without the planned QR screening and verified on Rev A |
 
 ## Rev A requirements
 

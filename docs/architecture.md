@@ -131,7 +131,8 @@ and subsequent authorized MCU updates.
 ## Open decisions
 
 - LED matrix pitch, LED part, and drive current (after QR testing).
-- Exact board outline details (corner radii, mounting holes) within 112 × 74 mm.
+- Board outline details: the layout uses 112 × 74 mm, 3 mm corners and three
+  M2 carrier holes; final at the PCB release.
 - NFC coil tuning and provisioning bytes (verified on a development tag; see
   [nfc.md](nfc.md)).
 - IMU: ICM-42688-P on I²C until real-part verification; SPI is the fallback.
