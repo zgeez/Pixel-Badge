@@ -784,16 +784,6 @@
 	)
 	(wire
 		(pts
-			(xy 228.6 63.5) (xy 228.6 66.04)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "1666084e-438c-45f0-b191-1421333bfb40")
-	)
-	(wire
-		(pts
 			(xy 88.9 68.58) (xy 93.98 68.58)
 		)
 		(stroke
@@ -854,16 +844,6 @@
 	)
 	(wire
 		(pts
-			(xy 182.88 63.5) (xy 182.88 66.04)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "6ea711a1-4525-4a2d-b829-101f2a25e7f7")
-	)
-	(wire
-		(pts
 			(xy 73.66 91.44) (xy 73.66 96.52)
 		)
 		(stroke
@@ -914,16 +894,6 @@
 	)
 	(wire
 		(pts
-			(xy 167.64 63.5) (xy 167.64 66.04)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "b8820a8b-eee5-411f-a88b-828bff373ae7")
-	)
-	(wire
-		(pts
 			(xy 182.88 101.6) (xy 182.88 104.14)
 		)
 		(stroke
@@ -931,16 +901,6 @@
 			(type default)
 		)
 		(uuid "bf430ed4-393c-45be-b631-6f6b62234395")
-	)
-	(wire
-		(pts
-			(xy 152.4 63.5) (xy 152.4 66.04)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "c5d87843-e301-4e8b-982c-c1ce6fa935da")
 	)
 	(wire
 		(pts
@@ -1110,29 +1070,6 @@
 			)
 		)
 	)
-	(global_label "SWDCLK"
-		(shape passive)
-		(at 182.88 66.04 270)
-		(fields_autoplaced yes)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right)
-		)
-		(uuid "8cb00221-c383-4138-b578-48bd7cb0f0ad")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 182.88 66.04 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-	)
 	(global_label "SPARE_P0_27"
 		(shape passive)
 		(at 228.6 104.14 270)
@@ -1146,29 +1083,6 @@
 		(uuid "93f7c3a8-5f05-4502-9bc2-37d2ee171b4b")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
 			(at 228.6 104.14 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-	)
-	(global_label "nRESET"
-		(shape passive)
-		(at 152.4 66.04 270)
-		(fields_autoplaced yes)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right)
-		)
-		(uuid "b3a2cf43-f000-4ce4-b975-669135e4b2f1")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 152.4 66.04 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1238,29 +1152,6 @@
 		(uuid "e0f1ae92-3399-4595-8df5-5c25e53a3044")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
 			(at 198.12 104.14 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-	)
-	(global_label "SWDIO"
-		(shape passive)
-		(at 167.64 66.04 270)
-		(fields_autoplaced yes)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right)
-		)
-		(uuid "e2211816-b39c-4f28-aadc-7c81305aed94")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 167.64 66.04 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1445,84 +1336,6 @@
 			(project "smart-led-badge"
 				(path "/fefc8d4a-8637-4143-b210-9149e35f9884/b62c38ea-faf7-48af-b256-d31a1668b65e"
 					(reference "TP509")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Connector:TestPoint")
-		(at 152.4 63.5 0)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp no)
-		(uuid "142969a5-929e-4195-91db-04e2ff0c7187")
-		(property "Reference" "TP501"
-			(at 153.67 58.42 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Value" "nRESET"
-			(at 153.67 60.96 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" "TestPoint:TestPoint_Pad_D1.0mm"
-			(at 152.4 63.5 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 152.4 63.5 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "test point"
-			(at 152.4 63.5 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "f2d06cb0-1718-4ee5-a983-1fdfbc0fb358")
-		)
-		(instances
-			(project "smart-led-badge"
-				(path "/fefc8d4a-8637-4143-b210-9149e35f9884/b62c38ea-faf7-48af-b256-d31a1668b65e"
-					(reference "TP501")
 					(unit 1)
 				)
 			)
@@ -1841,84 +1654,6 @@
 	)
 	(symbol
 		(lib_id "Connector:TestPoint")
-		(at 167.64 63.5 0)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp no)
-		(uuid "9493fc0d-dad1-4e06-af4d-de8d0707f17d")
-		(property "Reference" "TP502"
-			(at 168.91 58.42 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Value" "SWDIO"
-			(at 168.91 60.96 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" "TestPoint:TestPoint_Pad_D1.0mm"
-			(at 167.64 63.5 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 167.64 63.5 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "test point"
-			(at 167.64 63.5 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "65d380be-f1ca-40b0-839c-36c717f76a27")
-		)
-		(instances
-			(project "smart-led-badge"
-				(path "/fefc8d4a-8637-4143-b210-9149e35f9884/b62c38ea-faf7-48af-b256-d31a1668b65e"
-					(reference "TP502")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Connector:TestPoint")
 		(at 198.12 63.5 0)
 		(unit 1)
 		(body_style 1)
@@ -2067,161 +1802,6 @@
 			(project "smart-led-badge"
 				(path "/fefc8d4a-8637-4143-b210-9149e35f9884/b62c38ea-faf7-48af-b256-d31a1668b65e"
 					(reference "#PWR501")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "power:GND")
-		(at 228.6 66.04 0)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom no)
-		(on_board no)
-		(in_pos_files yes)
-		(dnp no)
-		(uuid "9865478c-e5b3-4cdf-aa60-1bc6c805e030")
-		(property "Reference" "#PWR503"
-			(at 228.6 62.23 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "GND"
-			(at 228.6 69.85 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" ""
-			(at 228.6 66.04 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 228.6 66.04 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
-			(at 228.6 66.04 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "83fbd696-303c-4c7a-8896-8aa335b169b3")
-		)
-		(instances
-			(project "smart-led-badge"
-				(path "/fefc8d4a-8637-4143-b210-9149e35f9884/b62c38ea-faf7-48af-b256-d31a1668b65e"
-					(reference "#PWR503")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Connector:TestPoint")
-		(at 182.88 63.5 0)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp no)
-		(uuid "9be140ab-f480-4c6d-8724-1a134c7bf25b")
-		(property "Reference" "TP503"
-			(at 184.15 58.42 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Value" "SWDCLK"
-			(at 184.15 60.96 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" "TestPoint:TestPoint_Pad_D1.0mm"
-			(at 182.88 63.5 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 182.88 63.5 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "test point"
-			(at 182.88 63.5 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "ac5da623-e0c2-4e14-b22f-1cab08f2d095")
-		)
-		(instances
-			(project "smart-led-badge"
-				(path "/fefc8d4a-8637-4143-b210-9149e35f9884/b62c38ea-faf7-48af-b256-d31a1668b65e"
-					(reference "TP503")
 					(unit 1)
 				)
 			)
@@ -2378,84 +1958,6 @@
 			(project "smart-led-badge"
 				(path "/fefc8d4a-8637-4143-b210-9149e35f9884/b62c38ea-faf7-48af-b256-d31a1668b65e"
 					(reference "TP507")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Connector:TestPoint")
-		(at 228.6 63.5 0)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp no)
-		(uuid "e313dd0f-4065-4669-96a0-26a48d0b482a")
-		(property "Reference" "TP506"
-			(at 229.87 58.42 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Value" "GND"
-			(at 229.87 60.96 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" "TestPoint:TestPoint_Pad_D1.0mm"
-			(at 228.6 63.5 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 228.6 63.5 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "test point"
-			(at 228.6 63.5 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "dd9b9d45-f8ad-4f57-a205-8e2d996a007e")
-		)
-		(instances
-			(project "smart-led-badge"
-				(path "/fefc8d4a-8637-4143-b210-9149e35f9884/b62c38ea-faf7-48af-b256-d31a1668b65e"
-					(reference "TP506")
 					(unit 1)
 				)
 			)

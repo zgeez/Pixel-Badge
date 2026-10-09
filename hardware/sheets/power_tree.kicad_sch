@@ -2519,16 +2519,6 @@
 	)
 	(wire
 		(pts
-			(xy 137.16 228.6) (xy 137.16 231.14)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "268fe6b2-6e41-49df-a697-1108ce6462ee")
-	)
-	(wire
-		(pts
 			(xy 101.6 29.21) (xy 101.6 26.67)
 		)
 		(stroke
@@ -6103,7 +6093,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "TestPoint:TestPoint_Pad_D1.0mm"
+		(property "Footprint" "smart-led-badge:TestPoint_Pad_D0.8mm"
 			(at 30.48 228.6 0)
 			(hide yes)
 			(show_name no)
@@ -7514,7 +7504,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "TestPoint:TestPoint_Pad_D1.0mm"
+		(property "Footprint" "smart-led-badge:TestPoint_Pad_D0.8mm"
 			(at 45.72 228.6 0)
 			(hide yes)
 			(show_name no)
@@ -7592,7 +7582,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "TestPoint:TestPoint_Pad_D1.0mm"
+		(property "Footprint" "smart-led-badge:TestPoint_Pad_D0.8mm"
 			(at 91.44 228.6 0)
 			(hide yes)
 			(show_name no)
@@ -9350,7 +9340,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "TestPoint:TestPoint_Pad_D1.0mm"
+		(property "Footprint" "smart-led-badge:TestPoint_Pad_D0.8mm"
 			(at 106.68 228.6 0)
 			(hide yes)
 			(show_name no)
@@ -10604,7 +10594,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "TestPoint:TestPoint_Pad_D1.0mm"
+		(property "Footprint" "smart-led-badge:TestPoint_Pad_D0.8mm"
 			(at 76.2 228.6 0)
 			(hide yes)
 			(show_name no)
@@ -11106,83 +11096,6 @@
 	)
 	(symbol
 		(lib_id "power:GND")
-		(at 137.16 231.14 0)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom no)
-		(on_board no)
-		(in_pos_files yes)
-		(dnp no)
-		(uuid "c114b953-82bf-4b12-8fc2-eb5e58091b19")
-		(property "Reference" "#PWR226"
-			(at 137.16 227.33 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "GND"
-			(at 137.16 234.95 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" ""
-			(at 137.16 231.14 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 137.16 231.14 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
-			(at 137.16 231.14 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "e4d925d2-28cd-4454-a6bd-c6e69d0dc5b4")
-		)
-		(instances
-			(project "smart-led-badge"
-				(path "/fefc8d4a-8637-4143-b210-9149e35f9884/39c04143-b8b4-4779-a96f-137c6ab8396e"
-					(reference "#PWR226")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "power:GND")
 		(at 132.08 67.31 0)
 		(unit 1)
 		(body_style 1)
@@ -11368,7 +11281,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "TestPoint:TestPoint_Pad_D1.0mm"
+		(property "Footprint" "smart-led-badge:TestPoint_Pad_D0.8mm"
 			(at 60.96 228.6 0)
 			(hide yes)
 			(show_name no)
@@ -12409,84 +12322,6 @@
 		)
 	)
 	(symbol
-		(lib_id "Connector:TestPoint")
-		(at 137.16 228.6 0)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp no)
-		(uuid "e967e715-128e-49c0-a07c-1ad5b3380642")
-		(property "Reference" "TP208"
-			(at 138.43 223.52 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Value" "GND"
-			(at 138.43 224.79 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" "TestPoint:TestPoint_Pad_D1.0mm"
-			(at 137.16 228.6 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 137.16 228.6 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "test point"
-			(at 137.16 228.6 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "754de4b5-f55d-43ee-8745-a0dc80260f12")
-		)
-		(instances
-			(project "smart-led-badge"
-				(path "/fefc8d4a-8637-4143-b210-9149e35f9884/39c04143-b8b4-4779-a96f-137c6ab8396e"
-					(reference "TP208")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
 		(lib_id "Device:R")
 		(at 223.52 60.96 0)
 		(unit 1)
@@ -12824,7 +12659,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "TestPoint:TestPoint_Pad_D1.0mm"
+		(property "Footprint" "smart-led-badge:TestPoint_Pad_D0.8mm"
 			(at 121.92 228.6 0)
 			(hide yes)
 			(show_name no)
