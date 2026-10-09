@@ -21,7 +21,7 @@ design opens on any machine without local path changes.
 
 | Library item | Source |
 |---|---|
-| Symbol `MDBT53-P1M`, footprint `Raytac_MDBT53-P1M` | KiCad 10.0.6 conversion of Raytac's `MDBT53_230719.lbr` (Footprint & Design Guide 241021); pads checked against the source; Raytac antenna keep-out added as a rule area; pin electrical types set from the Ver.E §2.5 pin table (power pins `power_in`, so ERC checks they are driven). Raytac's 3D model is not redistributed here |
+| Symbol `MDBT53-P1M`, footprint `Raytac_MDBT53-P1M` | KiCad 10.0.6 conversion of Raytac's `MDBT53_230719.lbr` (Footprint & Design Guide 241021); pads checked against the source; Raytac antenna keep-out added as a rule area; pin electrical types set from the Ver.E §2.5 pin table (power pins `power_in`, so ERC checks they are driven). Raytac's 3D model is not redistributed here; the footprint uses the project envelope model (below) |
 | Symbol `TPS63802`, footprint `Texas_DLA0010A` | Drawn from TI SLVSEU9D: pins and electrical types from Table 7-1; pads from the DLA0010A land pattern example (drawing 4223750/D 03/2019), body 2.0 × 3.0 mm |
 | Symbol `TPS61023`, footprint `Texas_DRL0006A` | Drawn from TI SLVSF14B: pins from the pin-function table; pads from the DRL0006A land pattern example (drawing 4223266/F 11/2024) |
 | Symbol `ICM-42688-P` (footprint: KiCad `LGA-14_3x2.5mm_P0.5mm_LayoutBorder3x4y`) | Drawn from TDK DS-000347 Rev 1.2 Table 9; KiCad footprint pad centres (±1.1625, ±0.9125 mm) and numbering checked against §10.2 |
@@ -35,8 +35,29 @@ design opens on any machine without local path changes.
 | Footprint `TI_DQA0010A_USON-10_2.5x1.0mm_P0.5mm` | TPD4E05U06 lands from TI SLVSBO7O, DQA0010A land pattern and stencil examples (drawing 4220328/A 12/2015): 0.565 × 0.20 mm, pins 3/8 0.565 × 0.40 mm, rows 0.835 mm apart, pin 3/8 paste 0.36 mm wide. Replaces KiCad's generic USON-10 (0.55 × 0.30 mm pads, 0.77 mm rows). Keep other nets out from between pins 3 and 8, where the DQA0010B outline has exposed metal; outline from KiCad's USON-10 |
 | Footprint `LED_0603_KENTO_KT-0603` | Matrix LED, from the Hubei KENTO KT-0603 suggested soldering pad (LCSC C2290 drawing): 0.70 × 0.70 mm pads, 0.70 mm gap. Pad 1 is the cathode (KENTO numbers it 2), marked by a chamfered pad and a fab line; no silkscreen; courtyard pads and body + 0.25 mm |
 | Footprint `L_NFC_Coil_30x25mm_6T` | NFC PCB coil: 30 × 25 mm outer, 6 turns, 0.4 mm track, 0.3 mm gap, 45° corner chamfers so the outer turn clears the board corner; F.Cu with an In1.Cu crossover through two tented 0.5/0.25 mm via pads; net tie between its pads. Calculated 1.67–2.00 µH (NXP AN11276 method), tuned with the parallel capacitor footprints |
+| Footprint `USB_C_Receptacle_HRO_TYPE-C-31-M-12` | Project copy of KiCad's footprint (unchanged pads), so it can carry the project envelope model; KiCad's library has no model for this part |
 | Footprint `TestPoint_Pad_D0.8mm` | KiCad `TestPoint_Pad_D1.0mm` with a 0.8 mm pad and the same silk and courtyard margins; used for the rail and GND test points |
 | Footprint `L_Murata_DFE201612E` | Murata DFE201612E body and electrodes (spec J(E)TE243A-0006B-01) match DFE201610P, so the pads follow KiCad's `L_Murata_DFE201610P` |
+
+3D models: every assembled part has one. Where KiCad's library has the part or
+an identical body, the footprint uses it (pads and fab outline checked to match):
+SOT-563 for `Texas_DRL0006A`, Coilcraft XAL4020 for `L_Coilcraft_XGL4020`
+(same 4.0 × 4.0 × 2.1 mm body), Murata DFE201610P scaled to 1.2 mm height for
+`L_Murata_DFE201612E`, TS-1088-xR020 for `SW_XUNPU_TS-1088`, Knowles
+SPH0645LM4H-6 (same 3.5 × 2.65 mm LGA body) for the microphone. The others use
+envelope models in `libraries/3dmodels/`, generated as coloured boxes from the
+fab outline (the datasheet body size) and the datasheet maximum height, for
+clearance and carrier checks only:
+
+| Model | Body (mm) | Source |
+|---|---|---|
+| `Texas_DLA0010A.step` | 2.0 × 3.0 × 1.0 max | TI drawing 4223750/D (VSON-HR, 1 mm max height) |
+| `Texas_RYK0018A.step` | 3.0 × 2.5 × 0.8 max | TI drawing 4226526/A (WQFN-HR, 0.8 mm max height) |
+| `NXP_XQFN-8_SOT902-3.step` | 1.6 × 1.6 × 0.5 | NXP SOT902-3 package description |
+| `Raytac_MDBT53-P1M.step` | 9.3 × 14.3 × 1.6, antenna end coloured | Raytac footprint outline and module height |
+| `USB_C_Receptacle_HRO_TYPE-C-31-M-12.step` | 8.94 × 7.3 × 3.26 shell | Footprint outline, HRO height |
+
+Test pads, mounting holes and the PCB coil have no model (nothing is assembled).
 
 ## Checks
 

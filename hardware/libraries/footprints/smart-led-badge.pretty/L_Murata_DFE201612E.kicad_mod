@@ -110,4 +110,15 @@
 		(uuid "17ada4b4-b0b2-41f0-973f-c39a988dca9f")
 	)
 	(embedded_fonts no)
+	(model "${KICAD10_3DMODEL_DIR}/Inductor_SMD.3dshapes/L_Murata_DFE201610P.step"
+		(offset
+			(xyz 0 0 0)
+		)
+		(scale
+			(xyz 1 1 1.2)
+		)
+		(rotate
+			(xyz 0 0 0)
+		)
+	)
 )

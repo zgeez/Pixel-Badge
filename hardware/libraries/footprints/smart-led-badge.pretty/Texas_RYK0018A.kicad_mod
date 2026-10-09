@@ -250,4 +250,15 @@
 		(uuid "3f664d11-6939-4fb6-9221-e0777f7bebcf")
 	)
 	(embedded_fonts no)
+	(model "${KIPRJMOD}/libraries/3dmodels/Texas_RYK0018A.step"
+		(offset
+			(xyz 0 0 0)
+		)
+		(scale
+			(xyz 1 1 1)
+		)
+		(rotate
+			(xyz 0 0 0)
+		)
+	)
 )
