@@ -187,6 +187,9 @@ Each row is 32 row-select bits (the row's bit is 0, which turns its PFET on)
 followed by 32 column bits (`A5`, row number, `5A`, inverted row number).
 RTT logs the frame rate once a second (about 195 frames/s).
 
+Measured results, with the setup and raw data, are in
+[validation.md](validation.md#result-scan-timing-on-the-nrf5340-dk-bench-no-matrix).
+
 ```powershell
 .\scripts\dev.ps1 build -App firmware/bench/matrix_timing -BuildDir build/matrix_timing
 ```

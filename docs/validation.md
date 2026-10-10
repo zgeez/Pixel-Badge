@@ -1,6 +1,8 @@
 # Validation
 
-Status: **no results yet**. This document defines what will be measured and how.
+Status: **one DK bench result**
+([matrix timing](#result-scan-timing-on-the-nrf5340-dk-bench-no-matrix)); no
+Rev A results. This document defines what will be measured and how.
 Results are added only after measurement, with the setup and raw data needed to
 reproduce them. Numerical acceptance thresholds are listed here only once they
 have been accepted; until then they are TBD. Required functional and privacy
@@ -15,6 +17,10 @@ Each result records:
 - method (link to the procedure below)
 - raw-data location and summary
 - acceptance threshold and pass/fail
+
+Raw data goes in `validation/results/<date>-<name>/` with a README listing each
+file and its SHA-256. Files too large for the repository (more than about 5 MB
+per result) go in a GitHub release instead, with their SHA-256 in the record.
 
 ## Categories
 
@@ -155,6 +161,36 @@ regulation. If not, raise VLED within the TPS61023 and 74HC595 limits or lower
 the peak current, and repeat.
 
 Acceptance criteria: TBD.
+
+#### Result: scan timing on the nRF5340 DK (bench, no matrix)
+
+| Field | Value |
+|---|---|
+| Date | 2026-10-09 |
+| Hardware | nRF5340 DK v2.0.3 (nRF5340 QKAA). No matrix or driver ICs attached; Rev A pins mapped onto the DK by the bench overlay. |
+| Firmware | `firmware/bench/matrix_timing` at commit `d541e00880b3`; nRF Connect SDK v3.4.1, board `nrf5340dk/nrf5340/cpuapp`. `zephyr.bin` SHA-256 `4c89e24ee02b8efc24603a943fdee9fcaf797bb62044e5425d7ec8292dc91b53`: the DK's flash read back after the captures and a pristine build of this commit both match it. |
+| Equipment | FX2-based 8-channel logic analyzer (sigrok `fx2lafw` driver) with PulseView (libsigrok 0.6.0-git-883c2ac, from the session file); the DK's onboard J-Link (SEGGER J-Link software V9.82) for flashing and halting |
+| Settings | 24 MS/s, 200 M samples (8.33 s). D0–D4 = SCK P0.08, MOSI P0.09, LAT P0.11, BLANK P0.12, frame marker P0.26. Edge resolution ±42 ns; the SCK duty cycle is not measurable at this rate. |
+| Method | [Matrix scan timing](firmware.md#matrix-scan-timing). Halt: J-Link command file `connect`, `h`, `sleep 2000`, `g` during the capture. Values measured from the capture by `analyze.py`. |
+| Raw data | [`validation/results/2026-10-09-dk-matrix-timing/`](../validation/results/2026-10-09-dk-matrix-timing/): sigrok session, screenshots, analysis script and output |
+| Threshold | Refresh 150–200 Hz (project target). Qualitative: LAT only while BLANK is high, no row lit across the frame restart, BLANK high while the CPU is halted. The blank window length has no accepted threshold (the design estimate is at least 2–4 µs). |
+| Pass/fail | **Pass.** Behavior under CPU and Bluetooth load not tested. |
+
+Summary (6.3 s of scanning: 1234 frames, 39 485 rows):
+
+- Row slot 160.0 µs; rows on for 155.0 µs every slot. BLANK high for 5.0 µs
+  around each latch, from 2 µs before LAT rises to 3 µs after.
+- LAT pulse 1.0 µs, always inside BLANK high. SPIM4 starts 0.33–0.62 µs after
+  LAT falls; 64 clocks span 7.9 µs and end 151 µs or more before the next latch.
+- All 39 485 shifts decode to the test pattern (row-select bit 0, then `A5`,
+  row, `5A`, inverted row), rows in order, and each frame starts with row 1.
+- Frame restart: the frame interrupt starts 2.0 µs after the last BLANK rise
+  and runs for 2.0–2.2 µs; BLANK stays high for 7.8 µs. Frame period 5123 µs
+  (195.2 Hz). In 5 of 1233 frames the interrupt started 12–15 µs after the
+  last BLANK rise instead of 2 µs (cause not identified); BLANK stayed high for
+  up to 21 µs and the frame took up to 5136 µs.
+- CPU halted: the scan completed its frame (32 of 32 latches) and stopped with
+  BLANK high, LAT and SCK low, for 2.01 s, then resumed when the CPU ran.
 
 ### 4. Current and power
 
