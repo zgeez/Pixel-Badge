@@ -6,6 +6,7 @@
 *.jpg binary
 *.pdf binary
 *.zip binary
+*.sr binary
 *.step -diff
 *.stp -diff
 *.wrl -diff

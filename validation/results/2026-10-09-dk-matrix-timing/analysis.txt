@@ -1,0 +1,20 @@
+200000000 samples at 24 MS/s = 8.333 s
+LAT rise to rise (us): n=39483: 160x38250, 162.7x6, 162.8x1221, 163x1, 173x1, 176x3, 176.1x1
+LAT high (us): n=39485: 0.96x919, 1x38566
+BLANK high (us): n=39484: 5x38251, 7.7x8, 7.8x1219, 8x1, 18x1, 20.9x2, 21x2
+BLANK low (row on) (us): n=39484: 155x39484
+BLANK rise to LAT rise (us): n=39483: 2x38250, 4.7x5, 4.8x1222, 5x1, 15x1, 18x3, 18.1x1
+LAT rise to BLANK fall (us): n=39484: 3x39484
+every LAT pulse inside BLANK high: True
+SCK rising edges per shift: {64: 39485}
+first to last SCK rise (us): n=39485: 7.8x209, 7.9x39276
+LAT fall to first SCK rise (us): n=39485: 0.33x1163, 0.38x69, 0.42x2, 0.46x1, 0.5x98, 0.54x128, 0.58x35843, 0.62x2181
+last SCK rise to next LAT rise (us): n=39483: 151x38250, 153x1227, 154x1, 164x1, 166x3, 167x1
+decoded shifts 39485, pattern errors 0, row order breaks 0
+frame marker high (us): n=1234: 2x784, 2.04x443, 2.12x4, 2.17x3
+frame marker period (us): n=1232: 5123x1227, 5133x1, 5136x4
+row in the first shift of each frame: {1: 1234}
+last BLANK rise to frame marker rise (us): n=1233: 1.96x2, 2x339, 2.04x886, 2.12x1, 12.17x1, 15.08x3, 15.21x1
+frame marker fall to next LAT rise (us): n=1234: 0.71x625, 0.75x609
+halt: LAT stops at 2.0206 s, resumes at 4.0324 s (2.0119 s); LAT pulses in the last frame 32/32
+halt: BLANK high from 2.020735 s for 2.0117 s; levels D0 0..0, D1 1..1, D2 0..0, D3 1..1, D4 0..0
