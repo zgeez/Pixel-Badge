@@ -23,6 +23,9 @@
 
 .EXAMPLE
     .\scripts\dev.ps1 build -Board smart_led_badge/nrf5340/cpuapp -BuildDir build/badge -ExtraConfFile firmware/configs/rev-a-peripherals.conf
+
+.EXAMPLE
+    .\scripts\dev.ps1 build -App firmware/bench/matrix_timing -BuildDir build/matrix_timing
 #>
 [CmdletBinding()]
 param(
@@ -32,6 +35,8 @@ param(
 
     [string] $Board = 'nrf5340dk/nrf5340/cpuapp',
     [string] $BuildDir = 'build/nrf5340dk',
+    # Application directory relative to the repository root.
+    [string] $App = 'firmware',
     # Optional Kconfig fragment added to the application image.
     [string] $ExtraConfFile,
     [string] $NcsVersion = 'v3.4.1',
@@ -160,7 +165,7 @@ function Invoke-Build {
         $cmakeArgs += "-DEXTRA_CONF_FILE=$conf"
     }
     Invoke-Native west (@('build', "--pristine=$pristineArg", '-b', $Board,
-        '-d', (Join-Path $RepoRoot $BuildDir), (Join-Path $RepoRoot 'firmware'),
+        '-d', (Join-Path $RepoRoot $BuildDir), (Join-Path $RepoRoot $App),
         '--') + $cmakeArgs)
 }
 
