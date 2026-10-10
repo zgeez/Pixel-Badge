@@ -87,6 +87,13 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: Build matrix timing bench test for nrf5340dk/nrf5340/cpuapp
+        run: |
+          export ZEPHYR_BASE="${GITHUB_WORKSPACE}/ncs/zephyr"
+          APP_DIR="${GITHUB_WORKSPACE}/smart-led-badge/firmware/bench/matrix_timing" \
+            BUILD_DIR="${GITHUB_WORKSPACE}/smart-led-badge/build/matrix_timing" \
+            bash smart-led-badge/scripts/ci/build-firmware.sh
+
       # Rev A board definition (firmware/boards/smart_led_badge): both cores
       # build, so devicetree or pin-map errors fail CI before hardware exists.
       - name: Build smart_led_badge/nrf5340/cpuapp

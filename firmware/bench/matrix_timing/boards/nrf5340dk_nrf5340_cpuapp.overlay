@@ -1,0 +1,7 @@
+/*
+ * SPDX-License-Identifier: MIT
+ *
+ * Same DK bench pin map as the badge application.
+ */
+
+#include "../../../boards/nrf5340dk_nrf5340_cpuapp.overlay"
