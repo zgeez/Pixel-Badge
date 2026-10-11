@@ -323,13 +323,20 @@ Acceptance criteria: TBD.
 
 ### 8. Microphone and audio processing
 
-Purpose: verify response to sound and that the microphone is inactive outside
-the audio mode.
+Purpose: verify response to sound, that the microphone is inactive outside the
+audio modes, and that recording is always visible: the recording indicator is
+on the matrix for the whole recording, and audio leaves the badge only in a
+recording the user started, over the encrypted link to the paired app.
 
-Required privacy review: trace raw samples from PDM/DMA capture through DSP and
-buffer disposal. Raw microphone samples may exist only in volatile/transient
-processing buffers. They must never be written to flash, NVS/settings, external
-storage, logs, crash dumps, or any other persistent storage. Review error paths,
+Required privacy review: trace raw samples from PDM/DMA capture through DSP,
+transmission and buffer disposal. Outside a recording, raw microphone samples
+may exist only in volatile/transient processing buffers. They must never be
+written to flash, NVS/settings, external storage, logs, crash dumps, or any
+other persistent storage; during a recording they are only streamed to the
+paired app. Check that no audio is transmitted without the recording mode
+(REC and level) shown, that the mode cannot be left or hidden while
+recording, and that a recording stops when the link drops, the display is
+turned off, or the length cap is reached. Review error paths,
 debug builds, logging backends, telemetry, and crash-dump configuration as well
 as the normal audio path. Persistent dumps must exclude sample buffers or be
 disabled; do not preserve whole RAM containing samples.
@@ -338,9 +345,9 @@ Where practical, feed a known sample pattern and instrument persistence/logging
 paths during audio mode, mode changes, reset, and faults. Inspect storage writes
 and dump/log outputs for sample leakage; record test limitations alongside the
 code/data-flow review. Synthetic test fixtures may be committed, but captured
-microphone audio must not become a test artifact. Privacy passes only when no
-raw audio reaches a persistent sink; retain the README's no-audio-storage
-guarantee. Product audio code does not exist yet, so this is a future release
+microphone audio must not become a test artifact. Privacy passes only when raw
+audio reaches no persistent sink on the badge and leaves it only in a visible,
+user-started recording streamed to the paired app. Product audio code does not exist yet, so this is a future release
 requirement, not a claim that the audit has already passed.
 
 Acceptance criteria: TBD.

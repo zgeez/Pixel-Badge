@@ -21,7 +21,9 @@ Rev A scope:
   additional encoder versions only where the output geometry permits)
 - Name / identity display
 - Motion-driven Flip/fluid-style simulation (IMU)
-- Audio visualization (PDM microphone; processed on the badge, no audio stored)
+- Audio visualization and voice recording (PDM microphone). Recordings stream
+  to the phone app for playback and are never stored on the badge; the matrix
+  shows a recording indicator for the whole recording
 - BLE configuration through a companion phone app; usable without a phone
   after configuration
 - Passive NFC contact link that works with the badge switched off
