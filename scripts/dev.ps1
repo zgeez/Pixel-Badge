@@ -168,11 +168,25 @@ function Invoke-Build {
     }
     if ($ExtraConfFile) {
         $conf = (Resolve-Path -LiteralPath $ExtraConfFile).Path.Replace('\', '/')
-        $cmakeArgs += "-DEXTRA_CONF_FILE=$conf"
+        # Application fragments must not reach MCUboot through sysbuild.
+        $confKey = if ($App -eq 'firmware' -and $Board -like '*/cpuapp') {
+            'firmware_EXTRA_CONF_FILE'
+        } else {
+            'EXTRA_CONF_FILE'
+        }
+        $cmakeArgs += "-D${confKey}=$conf"
     }
-    Invoke-Native west (@('build', "--pristine=$pristineArg", '-b', $Board,
-        '-d', (Join-Path $RepoRoot $BuildDir), (Join-Path $RepoRoot $App),
-        '--') + $cmakeArgs)
+    $previousExtraConf = $env:EXTRA_CONF_FILE
+    try {
+        if ($ExtraConfFile) {
+            Remove-Item Env:EXTRA_CONF_FILE -ErrorAction SilentlyContinue
+        }
+        Invoke-Native west (@('build', "--pristine=$pristineArg", '-b', $Board,
+            '-d', (Join-Path $RepoRoot $BuildDir), (Join-Path $RepoRoot $App),
+            '--') + $cmakeArgs)
+    } finally {
+        $env:EXTRA_CONF_FILE = $previousExtraConf
+    }
 }
 
 function Invoke-Test {
