@@ -50,7 +50,10 @@ sample since reset (data registers at -32768: sensor off or still starting) as
 `-EAGAIN` from fetch and `-ENODATA` from `channel_get` instead of as data. It
 does not detect repeated samples: with unequal ODRs the slower sensor's
 registers hold its last sample, so consumers that need each sample once use
-matching ODRs or, later, the FIFO. Moving the part to SPI only
+matching ODRs or, later, the FIFO. On the bench module, the first I²C
+transaction after the driver turns I3C off stalled until the TWIM timeout and
+its bus recovery, so the driver runs the bus recovery right after that write
+(a bench observation, not a datasheet requirement). Moving the part to SPI only
 changes the bus node and uses `compatible = "invensense,icm42688",
 "invensense,icm4268x"`. Wake-on-motion
 is not implemented yet.
