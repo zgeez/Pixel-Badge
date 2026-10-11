@@ -9,6 +9,7 @@
 
 #include "badge/bringup.hpp"
 #include "badge/display_demo.hpp"
+#include "badge/qr_screening.hpp"
 
 LOG_MODULE_REGISTER(app, CONFIG_APP_LOG_LEVEL);
 
@@ -23,7 +24,11 @@ static void display_thread(void *, void *, void *)
 		LOG_ERR("display %s not ready", display->name);
 		return;
 	}
+#if defined(CONFIG_APP_QR_SCREENING)
+	badge::run_qr_screening(display);
+#else
 	badge::run_display_demo(display);
+#endif
 }
 
 K_THREAD_DEFINE(display_tid, 2048, display_thread, NULL, NULL, NULL, 7, 0, 0);

@@ -246,6 +246,25 @@ about ±42 ns, but it distorts the SCK duty cycle; use a faster one to check
 SCK itself. Leave Buttons 3 and 4 unpressed and keep terminals off
 the DK's COM ports (see above).
 
+### QR screening
+
+Building the application with `firmware/configs/qr-screening.conf` replaces the
+display test patterns with QR test codes for the scan-reliability screening
+(validation plan, QR section). Each code is shown in normal and inverted
+polarity at brightness 255, 64 and 16; DK Button 1 steps to the next setting,
+Button 2 back, and RTT logs the setting number.
+
+```powershell
+.\scripts\dev.ps1 build -BuildDir build/qr -ExtraConfFile firmware/configs/qr-screening.conf
+```
+
+The codes come from `scripts/qr/gen_qr_test_codes.py` (segno to encode,
+ZXing-C++ to decode each frame back in both polarities). The committed set uses
+representative Version 1 payloads with the full quiet zone. Codes for other
+payloads, such as personal links, are written to a file outside the repository
+with `--out-cpp` and selected with `CONFIG_APP_QR_CODES_FILE`; Version 2 and 3
+codes fit only with a reduced quiet zone and are experiments.
+
 ## Tests
 
 Tests use Ztest and run with Twister on the `native_sim` host target. They live

@@ -94,6 +94,13 @@ jobs:
             BUILD_DIR="${GITHUB_WORKSPACE}/smart-led-badge/build/matrix_timing" \
             bash smart-led-badge/scripts/ci/build-firmware.sh
 
+      - name: Build QR screening for nrf5340dk/nrf5340/cpuapp
+        run: |
+          export ZEPHYR_BASE="${GITHUB_WORKSPACE}/ncs/zephyr"
+          BUILD_DIR="${GITHUB_WORKSPACE}/smart-led-badge/build/qr" \
+            EXTRA_CONF_FILE="${GITHUB_WORKSPACE}/smart-led-badge/firmware/configs/qr-screening.conf" \
+            bash smart-led-badge/scripts/ci/build-firmware.sh
+
       # Rev A board definition (firmware/boards/smart_led_badge): both cores
       # build, so devicetree or pin-map errors fail CI before hardware exists.
       - name: Build smart_led_badge/nrf5340/cpuapp
