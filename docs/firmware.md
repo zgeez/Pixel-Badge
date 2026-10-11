@@ -136,8 +136,9 @@ own thread, then logs an IMU sample and the microphone level every 5 s:
 - NFC tag: reads block 00h over I²C and checks that byte 0 reads 04h. The read
   follows the field-detect guarded procedure in [nfc.md](nfc.md): it does not
   start while an RF field is present, sends the block address and the read as
-  separate frames (START and STOP, at least 50 µs apart) inside a field-detect
-  watch window, with the field-detect level checked at both ends. Any RF field
+  separate frames (START and STOP), and before and after each frame waits the
+  field-detect latency and checks for a field, so no frame starts until a field
+  that arose during the previous one would have shown. Any RF field
   or activity fails the check, because the tag then needs full verification
   before use. The field-detect latency on the DK is not measured yet, so a
   fixed margin is used. It writes nothing to the tag.

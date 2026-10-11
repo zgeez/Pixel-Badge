@@ -184,7 +184,7 @@ const struct gpio_dt_spec ntag_fd = GPIO_DT_SPEC_GET(USER_NODE, nfc_fd_gpios);
 struct gpio_callback ntag_fd_cb;
 atomic_t ntag_fd_edges;
 constexpr uint32_t kFdLatencyUs = 500;
-constexpr uint32_t kFrameGapUs = 60; /* at least 50 us between frames */
+static_assert(20 + kFdLatencyUs >= 50, "the FD wait doubles as the 50 us frame gap");
 
 void on_ntag_fd(const struct device *, struct gpio_callback *, uint32_t)
 {
@@ -196,10 +196,19 @@ bool ntag_field_active()
 	return gpio_pin_get_dt(&ntag_fd) > 0;
 }
 
+/* True once FD has had time to show any field that arose before this call:
+ * waits 20 us plus the FD latency, then checks the level and the latch. */
+bool ntag_rf_seen_after_wait()
+{
+	k_busy_wait(20 + kFdLatencyUs);
+	return ntag_field_active() || atomic_get(&ntag_fd_edges) != 0;
+}
+
 /* Reads one 16-byte block: block address and data as two frames, each with
- * START and STOP, inside an FD watch window. No I2C runs while a field is
- * present: rf_seen is set and nothing is sent if FD is active when the
- * window opens, and also if an edge or an active FD is seen by its end. */
+ * START and STOP. Every frame is guarded on both sides: the FD wait and check
+ * run before it and after it, so no frame starts until any field that arose
+ * during the previous one would have shown on FD. Nothing more is sent once a
+ * field or an edge is seen (rf_seen). */
 int ntag_read_block(uint8_t block, uint8_t out[16], bool &rf_seen)
 {
 	atomic_set(&ntag_fd_edges, 0);
@@ -209,19 +218,15 @@ int ntag_read_block(uint8_t block, uint8_t out[16], bool &rf_seen)
 		return err;
 	}
 	/* Armed first, so a field arriving after this check is still caught. */
-	rf_seen = ntag_field_active();
-	if (!rf_seen) {
-		k_busy_wait(20 + kFdLatencyUs);
-		rf_seen = ntag_field_active() || atomic_get(&ntag_fd_edges) != 0;
-	}
+	rf_seen = ntag_field_active() || ntag_rf_seen_after_wait();
 	if (!rf_seen) {
 		err = i2c_write(ntag_bus, &block, 1, kNtagAddr);
-		if (err == 0) {
-			k_busy_wait(kFrameGapUs);
-			err = i2c_read(ntag_bus, out, 16, kNtagAddr);
-		}
-		k_busy_wait(20 + kFdLatencyUs);
-		rf_seen = ntag_field_active() || atomic_get(&ntag_fd_edges) != 0;
+		/* This wait is also the gap between frames (at least 50 us). */
+		rf_seen = ntag_rf_seen_after_wait();
+	}
+	if (!rf_seen && err == 0) {
+		err = i2c_read(ntag_bus, out, 16, kNtagAddr);
+		rf_seen = ntag_rf_seen_after_wait();
 	}
 	(void)gpio_pin_interrupt_configure_dt(&ntag_fd, GPIO_INT_DISABLE);
 	return err;
