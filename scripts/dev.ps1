@@ -178,9 +178,7 @@ function Invoke-Build {
     }
     $previousExtraConf = $env:EXTRA_CONF_FILE
     try {
-        if ($ExtraConfFile) {
-            Remove-Item Env:EXTRA_CONF_FILE -ErrorAction SilentlyContinue
-        }
+        Remove-Item Env:EXTRA_CONF_FILE -ErrorAction SilentlyContinue
         Invoke-Native west (@('build', "--pristine=$pristineArg", '-b', $Board,
             '-d', (Join-Path $RepoRoot $BuildDir), (Join-Path $RepoRoot $App),
             '--') + $cmakeArgs)
