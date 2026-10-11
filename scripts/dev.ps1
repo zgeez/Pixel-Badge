@@ -39,6 +39,9 @@ param(
     [string] $App = 'firmware',
     # Optional Kconfig fragment added to the application image.
     [string] $ExtraConfFile,
+    # Selects the local .env build default; stored settings still take precedence.
+    [ValidateSet('Portfolio', 'LinkedIn', 'GitHub', 'Resume', 'Representative')]
+    [string] $QrLink = 'Portfolio',
     [string] $NcsVersion = 'v3.4.1',
     [string] $NcsRoot = $(if ($env:NCS_ROOT) { $env:NCS_ROOT } else { 'C:\ncs' }),
     [switch] $Pristine
@@ -160,6 +163,9 @@ function Invoke-Build {
     # BOARD_ROOT makes the Rev A board (firmware/boards) visible to sysbuild too.
     $boardRoot = (Join-Path $RepoRoot 'firmware').Replace('\', '/')
     $cmakeArgs = @("-DBOARD_ROOT=$boardRoot")
+    if ($App -eq 'firmware') {
+        $cmakeArgs += "-DBADGE_QR_LINK=$($QrLink.ToUpperInvariant())"
+    }
     if ($ExtraConfFile) {
         $conf = (Resolve-Path -LiteralPath $ExtraConfFile).Path.Replace('\', '/')
         $cmakeArgs += "-DEXTRA_CONF_FILE=$conf"
