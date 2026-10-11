@@ -228,7 +228,9 @@ Acceptance criteria: TBD.
 ### 5. BLE
 
 Purpose: verify pairing, configuration through the companion app, and range,
-worn and unworn.
+worn and unworn. Pairing must be authenticated LE Secure Connections (MITM
+protected); the configuration, audio and recording-control characteristics
+must refuse a link whose bond is unauthenticated, such as Just Works.
 
 Acceptance criteria: TBD.
 
@@ -334,16 +336,27 @@ transmit queues (including any retransmission buffers) and buffer disposal.
 Audio data may exist only in volatile/transient buffers and must never be
 written to flash, NVS/settings, external storage, logs, telemetry, crash
 dumps, or any other persistent storage; during a recording the encoded stream
-is only sent to the paired app. Check that no audio is transmitted without the
-recording mode (REC and level) shown; that a long-press without a connected,
-subscribed app does not start a recording and shows that recording is
-unavailable; that the mode cannot be left or hidden while recording; that the
-user can stop a recording with a button press and from the app; and that a
-recording also stops when the link drops or the app unsubscribes, the display
-is turned off or blanked, or the length cap is reached. Review error paths,
-debug builds, logging backends, telemetry, and crash-dump configuration as well
-as the normal audio path. Persistent dumps must exclude audio buffers or be
-disabled; do not preserve whole RAM containing audio data.
+is only sent to the paired app. Check that:
+
+- no audio is transmitted without the recording mode (REC and level) shown,
+  and REC is visible at the lowest brightness setting;
+- a recording cannot start, from the app or a long-press, without a
+  connected, subscribed app that has proved the app key on this connection
+  (test a wrong key, a replayed response, and a second app on the same
+  phone); over a link whose bond is unauthenticated (Just Works); while the LED rail is shed for low battery or the display is off;
+  or with the matrix driver faulted. A long-press then shows that recording
+  is unavailable when the matrix is on;
+- a second app subscribed on the same phone during a recording receives only
+  data it cannot decrypt, and altered audio packets are rejected by the app;
+- the mode cannot be left or hidden while recording;
+- the user can stop a recording with a button press and from the app;
+- a recording also stops when the link drops or the app unsubscribes, the
+  display is turned off or blanked, the LED rail is shed or the matrix driver
+  faults, or the length cap is reached.
+
+Review error paths, debug builds, logging backends, telemetry, and crash-dump
+configuration as well as the normal audio path. Persistent dumps must exclude
+audio buffers or be disabled; do not preserve whole RAM containing audio data.
 
 Where practical, feed a known sample pattern and instrument persistence/logging
 paths during audio mode, mode changes, reset, and faults. Inspect storage writes
