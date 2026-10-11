@@ -53,8 +53,15 @@ registers hold its last sample, so consumers that need each sample once use
 matching ODRs or, later, the FIFO. Moving the part to SPI only
 changes the bus node and uses `compatible = "invensense,icm42688",
 "invensense,icm4268x"`. Wake-on-motion
-is not implemented yet. The other directories are empty; interfaces will be
-defined as features are implemented.
+is not implemented yet.
+
+The application reaches the display only through Zephyr's display API
+(`zephyr,display` chosen node), as a 32 × 32 monochrome display
+(`PIXEL_FORMAT_MONO01`, rows packed most significant bit first). On the DK the
+backend is a HUB75 panel (below); the badge gets its own matrix driver behind
+the same API. Frames and test patterns live in `firmware/src/services/`
+(`badge/test_pattern.hpp`), and `firmware/src/app/display_demo.cpp` cycles the
+patterns.
 
 ## Logging
 
@@ -105,6 +112,17 @@ RTS P0.11), and P0.10/P0.11 are no longer forwarded to the network core, so
 starting it (for Bluetooth, for example) cannot take matrix MISO and LAT away.
 Adding or changing an overlay needs a pristine build (`-Pristine`, or
 `--pristine` with west).
+
+The overlay also makes a HUB75 RGB panel the DK's display, for bench work
+only: R1, G1, B1, CLK and LAT on P1.11–P1.15, OE on P1.08 and row address A–E
+on P0.04–P0.07 and P0.25, through 5 V buffers (SN74AHCT245). The driver
+(`firmware/src/drivers/hub75`, compatible `smartledbadge,hub75`) shows the
+32 × 32 window in the panel's top half in one colour. TIMER0 times each 160 µs
+row slot (195 Hz refresh): its interrupt latches the row shifted during the
+previous slot and shifts the next row while this one is lit, and a second
+compare switches OE off through DPPI and GPIOTE, so brightness is set by
+hardware. TIMER1 and TIMER2 stay free for the matrix timing test. If the image
+is mirrored left to right, set `mirror-x` on the node.
 
 Before matrix work on the DK: the interface MCU leaves its UART pins tri-stated
 until a terminal opens the port and asserts DTR, and then drives them. Close
@@ -233,3 +251,5 @@ configuration and write order, power-mode/ODR validation (including a
 low-power start-up), invalid-sample handling, unit conversion, and the
 data-ready interrupt path. It proves
 the driver logic, not behavior on the real part.
+`firmware/tests/test_pattern` checks the frame bit layout and the test
+patterns.

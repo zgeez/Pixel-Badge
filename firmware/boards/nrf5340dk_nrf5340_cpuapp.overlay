@@ -20,9 +20,37 @@
  *   control. Otherwise any image that starts the network core (Bluetooth, for
  *   example) would take matrix MISO and LAT from the application core. P1.00 and
  *   P1.01 stay forwarded for the network core's UART.
+ * - HUB75 bench panel as the display (bench only; the badge has its own
+ *   matrix): R1/G1/B1/CLK/LAT on P1.11-P1.15, OE on P1.08, row address A-E on
+ *   P0.04-P0.07 and P0.25, through 5 V buffers. TIMER0 times its rows, so
+ *   TIMER1/TIMER2 stay free for the Rev A matrix timing.
  */
 
 / {
+	chosen {
+		zephyr,display = &hub75;
+	};
+
+	hub75: hub75 {
+		compatible = "smartledbadge,hub75";
+		width = <32>;
+		height = <32>;
+		panel-columns = <64>;
+		r1-gpios = <&gpio1 11 GPIO_ACTIVE_HIGH>;
+		g1-gpios = <&gpio1 12 GPIO_ACTIVE_HIGH>;
+		b1-gpios = <&gpio1 13 GPIO_ACTIVE_HIGH>;
+		clk-gpios = <&gpio1 14 GPIO_ACTIVE_HIGH>;
+		lat-gpios = <&gpio1 15 GPIO_ACTIVE_HIGH>;
+		oe-gpios = <&gpio1 8 GPIO_ACTIVE_HIGH>; /* high = panel off */
+		addr-gpios = <&gpio0 4 GPIO_ACTIVE_HIGH>, <&gpio0 5 GPIO_ACTIVE_HIGH>,
+			     <&gpio0 6 GPIO_ACTIVE_HIGH>, <&gpio0 7 GPIO_ACTIVE_HIGH>,
+			     <&gpio0 25 GPIO_ACTIVE_HIGH>;
+		timer = <&timer0>;
+		/* Bench panel shifts its columns in the opposite order (seen on the
+		 * orientation pattern, 2026-10-11). */
+		mirror-x;
+	};
+
 	aliases {
 		/delete-property/ sw2;
 		/delete-property/ sw3;

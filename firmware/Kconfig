@@ -6,6 +6,11 @@ module = APP
 module-str = Application
 source "subsys/logging/Kconfig.template.log_config"
 
+config APP_DISPLAY_BRIGHTNESS
+	int "Display brightness after the test patterns"
+	default 128
+	range 1 255
+
 endmenu
 
 source "Kconfig.zephyr"
