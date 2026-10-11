@@ -225,6 +225,14 @@ static int icm42688_i2c_configure(const struct device *dev)
 				ret);
 			return ret;
 		}
+		if (seq[i].bank == 1 && seq[i].reg == BANK1_INTF_CONFIG6) {
+			/* On the bench module the transaction after this write
+			 * (I3C off) stalled until the TWIM timeout and its bus
+			 * recovery, then worked (2026-10-11). Run the recovery
+			 * now instead of stalling the bus for the timeout.
+			 */
+			(void)i2c_recover_bus(cfg->i2c.bus);
+		}
 	}
 	k_busy_wait(MODE_DELAY_US);
 
