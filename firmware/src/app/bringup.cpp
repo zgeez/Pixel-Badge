@@ -185,15 +185,21 @@ struct gpio_callback ntag_fd_cb;
 atomic_t ntag_fd_edges;
 constexpr uint32_t kFdLatencyUs = 500;
 constexpr uint32_t kFrameGapUs = 60; /* at least 50 us between frames */
-constexpr int kNtagTries = 3;
 
 void on_ntag_fd(const struct device *, struct gpio_callback *, uint32_t)
 {
 	atomic_inc(&ntag_fd_edges);
 }
 
+bool ntag_field_active()
+{
+	return gpio_pin_get_dt(&ntag_fd) > 0;
+}
+
 /* Reads one 16-byte block: block address and data as two frames, each with
- * START and STOP, inside an FD watch window. */
+ * START and STOP, inside an FD watch window. No I2C runs while a field is
+ * present: rf_seen is set and nothing is sent if FD is active when the
+ * window opens, and also if an edge or an active FD is seen by its end. */
 int ntag_read_block(uint8_t block, uint8_t out[16], bool &rf_seen)
 {
 	atomic_set(&ntag_fd_edges, 0);
@@ -202,15 +208,22 @@ int ntag_read_block(uint8_t block, uint8_t out[16], bool &rf_seen)
 	if (err != 0) {
 		return err;
 	}
-	k_busy_wait(20 + kFdLatencyUs);
-	err = i2c_write(ntag_bus, &block, 1, kNtagAddr);
-	if (err == 0) {
-		k_busy_wait(kFrameGapUs);
-		err = i2c_read(ntag_bus, out, 16, kNtagAddr);
+	/* Armed first, so a field arriving after this check is still caught. */
+	rf_seen = ntag_field_active();
+	if (!rf_seen) {
+		k_busy_wait(20 + kFdLatencyUs);
+		rf_seen = ntag_field_active() || atomic_get(&ntag_fd_edges) != 0;
 	}
-	k_busy_wait(20 + kFdLatencyUs);
+	if (!rf_seen) {
+		err = i2c_write(ntag_bus, &block, 1, kNtagAddr);
+		if (err == 0) {
+			k_busy_wait(kFrameGapUs);
+			err = i2c_read(ntag_bus, out, 16, kNtagAddr);
+		}
+		k_busy_wait(20 + kFdLatencyUs);
+		rf_seen = ntag_field_active() || atomic_get(&ntag_fd_edges) != 0;
+	}
 	(void)gpio_pin_interrupt_configure_dt(&ntag_fd, GPIO_INT_DISABLE);
-	rf_seen = atomic_get(&ntag_fd_edges) != 0;
 	return err;
 }
 
@@ -233,39 +246,30 @@ int ntag_check()
 		LOG_ERR("NFC tag: FAIL, field-detect setup %d", err);
 		return 1;
 	}
-	if (gpio_pin_get_dt(&ntag_fd) > 0) {
-		LOG_ERR("NFC tag: FAIL, RF field present: remove the phone and retry");
+	bool rf_seen = false;
+
+	err = ntag_read_block(0x00, b, rf_seen);
+	if (rf_seen) {
+		/* The check does not retry: RF activity around a read may have
+		 * written EEPROM, so the tag's address, configuration and NDEF
+		 * blocks need full verification before use (docs/nfc.md), which
+		 * this read-only check does not do. */
+		LOG_ERR("NFC tag: FAIL, RF field or activity during the check; keep phones "
+			"away, and re-verify the tag before use");
 		return 1;
 	}
-
-	for (int attempt = 1; attempt <= kNtagTries; attempt++) {
-		bool rf_seen = false;
-
-		err = ntag_read_block(0x00, b, rf_seen);
-		if (rf_seen) {
-			/* A transition during a read may have written EEPROM: the
-			 * tag's address, configuration and NDEF blocks need checking
-			 * before it is used (docs/nfc.md). */
-			LOG_WRN("NFC tag: RF activity during attempt %d, result discarded; "
-				"re-verify the tag before use",
-				attempt);
-			continue;
-		}
-		if (err != 0) {
-			LOG_ERR("NFC tag: FAIL, no answer at 0x%02x (%d)", kNtagAddr, err);
-			return 1;
-		}
-		LOG_HEXDUMP_INF(b, sizeof(b), "NFC tag: block 00h");
-		/* Byte 0 of block 00h always reads 04h over I2C (docs/nfc.md). */
-		if (b[0] != 0x04) {
-			LOG_ERR("NFC tag: FAIL, block 00h byte 0 is 0x%02x, expected 0x04", b[0]);
-			return 1;
-		}
-		LOG_INF("NFC tag: OK, CC %02x %02x %02x %02x", b[12], b[13], b[14], b[15]);
-		return 0;
+	if (err != 0) {
+		LOG_ERR("NFC tag: FAIL, no answer at 0x%02x (%d)", kNtagAddr, err);
+		return 1;
 	}
-	LOG_ERR("NFC tag: FAIL, RF activity on every attempt");
-	return 1;
+	LOG_HEXDUMP_INF(b, sizeof(b), "NFC tag: block 00h");
+	/* Byte 0 of block 00h always reads 04h over I2C (docs/nfc.md). */
+	if (b[0] != 0x04) {
+		LOG_ERR("NFC tag: FAIL, block 00h byte 0 is 0x%02x, expected 0x04", b[0]);
+		return 1;
+	}
+	LOG_INF("NFC tag: OK, CC %02x %02x %02x %02x", b[12], b[13], b[14], b[15]);
+	return 0;
 }
 #else
 int ntag_check()

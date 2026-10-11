@@ -137,9 +137,10 @@ own thread, then logs an IMU sample and the microphone level every 5 s:
   follows the field-detect guarded procedure in [nfc.md](nfc.md): it does not
   start while an RF field is present, sends the block address and the read as
   separate frames (START and STOP, at least 50 µs apart) inside a field-detect
-  watch window, and discards and retries the read if RF activity is seen. The
-  field-detect latency on the DK is not measured yet, so a fixed margin is
-  used. It writes nothing to the tag.
+  watch window, with the field-detect level checked at both ends. Any RF field
+  or activity fails the check, because the tag then needs full verification
+  before use. The field-detect latency on the DK is not measured yet, so a
+  fixed margin is used. It writes nothing to the tag.
 - Microphone: captures both PDM channels at 16 kHz (clock within the
   MP34DT01-M's 1–3.25 MHz) and logs the mean, AC RMS and range of each. The
   DATA pin has a pull-down on the DK, and the check fails when both channels
