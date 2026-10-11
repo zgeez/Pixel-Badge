@@ -228,7 +228,9 @@ Acceptance criteria: TBD.
 ### 5. BLE
 
 Purpose: verify pairing, configuration through the companion app, and range,
-worn and unworn.
+worn and unworn. Pairing must be authenticated LE Secure Connections (MITM
+protected); the configuration, audio and recording-control characteristics
+must refuse a link whose bond is unauthenticated, such as Just Works.
 
 Acceptance criteria: TBD.
 
@@ -323,24 +325,93 @@ Acceptance criteria: TBD.
 
 ### 8. Microphone and audio processing
 
-Purpose: verify response to sound and that the microphone is inactive outside
-the audio mode.
+Purpose: verify response to sound, that the microphone is inactive outside the
+audio modes, and that recording is always visible: the recording indicator is
+on the matrix for the whole recording, and audio leaves the badge only in a
+recording the user started, over the encrypted link to the paired app.
 
-Required privacy review: trace raw samples from PDM/DMA capture through DSP and
-buffer disposal. Raw microphone samples may exist only in volatile/transient
-processing buffers. They must never be written to flash, NVS/settings, external
-storage, logs, crash dumps, or any other persistent storage. Review error paths,
-debug builds, logging backends, telemetry, and crash-dump configuration as well
-as the normal audio path. Persistent dumps must exclude sample buffers or be
-disabled; do not preserve whole RAM containing samples.
+Required privacy review: trace audio data, raw samples and the encoded ADPCM
+stream alike, from PDM/DMA capture through DSP, encoding, the Bluetooth
+transmit queues (including any retransmission buffers) and buffer disposal.
+Audio data may exist only in volatile/transient buffers and must never be
+written to flash, NVS/settings, external storage, logs, telemetry, crash
+dumps, or any other persistent storage; during a recording the encoded stream
+is only sent to the paired app. Trace key material (the app key, per-recording
+keys and key-exchange secrets) the same way, on the badge and in the app,
+through normal and error paths: no key in logs, telemetry or dumps. Check
+that:
+
+- no audio is captured for a recording before the matrix driver confirms the
+  REC frame is shown: compare the capture timestamps of the first sent
+  samples with the frame-swap time, including a start from a visualization
+  mode;
+- no audio is captured or sent after REC leaves the matrix: for each stop
+  (button, app, length cap, display off, blanking, LED rail shed, driver
+  fault), compare the timestamp of the last captured and last sent sample
+  with the frame-off or rail-off time, and check that queued audio is
+  discarded;
+- a recording cannot start, from the app or a long-press, without a
+  connected, subscribed companion app that has proved the app key on this
+  connection; over a link whose bond is unauthenticated (Just Works); while
+  the LED rail is shed for low battery or the display is off; or with the
+  matrix driver faulted. A long-press then shows that recording is
+  unavailable when the matrix is on;
+- a long-press captures nothing until the app returns a fresh authenticated
+  accept; with the app suspended or stalled while still connected and
+  subscribed, no capture starts and the badge shows that recording is
+  unavailable;
+- app-key enrollment needs the code confirmed on the badge, and a second app
+  trying to enroll in the same pairing window cancels it; after pairing
+  again and after a factory reset, the old app key and counters are erased
+  and commands made with them are refused;
+- recording-control commands with a wrong key, a replayed or reused counter,
+  or sent by a second app on the same phone after the companion app has
+  authenticated are refused;
+- a second app subscribed on the same phone during a recording receives only
+  data it cannot decrypt, and altered audio packets are rejected by the app;
+- each recording uses a distinct key (review the derivation and compare the
+  keys of two recordings), and packets from one recording injected into
+  another are rejected;
+- the app stores recordings only in its private storage: another app cannot
+  read the file, it is not in shared media or file storage, and it is absent
+  from a device backup and a cloud backup of the phone; it leaves the app
+  only through an explicit export or share;
+- the mode cannot be left or hidden while recording;
+- the user can stop a recording with a button press and from the app;
+- a recording also stops when the link drops or the app unsubscribes, the
+  display is turned off or blanked, the LED rail is shed or the matrix driver
+  faults, or the length cap is reached; the firmware ceiling holds with the
+  length setting missing, corrupt or out of range in storage, and an
+  over-limit settings command is clamped or refused;
+- a recording decodes correctly end to end: play a known synthetic waveform
+  (for example a tone sweep with timing marks) to the microphone during a
+  recording, with REC on the matrix and representative Bluetooth conditions,
+  then decode the app's stored file and check its duration, sample rate,
+  sample order and continuity, and that induced packet loss is detected and
+  handled as specified rather than shifting later audio.
+
+REC visibility: with the enforced recording brightness and the badge worn on
+the chest, an observer who is not told the mode reads whether the badge is
+recording at 1 m and 2 m, head-on and from 45° to the side and 30° above,
+indoors (room light), outdoors in shade, and outdoors in direct sun, with the
+measured illuminance recorded for each. Proposed pass rule (not yet accepted):
+10 of 10 trials per condition, each answered within 2 s. Recording is enabled
+in release firmware only if every condition passes; if one fails even at full
+brightness, release firmware ships with recording disabled until a fix passes
+this test.
+
+Review error paths, debug builds, logging backends, telemetry, and crash-dump
+configuration as well as the normal audio path. Persistent dumps must exclude
+audio buffers or be disabled; do not preserve whole RAM containing audio data.
 
 Where practical, feed a known sample pattern and instrument persistence/logging
 paths during audio mode, mode changes, reset, and faults. Inspect storage writes
 and dump/log outputs for sample leakage; record test limitations alongside the
 code/data-flow review. Synthetic test fixtures may be committed, but captured
-microphone audio must not become a test artifact. Privacy passes only when no
-raw audio reaches a persistent sink; retain the README's no-audio-storage
-guarantee. Product audio code does not exist yet, so this is a future release
+microphone audio must not become a test artifact. Privacy passes only when
+neither raw nor encoded audio reaches a persistent sink on the badge and audio
+leaves it only in a visible, user-started recording streamed to the paired
+app. Product audio code does not exist yet, so this is a future release
 requirement, not a claim that the audit has already passed.
 
 Acceptance criteria: TBD.

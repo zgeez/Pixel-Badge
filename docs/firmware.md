@@ -78,14 +78,62 @@ No project-specific logging abstraction is used.
 
 ## Audio privacy requirement
 
-Planned audio visualization processes raw microphone samples locally in
-volatile/transient buffers only. No raw samples may reach flash, NVS/settings,
-external storage, logs, crash dumps, or other persistent storage. Review capture,
-DSP, logging, persistence, and fault/dump data flows before release, including
-debug configurations. Persistent crash dumps must exclude sample buffers or be
-disabled. Verification requirements are in
+The badge visualizes sound and can record voice for playback in the phone app
+([ADR 0011](decisions/0011-visible-voice-recording.md)). Recording is visible
+and never stored on the badge:
+
+- It starts only from the paired app or a button long-press, and only when
+  the phone is connected with an authenticated bond (LE Secure Connections
+  with MITM protection; Just Works bonds are refused for audio), the
+  companion app is subscribed to the audio stream and has proved the app key
+  on this connection (a button start also waits for a fresh authenticated
+  accept from the app), and the LED rail is on (not shed for low battery)
+  with the matrix driver running. Otherwise nothing is captured for sending, and
+  after a long-press the matrix, if on, briefly shows that recording is
+  unavailable.
+- It runs as its own display mode: the matrix shows REC and a live level bar
+  for the whole recording, at a fixed recording brightness (set by the
+  visibility test) whatever the brightness setting. The mode cannot run
+  behind another mode. Release firmware enables recording only if REC passes
+  that test in every condition, direct sun included.
+- Capture for a recording starts only after the matrix driver confirms the
+  REC frame is shown; earlier samples, including any from a visualization
+  mode, are discarded and never encoded or sent.
+- Audio is streamed live, compressed (IMA ADPCM at 16 kHz), over the encrypted
+  Bluetooth link to the paired app, which keeps recordings only in its
+  private, encrypted storage, excluded from backups; a recording leaves the
+  app only by an explicit export or share.
+- The companion app, not only the phone, is authenticated with an app key.
+  The key is enrolled only in a pairing window opened on the badge, after the
+  user confirms on the badge that the code it shows matches the app's (one
+  enrollment per window; a second attempt cancels it). It is kept with the
+  bond keys on the badge and in the phone's secure key store, and erased
+  with its counters when the badge is paired again or reset. Every
+  recording-control command from the app carries an authenticator with that
+  key and a fresh counter, and each recording is encrypted and authenticated
+  with its own freshly derived key, so other apps on the phone can neither
+  control nor read a recording.
+- The user stops it with a button press or from the app. It also stops when
+  the link drops or the app unsubscribes, when the display is turned off or
+  blanked, when the LED rail is shed for low battery or the matrix driver
+  faults, or at the maximum length set in the settings (clamped to a ceiling
+  built into the firmware, with a safe default). Before REC leaves the
+  matrix or the LED rail turns off, capture stops and any audio not yet sent
+  is discarded; on a matrix driver fault, capture stops at once and queued
+  audio is discarded, not sent.
+
+Audio data, both raw microphone samples and the encoded ADPCM stream, exists
+on the badge only in volatile/transient buffers (capture, DSP, encoding and
+Bluetooth transmit queues) and is discarded when visualization or the recording
+ends. No audio data may reach flash, NVS/settings, external storage, logs,
+telemetry, crash dumps, or other persistent storage, and no key (app key,
+per-recording key or key-exchange secret) may reach logs, telemetry or dumps.
+Review capture, DSP, transmission, logging, persistence, and fault/dump data
+flows before release, including debug configurations. Persistent crash dumps
+must exclude audio buffers or be disabled. Verification requirements are in
 [validation.md](validation.md#8-microphone-and-audio-processing); no audio
-implementation or completed privacy audit exists yet.
+feature or completed privacy audit exists yet (the bring-up check only logs
+levels).
 
 ## Building
 
