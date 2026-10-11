@@ -25,7 +25,7 @@ decision.
 
 | ADR | Decision | Status |
 |---|---|---|
-| [0001](0001-rev-a-product-scope.md) | Rev A product scope and engineering priorities | Accepted |
+| [0001](0001-rev-a-product-scope.md) | Rev A product scope and engineering priorities | Accepted; partly superseded by 0011 |
 | [0002](0002-nrf5340-module-zephyr-platform.md) | nRF5340 / MDBT53-P1M / NCS-Zephyr platform | Accepted |
 | [0003](0003-monochrome-display-qr-validation.md) | 32×32 monochrome display and QR-first validation | Accepted |
 | [0004](0004-ble-passive-nfc.md) | BLE configuration and external passive NTAG NFC | Accepted |
@@ -35,3 +35,4 @@ decision.
 | [0008](0008-landscape-front-buttons.md) | Landscape wear; buttons on the front below the LED field when they fit (amends 0006) | Accepted; partly superseded by 0009 and 0010 |
 | [0009](0009-dual-orientation-dual-mounting.md) | Portrait and landscape wear with firmware rotation; magnetic and lanyard mounting (amends 0006 and 0008) | Accepted |
 | [0010](0010-single-sided-assembly.md) | Single-sided assembly: all components on the front; rear holds the battery, its connector and the carrier; regional thickness targets (amends 0006 and 0008) | Accepted |
+| [0011](0011-visible-voice-recording.md) | Visible voice recording streamed to the phone app; no audio stored on the badge (amends 0001) | Accepted |

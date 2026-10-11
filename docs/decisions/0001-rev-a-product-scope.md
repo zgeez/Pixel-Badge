@@ -1,6 +1,7 @@
 # 0001: Rev A product scope and engineering priorities
 
-- Status: Accepted
+- Status: Accepted; the "no stored microphone audio" part is superseded by
+  [0011](0011-visible-voice-recording.md)
 - Date: 2026-10-04
 - Deciders: Project owner
 

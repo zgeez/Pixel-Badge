@@ -12,7 +12,8 @@ offers these Rev A modes and functions:
 
 - QR link display and name/identity display
 - Motion-driven Flip/fluid-style simulation (IMU input)
-- Audio visualization (PDM microphone, processed locally)
+- Audio visualization (PDM microphone, processed locally) and visible voice
+  recording streamed to the phone app ([ADR 0011](decisions/0011-visible-voice-recording.md))
 - BLE configuration from a companion phone app; the badge works without a phone
   once configured
 - A passive NFC tag that opens the same link as the QR code, including when the
