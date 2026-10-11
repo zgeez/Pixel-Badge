@@ -45,14 +45,19 @@ Voice recording is allowed, visibly and without storing audio on the badge:
   Otherwise the badge does not record, and after a long-press the matrix, if
   it is on, briefly shows that recording is unavailable.
 - Recording is its own display mode: the matrix shows REC and a live level bar
-  for the whole recording, at a minimum visible brightness whatever the
-  brightness setting. The mode cannot run behind another mode.
+  for the whole recording. REC uses a fixed recording brightness, whatever
+  the brightness setting, set by the visibility test in validation section 8
+  (the badge has no ambient light sensor). The mode cannot run behind another
+  mode.
 - Capture for a recording starts only after the matrix driver confirms the
   REC frame is being shown. Samples captured before that, including any from
   a visualization mode, are discarded and never encoded or sent.
 - Audio is streamed live, compressed with IMA ADPCM at 16 kHz (about
-  64 kbit/s), over the encrypted, bonded BLE link to the paired app, which
-  stores the recording.
+  64 kbit/s), over the encrypted, bonded BLE link to the paired app.
+- The app keeps recordings only in its private, encrypted storage, excluded
+  from cloud and device backups, never in shared media or file storage. A
+  recording leaves the app only when the user explicitly exports or shares
+  it.
 - A Bluetooth bond trusts the phone, not one app on it, so the companion app
   is authenticated as well, with an app key:
   - Enrollment is confirmed on the badge. The key is set up only while
@@ -75,6 +80,9 @@ Voice recording is allowed, visibly and without storing audio on the badge:
   stops when the link drops or the app unsubscribes, when the display is
   turned off or blanked, when the LED rail is shed for low battery or the
   matrix driver faults, or at the maximum length set in the settings.
+  Before REC leaves the matrix or the LED rail turns off, capture stops and
+  any audio not yet sent is discarded. If the matrix driver faults, capture
+  stops at once and all queued audio is discarded, not sent.
 - Audio data, raw samples and the encoded ADPCM stream alike (before and
   after encryption), exists on the badge only in volatile buffers (capture,
   encoding and Bluetooth transmit queues) and is discarded when the recording
@@ -88,10 +96,12 @@ visualization remains as decided there.
 The firmware needs a recording mode, an audio GATT service with ADPCM
 encoding, app-key enrollment with confirmation on the badge, authenticated
 control commands, per-recording encryption, and the stop conditions above;
-the app needs the matching key handling and recording and playback screens.
+the app needs the matching key handling, private storage for recordings, and
+recording and playback screens.
 Recording is new scope and must not delay the minimum viable demo. The audio
 privacy review (validation section 8) now covers encoded audio and
-transmission: no audio is captured for a recording before REC is shown, a
+transmission: no audio is captured for a recording before REC is shown or
+after it is removed, REC is readable in the intended wear conditions, a
 recording cannot start without the authenticated companion app or while the
 indicator cannot be shown, no other app can enroll, control or read a
 recording, the mode cannot be left or hidden while recording, and the manual

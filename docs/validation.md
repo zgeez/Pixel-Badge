@@ -341,7 +341,12 @@ is only sent to the paired app. Check that:
 - no audio is captured for a recording before the matrix driver confirms the
   REC frame is shown: compare the capture timestamps of the first sent
   samples with the frame-swap time, including a start from a visualization
-  mode; REC is visible at the lowest brightness setting;
+  mode;
+- no audio is captured or sent after REC leaves the matrix: for each stop
+  (button, app, length cap, display off, blanking, LED rail shed, driver
+  fault), compare the timestamp of the last captured and last sent sample
+  with the frame-off or rail-off time, and check that queued audio is
+  discarded;
 - a recording cannot start, from the app or a long-press, without a
   connected, subscribed companion app that has proved the app key on this
   connection; over a link whose bond is unauthenticated (Just Works); while
@@ -355,11 +360,24 @@ is only sent to the paired app. Check that:
   authenticated are refused;
 - a second app subscribed on the same phone during a recording receives only
   data it cannot decrypt, and altered audio packets are rejected by the app;
+- the app stores recordings only in its private storage: another app cannot
+  read the file, it is not in shared media or file storage, and it is absent
+  from a device backup and a cloud backup of the phone; it leaves the app
+  only through an explicit export or share;
 - the mode cannot be left or hidden while recording;
 - the user can stop a recording with a button press and from the app;
 - a recording also stops when the link drops or the app unsubscribes, the
   display is turned off or blanked, the LED rail is shed or the matrix driver
   faults, or the length cap is reached.
+
+REC visibility: with the enforced recording brightness and the badge worn on
+the chest, an observer who is not told the mode reads whether the badge is
+recording at 1 m and 2 m, head-on and from 45° to the side and 30° above,
+indoors (room light), outdoors in shade, and outdoors in direct sun, with the
+measured illuminance recorded for each. Proposed pass rule (not yet accepted):
+10 of 10 trials per condition, each answered within 2 s. If a condition fails
+at full brightness, the limit is recorded and recording is not presented as
+visible in that condition.
 
 Review error paths, debug builds, logging backends, telemetry, and crash-dump
 configuration as well as the normal audio path. Persistent dumps must exclude

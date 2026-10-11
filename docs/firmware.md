@@ -91,13 +91,16 @@ and never stored on the badge:
   after a long-press the matrix, if on, briefly shows that recording is
   unavailable.
 - It runs as its own display mode: the matrix shows REC and a live level bar
-  for the whole recording, at a minimum visible brightness whatever the
-  brightness setting. The mode cannot run behind another mode.
+  for the whole recording, at a fixed recording brightness (set by the
+  visibility test) whatever the brightness setting. The mode cannot run
+  behind another mode.
 - Capture for a recording starts only after the matrix driver confirms the
   REC frame is shown; earlier samples, including any from a visualization
   mode, are discarded and never encoded or sent.
 - Audio is streamed live, compressed (IMA ADPCM at 16 kHz), over the encrypted
-  Bluetooth link to the paired app, which stores the recording.
+  Bluetooth link to the paired app, which keeps recordings only in its
+  private, encrypted storage, excluded from backups; a recording leaves the
+  app only by an explicit export or share.
 - The companion app, not only the phone, is authenticated with an app key.
   The key is enrolled only in a pairing window opened on the badge, after the
   user confirms on the badge that the code it shows matches the app's (one
@@ -110,7 +113,10 @@ and never stored on the badge:
 - The user stops it with a button press or from the app. It also stops when
   the link drops or the app unsubscribes, when the display is turned off or
   blanked, when the LED rail is shed for low battery or the matrix driver
-  faults, or at the maximum length set in the settings.
+  faults, or at the maximum length set in the settings. Before REC leaves the
+  matrix or the LED rail turns off, capture stops and any audio not yet sent
+  is discarded; on a matrix driver fault, capture stops at once and queued
+  audio is discarded, not sent.
 
 Audio data, both raw microphone samples and the encoded ADPCM stream, exists
 on the badge only in volatile/transient buffers (capture, DSP, encoding and
