@@ -132,7 +132,8 @@ DATA P1.09) and the NFC tag's field-detect line (P1.06) on their Rev A pins. The
 tag shares the IMU's I²C1 bus on the DK, because its Rev A bus pins are the
 debugger's serial port. At start-up the application runs module checks
 (`firmware/src/app/bringup.cpp`) while the display test patterns run in their
-own thread, then logs an IMU sample and the microphone level every 5 s:
+own thread, then logs an IMU sample, the NFC field-detect level with its edge
+count, and the microphone level every 5 s:
 
 - IMU: identity (checked by the driver), one sample with the gravity magnitude,
   and the data-ready interrupt rate (100 Hz expected).
@@ -145,12 +146,16 @@ own thread, then logs an IMU sample and the microphone level every 5 s:
   or activity fails the check, because the tag then needs full verification
   before use. The field-detect latency on the DK is not measured yet, so a
   fixed margin is used. It writes nothing to the tag.
-- Microphone: captures both PDM channels at 16 kHz (clock within the
-  MP34DT01-M's 1–3.25 MHz) and logs the mean, AC RMS and range of each. The
-  DATA pin has a pull-down on the DK, and the check fails when both channels
-  are constant or statistically alike, which is what an unconnected DATA pin
-  gives. Samples stay in the capture buffers and are discarded; only the
-  levels are logged.
+- Microphone: captures both PDM channels at 32 kHz with the clock near 2 MHz
+  (the MP34DT01-M's range is 1–3.25 MHz, 2.4 MHz typical; at 1.25 MHz the
+  quiet level was over three times higher) and logs the mean, AC RMS and
+  range of each. A
+  mic's PDM stream averages near zero; a DATA line nothing drives (pulled down
+  on the DK) decimates to a large constant offset, so the check fails unless a
+  channel varies with a mean within ±4096. Both channels may carry nearly the
+  same data, because the mic's idle half-cycle can hold the previous bit.
+  Samples stay in the capture buffers and are discarded; only the levels are
+  logged.
 
 Before matrix work on the DK: the interface MCU leaves its UART pins tri-stated
 until a terminal opens the port and asserts DTR, and then drives them. Close

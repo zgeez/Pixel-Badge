@@ -232,7 +232,24 @@ int ntag_read_block(uint8_t block, uint8_t out[16], bool &rf_seen)
 	return err;
 }
 
-int ntag_check()
+/* Between checks FD is only watched (no I2C), so the periodic log can show
+ * whether the tag sees a reader's field. */
+void ntag_watch_field()
+{
+	atomic_set(&ntag_fd_edges, 0);
+	(void)gpio_pin_interrupt_configure_dt(&ntag_fd, GPIO_INT_EDGE_BOTH);
+}
+
+void ntag_log_field()
+{
+	if (ntag_fd_cb.handler != NULL) {
+		LOG_INF("NFC tag: field detect %s, %d edges in 5 s",
+			ntag_field_active() ? "active" : "inactive",
+			static_cast<int>(atomic_set(&ntag_fd_edges, 0)));
+	}
+}
+
+int ntag_check_once()
 {
 	uint8_t b[16];
 
@@ -276,6 +293,16 @@ int ntag_check()
 	LOG_INF("NFC tag: OK, CC %02x %02x %02x %02x", b[12], b[13], b[14], b[15]);
 	return 0;
 }
+
+int ntag_check()
+{
+	int failed = ntag_check_once();
+
+	if (ntag_fd_cb.handler != NULL) {
+		ntag_watch_field();
+	}
+	return failed;
+}
 #else
 int ntag_check()
 {
@@ -283,12 +310,16 @@ int ntag_check()
 	LOG_WRN("NFC tag: skipped, no field-detect line to guard I2C reads");
 	return 0;
 }
+
+void ntag_log_field()
+{
+}
 #endif
 #endif
 
 #if HAVE_MIC
 const struct device *const mic = DEVICE_DT_GET(PDM_NODE);
-constexpr uint32_t kRate = 16000;
+constexpr uint32_t kRate = 32000;
 constexpr uint32_t kBlockMs = 100;
 constexpr uint32_t kChannels = 2;
 constexpr uint32_t kBlockBytes = kRate * kBlockMs / 1000 * kChannels * sizeof(int16_t);
@@ -304,8 +335,11 @@ int mic_configure()
 	stream.pcm_width = 16;
 	stream.block_size = kBlockBytes;
 	stream.mem_slab = &mic_slab;
-	/* MP34DT01-M: clock 1-3.25 MHz, duty cycle 40-60 % (ST DocID026514 Rev 3). */
-	cfg.io.min_pdm_clk_freq = 1000000;
+	/* MP34DT01-M: clock 1-3.25 MHz, 2.4 MHz typical, duty cycle 40-60 % (ST
+	 * DocID026514 Rev 3). At 16 kHz the driver chose 1.25 MHz and the quiet
+	 * level was over 3 times higher than at about 2 MHz (bench, 2026-10-11),
+	 * so the clock is kept near 2 MHz with a 32 kHz output rate. */
+	cfg.io.min_pdm_clk_freq = 1800000;
 	cfg.io.max_pdm_clk_freq = 3250000;
 	cfg.io.min_pdm_clk_dc = 40;
 	cfg.io.max_pdm_clk_dc = 60;
@@ -409,16 +443,21 @@ int mic_check()
 		return 1;
 	}
 	mic_log(st);
-	/* With DATA pulled down, an open pin reads constant on both channels. A
-	 * floating pin gives the same statistics on both channels. A mic drives
-	 * one channel, so that channel varies and the two differ. */
-	bool constant = st.min[0] == st.max[0] && st.min[1] == st.max[1];
-	bool same = st.mean[0] == st.mean[1] && st.ac_rms[0] == st.ac_rms[1] &&
-		    st.min[0] == st.min[1] && st.max[0] == st.max[1];
+	/* A PDM mic sends about as many ones as zeros, so its decimated output
+	 * averages near zero. A DATA line nothing drives sits at one level
+	 * (pulled down on the DK) and decimates to a large constant offset: -8906
+	 * with nothing connected, against a mean of about 60 with the bench mic
+	 * (2026-10-11). The idle half-cycle of a real mic can hold the previous
+	 * bit, so both channels may carry nearly the same data. */
+	constexpr int32_t kMaxDataMean = 4096;
+	bool data = false;
 
-	if (constant || same) {
-		LOG_ERR("Mic: FAIL, no microphone data on DATA (%s)",
-			constant ? "constant" : "both channels alike");
+	for (int c = 0; c < 2; c++) {
+		data = data || (st.min[c] != st.max[c] && st.mean[c] > -kMaxDataMean &&
+				st.mean[c] < kMaxDataMean);
+	}
+	if (!data) {
+		LOG_ERR("Mic: FAIL, no microphone data on DATA (stuck at one level)");
 		return 1;
 	}
 	LOG_INF("Mic: data present; confirm by sound: the AC RMS must rise when you clap");
@@ -455,6 +494,9 @@ void log_bringup_readings()
 		LOG_INF("IMU: accel %d %d %d mm/s2, gyro %d %d %d mdps, %d data-ready", a[0], a[1],
 			a[2], g[0], g[1], g[2], static_cast<int>(atomic_get(&drdy_count)));
 	}
+#endif
+#if HAVE_NTAG
+	ntag_log_field();
 #endif
 #if HAVE_MIC
 	MicStats st;
