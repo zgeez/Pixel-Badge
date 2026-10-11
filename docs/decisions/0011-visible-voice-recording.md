@@ -38,7 +38,9 @@ Voice recording is allowed, visibly and without storing audio on the badge:
     unauthenticated, such as Just Works;
   - the companion app is subscribed to the audio stream and has proved the
     app key (below) on this connection; a start from the app also carries a
-    valid app-key authenticator of its own;
+    valid app-key authenticator of its own, and a button start waits for a
+    fresh authenticated accept from the app (its reply to a new challenge)
+    before any capture, so a suspended or stalled app cannot be recorded to;
   - the LED rail is on (not shed for low battery) and the matrix driver is
     running.
 
@@ -49,6 +51,11 @@ Voice recording is allowed, visibly and without storing audio on the badge:
   the brightness setting, set by the visibility test in validation section 8
   (the badge has no ambient light sensor). The mode cannot run behind another
   mode.
+- Recording is enabled in release firmware only if REC passes that visibility
+  test in every tested condition, direct sun included. If any condition
+  fails, release firmware ships with recording disabled until a fix passes
+  the test (a brighter REC, or an ambient light sensor or separate REC
+  indicator in a later board revision).
 - Capture for a recording starts only after the matrix driver confirms the
   REC frame is being shown. Samples captured before that, including any from
   a visualization mode, are discarded and never encoded or sent.
@@ -66,20 +73,26 @@ Voice recording is allowed, visibly and without storing audio on the badge:
     with a button press on the badge only if the codes match. The badge takes
     one enrollment per pairing window and cancels the window if a second app
     tries. The badge keeps the key with its Bluetooth bond keys, the app in
-    the phone's secure key store; pairing again or a factory reset replaces
-    it.
+    the phone's secure key store. Pairing again or a factory reset erases
+    the old key and its counters before a new key is accepted, so the
+    previous app is refused.
   - Every recording-control command from the app (start, stop, recording
     settings) carries an authenticator computed with the app key over the
     command and a fresh counter, so a command from another app on the same
     connection, or a replayed one, is refused.
   - Each recording is encrypted and authenticated with a key used for that
-    recording only, so another app on the phone cannot read it.
-  - No key is ever logged. The protocol is defined with the audio GATT
-    service.
+    recording only, derived fresh for each recording, so another app on the
+    phone cannot read it and packets from one recording are not accepted in
+    another.
+  - No key, stored or derived, is ever logged, sent as telemetry or kept in
+    a crash dump, on the badge or in the app. The protocol is defined with
+    the audio GATT service.
 - The user stops a recording with a button press or from the app. It also
   stops when the link drops or the app unsubscribes, when the display is
   turned off or blanked, when the LED rail is shed for low battery or the
-  matrix driver faults, or at the maximum length set in the settings.
+  matrix driver faults, or at the maximum length set in the settings. The
+  firmware clamps that setting to a fixed ceiling built into the firmware and
+  uses a safe default if the stored value is missing or invalid.
   Before REC leaves the matrix or the LED rail turns off, capture stops and
   any audio not yet sent is discarded. If the matrix driver faults, capture
   stops at once and all queued audio is discarded, not sent.
@@ -98,7 +111,9 @@ encoding, app-key enrollment with confirmation on the badge, authenticated
 control commands, per-recording encryption, and the stop conditions above;
 the app needs the matching key handling, private storage for recordings, and
 recording and playback screens.
-Recording is new scope and must not delay the minimum viable demo. The audio
+Recording is new scope and must not delay the minimum viable demo, and it may
+not ship on Rev A: it stays disabled in release firmware unless REC passes the
+visibility test in every condition. The audio
 privacy review (validation section 8) now covers encoded audio and
 transmission: no audio is captured for a recording before REC is shown or
 after it is removed, REC is readable in the intended wear conditions, a

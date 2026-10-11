@@ -336,7 +336,10 @@ transmit queues (including any retransmission buffers) and buffer disposal.
 Audio data may exist only in volatile/transient buffers and must never be
 written to flash, NVS/settings, external storage, logs, telemetry, crash
 dumps, or any other persistent storage; during a recording the encoded stream
-is only sent to the paired app. Check that:
+is only sent to the paired app. Trace key material (the app key, per-recording
+keys and key-exchange secrets) the same way, on the badge and in the app,
+through normal and error paths: no key in logs, telemetry or dumps. Check
+that:
 
 - no audio is captured for a recording before the matrix driver confirms the
   REC frame is shown: compare the capture timestamps of the first sent
@@ -353,13 +356,22 @@ is only sent to the paired app. Check that:
   the LED rail is shed for low battery or the display is off; or with the
   matrix driver faulted. A long-press then shows that recording is
   unavailable when the matrix is on;
+- a long-press captures nothing until the app returns a fresh authenticated
+  accept; with the app suspended or stalled while still connected and
+  subscribed, no capture starts and the badge shows that recording is
+  unavailable;
 - app-key enrollment needs the code confirmed on the badge, and a second app
-  trying to enroll in the same pairing window cancels it;
+  trying to enroll in the same pairing window cancels it; after pairing
+  again and after a factory reset, the old app key and counters are erased
+  and commands made with them are refused;
 - recording-control commands with a wrong key, a replayed or reused counter,
   or sent by a second app on the same phone after the companion app has
   authenticated are refused;
 - a second app subscribed on the same phone during a recording receives only
   data it cannot decrypt, and altered audio packets are rejected by the app;
+- each recording uses a distinct key (review the derivation and compare the
+  keys of two recordings), and packets from one recording injected into
+  another are rejected;
 - the app stores recordings only in its private storage: another app cannot
   read the file, it is not in shared media or file storage, and it is absent
   from a device backup and a cloud backup of the phone; it leaves the app
@@ -368,16 +380,25 @@ is only sent to the paired app. Check that:
 - the user can stop a recording with a button press and from the app;
 - a recording also stops when the link drops or the app unsubscribes, the
   display is turned off or blanked, the LED rail is shed or the matrix driver
-  faults, or the length cap is reached.
+  faults, or the length cap is reached; the firmware ceiling holds with the
+  length setting missing, corrupt or out of range in storage, and an
+  over-limit settings command is clamped or refused;
+- a recording decodes correctly end to end: play a known synthetic waveform
+  (for example a tone sweep with timing marks) to the microphone during a
+  recording, with REC on the matrix and representative Bluetooth conditions,
+  then decode the app's stored file and check its duration, sample rate,
+  sample order and continuity, and that induced packet loss is detected and
+  handled as specified rather than shifting later audio.
 
 REC visibility: with the enforced recording brightness and the badge worn on
 the chest, an observer who is not told the mode reads whether the badge is
 recording at 1 m and 2 m, head-on and from 45° to the side and 30° above,
 indoors (room light), outdoors in shade, and outdoors in direct sun, with the
 measured illuminance recorded for each. Proposed pass rule (not yet accepted):
-10 of 10 trials per condition, each answered within 2 s. If a condition fails
-at full brightness, the limit is recorded and recording is not presented as
-visible in that condition.
+10 of 10 trials per condition, each answered within 2 s. Recording is enabled
+in release firmware only if every condition passes; if one fails even at full
+brightness, release firmware ships with recording disabled until a fix passes
+this test.
 
 Review error paths, debug builds, logging backends, telemetry, and crash-dump
 configuration as well as the normal audio path. Persistent dumps must exclude
