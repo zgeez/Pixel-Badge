@@ -36,8 +36,9 @@ Voice recording is allowed, visibly and without storing audio on the badge:
     pairing with MITM protection (the passkey shown on the matrix). The audio
     and recording-control characteristics refuse links whose bond is
     unauthenticated, such as Just Works;
-  - the app has proved, on this connection, that it holds the app key (below)
-    and is subscribed to the audio stream;
+  - the companion app is subscribed to the audio stream and has proved the
+    app key (below) on this connection; a start from the app also carries a
+    valid app-key authenticator of its own;
   - the LED rail is on (not shed for low battery) and the matrix driver is
     running.
 
@@ -45,28 +46,39 @@ Voice recording is allowed, visibly and without storing audio on the badge:
   it is on, briefly shows that recording is unavailable.
 - Recording is its own display mode: the matrix shows REC and a live level bar
   for the whole recording, at a minimum visible brightness whatever the
-  brightness setting. Audio is sent only once REC is on the matrix. The mode
-  cannot run behind another mode.
+  brightness setting. The mode cannot run behind another mode.
+- Capture for a recording starts only after the matrix driver confirms the
+  REC frame is being shown. Samples captured before that, including any from
+  a visualization mode, are discarded and never encoded or sent.
 - Audio is streamed live, compressed with IMA ADPCM at 16 kHz (about
   64 kbit/s), over the encrypted, bonded BLE link to the paired app, which
   stores the recording.
 - A Bluetooth bond trusts the phone, not one app on it, so the companion app
-  is authenticated as well. At pairing the app and the badge set up a shared
-  app key; the badge keeps it with its Bluetooth bond keys, the app in the
-  phone's secure key store. Recording control needs a fresh challenge and
-  response with that key on every connection, and the audio is encrypted and
-  authenticated with a key used for that recording only, so another app on the
-  same phone can neither start a recording nor read one. Pairing again or a
-  factory reset replaces the app key. No key is ever logged. The protocol is
-  defined with the audio GATT service.
+  is authenticated as well, with an app key:
+  - Enrollment is confirmed on the badge. The key is set up only while
+    pairing mode, started on the badge, is open: the app and the badge run a
+    key exchange, both show a short code derived from it, and the user accepts
+    with a button press on the badge only if the codes match. The badge takes
+    one enrollment per pairing window and cancels the window if a second app
+    tries. The badge keeps the key with its Bluetooth bond keys, the app in
+    the phone's secure key store; pairing again or a factory reset replaces
+    it.
+  - Every recording-control command from the app (start, stop, recording
+    settings) carries an authenticator computed with the app key over the
+    command and a fresh counter, so a command from another app on the same
+    connection, or a replayed one, is refused.
+  - Each recording is encrypted and authenticated with a key used for that
+    recording only, so another app on the phone cannot read it.
+  - No key is ever logged. The protocol is defined with the audio GATT
+    service.
 - The user stops a recording with a button press or from the app. It also
   stops when the link drops or the app unsubscribes, when the display is
   turned off or blanked, when the LED rail is shed for low battery or the
   matrix driver faults, or at the maximum length set in the settings.
 - Audio data, raw samples and the encoded ADPCM stream alike (before and
-  after encryption), exists on the badge only in volatile buffers (capture, encoding and Bluetooth transmit
-  queues) and is discarded when the recording ends; none reaches flash,
-  NVS/settings, logs, telemetry or crash dumps.
+  after encryption), exists on the badge only in volatile buffers (capture,
+  encoding and Bluetooth transmit queues) and is discarded when the recording
+  ends; none reaches flash, NVS/settings, logs, telemetry or crash dumps.
 
 This supersedes the "no stored microphone audio" part of 0001. Audio
 visualization remains as decided there.
@@ -74,14 +86,16 @@ visualization remains as decided there.
 ## Consequences
 
 The firmware needs a recording mode, an audio GATT service with ADPCM
-encoding, the app key with its challenge and per-recording encryption, and the
-stop conditions above; the app needs the matching key handling and recording
-and playback screens. Recording is new scope and must not delay the minimum viable demo.
-The audio privacy review (validation section 8) now covers encoded audio and
-transmission: no audio is sent without the recording mode shown, a recording
-cannot start without an authenticated app holding the app key or while the
-indicator cannot be shown, the mode cannot be left or hidden while recording,
-and the manual stop and every automatic stop condition work.
+encoding, app-key enrollment with confirmation on the badge, authenticated
+control commands, per-recording encryption, and the stop conditions above;
+the app needs the matching key handling and recording and playback screens.
+Recording is new scope and must not delay the minimum viable demo. The audio
+privacy review (validation section 8) now covers encoded audio and
+transmission: no audio is captured for a recording before REC is shown, a
+recording cannot start without the authenticated companion app or while the
+indicator cannot be shown, no other app can enroll, control or read a
+recording, the mode cannot be left or hidden while recording, and the manual
+stop and every automatic stop condition work.
 
 ## References
 

@@ -338,14 +338,21 @@ written to flash, NVS/settings, external storage, logs, telemetry, crash
 dumps, or any other persistent storage; during a recording the encoded stream
 is only sent to the paired app. Check that:
 
-- no audio is transmitted without the recording mode (REC and level) shown,
-  and REC is visible at the lowest brightness setting;
+- no audio is captured for a recording before the matrix driver confirms the
+  REC frame is shown: compare the capture timestamps of the first sent
+  samples with the frame-swap time, including a start from a visualization
+  mode; REC is visible at the lowest brightness setting;
 - a recording cannot start, from the app or a long-press, without a
-  connected, subscribed app that has proved the app key on this connection
-  (test a wrong key, a replayed response, and a second app on the same
-  phone); over a link whose bond is unauthenticated (Just Works); while the LED rail is shed for low battery or the display is off;
-  or with the matrix driver faulted. A long-press then shows that recording
-  is unavailable when the matrix is on;
+  connected, subscribed companion app that has proved the app key on this
+  connection; over a link whose bond is unauthenticated (Just Works); while
+  the LED rail is shed for low battery or the display is off; or with the
+  matrix driver faulted. A long-press then shows that recording is
+  unavailable when the matrix is on;
+- app-key enrollment needs the code confirmed on the badge, and a second app
+  trying to enroll in the same pairing window cancels it;
+- recording-control commands with a wrong key, a replayed or reused counter,
+  or sent by a second app on the same phone after the companion app has
+  authenticated are refused;
 - a second app subscribed on the same phone during a recording receives only
   data it cannot decrypt, and altered audio packets are rejected by the app;
 - the mode cannot be left or hidden while recording;

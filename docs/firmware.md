@@ -84,24 +84,29 @@ and never stored on the badge:
 
 - It starts only from the paired app or a button long-press, and only when
   the phone is connected with an authenticated bond (LE Secure Connections
-  with MITM protection; Just Works bonds are refused for audio), the app has
-  proved it holds the app key on this connection and is subscribed to the
-  audio stream, and the LED rail is on (not shed for low battery) with the
-  matrix driver running. Otherwise nothing is captured for
-  sending, and after a long-press the matrix, if on, briefly shows that
-  recording is unavailable.
+  with MITM protection; Just Works bonds are refused for audio), the
+  companion app is subscribed to the audio stream and has proved the app key
+  on this connection, and the LED rail is on (not shed for low battery) with
+  the matrix driver running. Otherwise nothing is captured for sending, and
+  after a long-press the matrix, if on, briefly shows that recording is
+  unavailable.
 - It runs as its own display mode: the matrix shows REC and a live level bar
   for the whole recording, at a minimum visible brightness whatever the
-  brightness setting. Audio is sent only once REC is on the matrix. The mode
-  cannot run behind another mode.
+  brightness setting. The mode cannot run behind another mode.
+- Capture for a recording starts only after the matrix driver confirms the
+  REC frame is shown; earlier samples, including any from a visualization
+  mode, are discarded and never encoded or sent.
 - Audio is streamed live, compressed (IMA ADPCM at 16 kHz), over the encrypted
   Bluetooth link to the paired app, which stores the recording.
-- The companion app, not only the phone, is authenticated: an app key set up
-  at pairing (kept with the bond keys on the badge and in the phone's secure
-  key store) is proved by challenge and response on every connection before
-  recording control is accepted, and each recording is encrypted and
-  authenticated with its own key, so other apps on the phone can neither start
-  nor read a recording.
+- The companion app, not only the phone, is authenticated with an app key.
+  The key is enrolled only in a pairing window opened on the badge, after the
+  user confirms on the badge that the code it shows matches the app's (one
+  enrollment per window; a second attempt cancels it). It is kept with the
+  bond keys on the badge and in the phone's secure key store. Every
+  recording-control command from the app carries an authenticator with that
+  key and a fresh counter, and each recording is encrypted and authenticated
+  with its own key, so other apps on the phone can neither control nor read a
+  recording.
 - The user stops it with a button press or from the app. It also stops when
   the link drops or the app unsubscribes, when the display is turned off or
   blanked, when the LED rail is shed for low battery or the matrix driver
