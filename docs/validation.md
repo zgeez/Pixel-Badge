@@ -1,8 +1,9 @@
 # Validation
 
-Status: **two DK bench results**
+Status: **three DK bench records**
 ([QR screening](#result-qr-screening-on-the-hub75-bench-panel),
-[matrix timing](#result-scan-timing-on-the-nrf5340-dk-bench-no-matrix)); no
+[matrix timing](#result-scan-timing-on-the-nrf5340-dk-bench-no-matrix),
+[prototype foundation](#result-prototype-foundation-on-the-dk)); no
 Rev A results. This document defines what will be measured and how.
 Results are added only after measurement, with the setup and raw data needed to
 reproduce them. Numerical acceptance thresholds are listed here only once they
@@ -22,6 +23,26 @@ Each result records:
 Raw data goes in `validation/results/<date>-<name>/` with a README listing each
 file and its SHA-256. Files too large for the repository (more than about 5 MB
 per result) go in a GitHub release instead, with their SHA-256 in the record.
+
+### Result: prototype foundation on the DK
+
+On 2026-10-11 the owner reported all six steps in the
+[foundation bench procedure](firmware.md#owner-bench-acceptance) passed and
+confirmed checking RTT: normal QR/name operation, reserved long presses,
+brightness persistence across reset/power cycle, boot-button factory reset,
+forced watchdog-loop safe mode and restoration of the normal image.
+
+The separate [direct RTT capture and setup record](../validation/results/2026-10-11-dk-p0-foundation/README.md)
+confirm normal QR readiness and healthy-counter clearing at uptime 30.111 s,
+with expected default-setting warnings and no error messages. The capture
+does not contain the earlier individual button, persistence, factory-reset
+or forced-watchdog sequences; those outcomes remain owner-reported.
+
+The firmware was the uncommitted initial P0 working tree, before the later
+display retry/schema recovery corrections. This is functional bench evidence
+for that image, not Rev A validation or evidence that the corrected image was
+flashed. Measured GPIO timing, physical power interruption during writes,
+concurrent peripheral checks and broad optical acceptance remain unverified.
 
 ## Categories
 

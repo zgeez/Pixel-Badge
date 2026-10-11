@@ -6,9 +6,12 @@ link and name/identity, runs a motion-driven fluid simulation and an audio
 visualization, is configured over BLE from a companion phone app, and carries a
 passive NFC tag that shares the same link even when the badge is switched off.
 
-**Status:** early development. Rev A scope is defined; firmware is a minimal
-bootstrap and all schematic sheets are drawn (review and freeze pending; no
-layout yet). No performance or battery figures have been measured.
+**Status:** prototype firmware foundation implemented: QR/name modes, persistent
+settings, two-button controls, MCUboot and watchdog recovery on the DK target.
+The owner reports the initial P0 bench procedure passed; later display/schema
+recovery corrections need a new bench run. Rev A has a schematic and board
+definition; its hardware-specific firmware comes later. See
+[firmware](docs/firmware.md) for the current scope and validation limits.
 
 **Build status:** _CI status badge to be added once the CI workflow has run on
 `main`._

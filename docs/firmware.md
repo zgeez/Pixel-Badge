@@ -1,10 +1,16 @@
 # Firmware
 
-Status: **bring-up**. On the nRF5340 DK the application shows test patterns
-on a HUB75 bench panel and runs self-checks of the IMU, NFC tag and
-microphone; bench tools cover the matrix scan timing and QR screening. The
-Rev A board definition builds in CI. No product features (display modes,
-BLE, NFC updates, audio) are implemented yet.
+Status: **prototype foundation**. The default nRF5340 DK application implements
+QR/name modes, persistent settings, two-button controls, a watchdog and
+reset-loop safe mode. On 2026-10-11 the owner reported all six foundation
+bench steps passed. A separate direct RTT capture confirms normal QR boot
+and healthy-counter clearing; it does not capture the earlier button,
+persistence, factory-reset or forced-watchdog tests. That pass predates the
+display/schema recovery corrections; those changes require a new bench run.
+See the [foundation result](validation.md#result-prototype-foundation-on-the-dk).
+Peripheral bring-up checks and QR screening remain separate options. BLE,
+NFC updates and audio modes are not implemented yet. Rev A remains a board
+compatibility build with no badge matrix backend.
 
 ## Platform
 
@@ -25,7 +31,7 @@ BLE, NFC updates, audio) are implemented yet.
 - Application-owned sources compile with `-Wextra -Werror`. These flags apply
   only to the application target, not to Zephyr or third-party modules.
 
-## Proposed layering
+## Layering
 
 Dependencies point downward only.
 
@@ -66,8 +72,104 @@ The application reaches the display only through Zephyr's display API
 (`PIXEL_FORMAT_MONO01`, rows packed most significant bit first). On the DK the
 backend is a HUB75 panel (below); the badge gets its own matrix driver behind
 the same API. Frames and test patterns live in `firmware/src/services/`
-(`badge/test_pattern.hpp`), and `firmware/src/app/display_demo.cpp` cycles the
-patterns.
+(`badge/test_pattern.hpp`). `src/app/prototype.cpp` owns the main loop;
+`src/app/modes.cpp` selects content. Services `qr`, `settings`, `buttons`,
+`boot_guard`, `display_health` and `text` are independent of Zephyr and have
+native_sim Ztests.
+`src/platform/settings_store.cpp` connects validated fields to Zephyr NVS;
+`boot_retention.cpp` isolates the Nordic retention register. No application
+code includes HUB75 or IMU driver headers.
+
+## Prototype settings and controls
+
+Public defaults: URL `HTTPS://EXAMPLE.COM`, name `BADGE`, brightness 128,
+boot mode QR; schema version 1. Records live under `badge/` in Zephyr settings.
+Local builds can replace the compiled URL from `.env` as described below;
+that URL also becomes the factory-reset and safe-mode default.
+Strings are stored without their terminating NUL; scalar fields are one byte.
+Every field is validated on load. Missing/invalid fields use their defaults
+and log the field name, never the stored payload. An absent/unknown schema
+defaults all fields. Load errors select safe mode and disable writes.
+On the first save after schema recovery, every application field is replaced
+with its default before version 1 is written. The requested field is saved
+afterward. An interruption before schema activation still loads defaults;
+after activation, all remaining records are defaults, so stale values cannot
+reappear. Future bonds/keys outside `badge/` are not erased by this recovery.
+
+- URL: bounded ASCII HTTP(S) URL with a nonempty authority, no whitespace,
+  controls or user-info; percent escapes must have two hex digits. Maximum
+  20 characters, additionally required to fit V1-M. Encoding keeps all URL
+  bytes and path case; it does not uppercase a link to make it fit.
+- Name: 1–32 printable ASCII bytes. The original 3 × 5 font renders lowercase
+  as uppercase; common punctuation is supported and other glyphs show `?`.
+  Names of up to four characters use 2× glyphs, five to eight use 1×; longer
+  names scroll one pixel per 150 ms with an eight-pixel gap.
+- Brightness: 1–255. Button steps are 16, 64, 128, 255, then 16.
+- Default mode: QR or name. QR is the compiled boot default; a future
+  configuration client may save a different boot mode. Button mode changes
+  affect the active mode only.
+
+The settings service validates before writing and updates RAM only after a
+successful single-field save. NVS writes data and its CRC before commit
+metadata, ignores incomplete writes on mount, and retains the prior committed
+value. Schema recovery publishes the schema last after writing all defaults;
+it is not a general multi-field transaction. The host
+flash-simulator test interrupts a name replacement at each byte boundary and
+remounts the actual backend. Arbitrary bit corruption is detected with the
+data CRC and handled as a missing/invalid value; it is distinct from power-cut
+recovery. No keys or audio are stored in P0. NVS itself is not encrypted.
+See [ADR 0012](decisions/0012-prototype-foundation.md) for the storage choice.
+
+| DK control | Action |
+|---|---|
+| Button 1 short | Toggle QR/name |
+| Button 2 short | Cycle brightness and persist the new value |
+| Either button long | Reserved; log the event with no action in P0 |
+| Button 2 held at boot | Factory reset after a continuous one-second hold |
+
+Buttons are polled at 20 ms, debounced for 30 ms and classified long at 800 ms.
+A long press never also produces a short press. A button held at startup is
+suppressed until release. Factory reset erases the entire settings partition
+before mounting, including future bonds/app-key records. Keep holding Button 2
+through the reset confirmation; after a power cut during erasure, repeat this
+procedure. Factory reset is not an atomic transaction across the partition.
+
+QR is fixed at Version 1 (21 × 21), EC M without boosting. Modules start at
+(5,5), giving five quiet pixels above/left and six below/right: at least the
+full four-module quiet zone. Light modules/background are lit, dark modules
+unlit. Invalid/non-fitting input keeps the previous URL and frame. No V2/V3
+experimental option is introduced. Rotation happens in rendering, with a
+hook for later orientation; QR captures rotation on entry and retains it
+until re-entry. The scan driver does not rotate content.
+
+The hardware watchdog has an eight-second timeout and is fed by the badge
+loop. Reset cause is logged through Zephyr hwinfo. POWER GPREGRET[1] retains
+a tagged watchdog-reset count; three consecutive watchdog resets before a
+30-second interval of successful display operation select safe mode with the
+default QR and brightness.
+Safe mode ignores mode/brightness presses and continues feeding the watchdog.
+A healthy loop clears the count while staying in safe mode for that boot;
+a later reset can return to normal. A non-watchdog reset starts a fresh count.
+Nordic's [nRF5340 reset behavior](https://docs.nordicsemi.com/r/bundle/ps_nrf5340/page/chapters/reset/doc/reset.html)
+specifies GPREGRET retention on watchdog reset. The owner reports the forced
+reset-loop bench test passed; that sequence is absent from the direct capture.
+
+Display writes, including `-EBUSY`/`-EAGAIN`, are retried at 100 ms intervals
+without permanently disabling rendering or brightness controls. Failed
+initialization is also retried. Two seconds of uninterrupted errors latches
+a restart: the application attempts blanking and stops feeding the watchdog,
+which resets the SoC within its configured timeout. If the watchdog is
+unavailable, it requests a software reset instead. Any recovered error starts
+a fresh healthy interval, so a recent display fault cannot clear the retained
+reset-loop count. These are application policy intervals, not measured
+hardware recovery times. A display that remains broken can still prevent
+safe-mode QR output; the restart path does not repair hardware.
+
+`CONFIG_APP_BRINGUP_CHECKS` is off for the default prototype. The
+`prototype-debug.conf` fragment enables checks in a separate lower-priority
+thread after startup; normal display/buttons/watchdog do not wait for them.
+`watchdog-loop.conf` deliberately stops feeding before healthy confirmation
+until safe mode is reached. Use it only for the bench procedure below.
 
 ## Logging
 
@@ -154,7 +256,125 @@ Linux/WSL, with the toolchain on `PATH` and `ZEPHYR_BASE` set:
 make build
 ```
 
-Output: `build/nrf5340dk/firmware/zephyr/zephyr.hex`.
+### Local QR links
+
+Prototype builds read the repository-root `.env` when it exists. The four
+`BADGE_URL_PORTFOLIO`, `BADGE_URL_LINKEDIN`, `BADGE_URL_GITHUB` and
+`BADGE_URL_RESUME` entries must all be valid V1-M URLs. Only the HTTP(S) scheme
+is uppercased to allow alphanumeric encoding; every other byte, including path
+case, is preserved. Alphanumeric URLs fit up to 20 characters; URLs needing
+byte encoding fit up to 14. Unrelated `.env` entries are ignored and values
+are never evaluated as commands or environment-variable substitutions.
+
+Portfolio is the local build default. To select another link before the phone
+app exists:
+
+```powershell
+.\scripts\dev.ps1 build -QrLink LinkedIn
+# Other choices: Portfolio, GitHub, Resume, Representative
+```
+
+For Linux/WSL, pass `-DBADGE_QR_LINK=LINKEDIN` to `west build` after `--`.
+Use `REPRESENTATIVE` to explicitly ignore `.env`, or omit `.env` for the public
+portfolio placeholder. Changing the link or `.env` regenerates a header in
+the build directory; personal URLs remain outside committed sources.
+
+An existing valid NVS URL takes precedence over the compiled default. To use
+the new default on an already configured badge, hold Button 2 while resetting
+through the one-second factory-reset confirmation. This also resets the name,
+brightness and other settings. Button 1 continues switching QR/name; the
+badge never automatically cycles destinations. App/BLE link selection is
+planned and is not implemented in P0.
+
+Flash output: **`build/nrf5340dk/merged.hex`**, containing MCUboot and the signed
+application. The unsigned `firmware/zephyr/zephyr.hex` cannot boot this layout.
+CI archives merged HEX, the signed application, ELF/map/config files and the
+resolved partition layout. Bench configurations also archive their merged HEX.
+
+Use `-Pristine` once for each existing CPUAPP build directory when moving
+from the bring-up firmware to this layout; an old cached sysbuild selection
+can otherwise retain its no-bootloader setting. CI builds fresh directories.
+
+### MCUboot and static flash layout
+
+Sysbuild enables MCUboot and Partition Manager for both CPUAPP board targets.
+The 1 MiB application-core flash uses `firmware/pm_static.yml`:
+
+| Region | Start | Size | Reason |
+|---|---|---|---|
+| MCUboot | `0x00000` | 64 KiB | Space for the current bootloader with growth margin |
+| Primary slot | `0x10000` | 320 KiB | Application plus 512-byte header pad and upgrade/trailer allowance |
+| Secondary slot | `0x60000` | 320 KiB | Later application update staging; no DFU transport in P0 |
+| Network update reserve | `0xb0000` | 288 KiB | Space beyond the network core's 256 KiB flash size for a later update payload/header |
+| Settings | `0xf8000` | 32 KiB | Eight 4 KiB NVS sectors for app settings, future bonds and a small key store |
+
+The app starts at `0x10200`. Slot size is not the maximum payload size: header,
+trailer and the selected swap-using-move algorithm also consume space. Future
+images must pass the build/signing size checks. Settings are deliberately
+larger than the few P0 records, providing garbage-collection and wear margin;
+future bonding/key capacity must be verified when those services exist.
+The network reserve is inert, not a configured network-core DFU partition.
+Adding radio-core boot/update support will need its SDK multi-image wiring.
+
+Rev A CPUAPP uses the same boot layout for compatibility, with no P0 UI or
+Rev A hardware features enabled. The standalone CPUNET image and matrix timing
+bench application retain their original build/flash layout. Partition Manager
+is deprecated but supported on nRF53 in pinned NCS v3.4.1; see ADR 0012 for the
+explicit choice. P0 uses the SDK's publicly distributed
+development signing key and supplies no production signing credentials.
+
+### Owner bench acceptance
+
+The owner reports the six steps below passed on 2026-10-11 for the initial P0
+image. The [record](validation.md#result-prototype-foundation-on-the-dk)
+separates this report from the narrower direct RTT evidence. Repeat after
+display/schema recovery changes; that revised image has not been bench-tested.
+
+Use the existing HUB75 wiring and power procedure below. Close all DK COM
+terminals, use RTT, and keep Buttons 3/4 untouched. In an NCS v3.4.1 terminal:
+
+```powershell
+.\scripts\dev.ps1 build -Pristine -QrLink Representative
+west flash -d build/nrf5340dk --runner jlink
+```
+
+Check `build/nrf5340dk/firmware/zephyr/runners.yaml` first: its HEX path must
+resolve to the top-level `merged.hex`. The sysbuild flash command programs the
+merged image; if using J-Link Commander directly, select the nRF5340 application
+core and load that merged HEX. Do not erase the chip when checking persistence.
+Open the J-Link RTT viewer and select the application-core device.
+
+1. Fresh/reset settings: RTT logs reset cause, defaulted fields and `badge ready:
+   QR mode`; the panel shows the representative URL and a phone decodes
+   `HTTPS://EXAMPLE.COM`. Confirm the full quiet border.
+2. Button 1 short switches to `BADGE`, then QR. Holding either button for at
+   least 800 ms logs a reserved long press with no short action on release.
+3. Button 2 short changes brightness and logs the committed level. Reset the DK
+   without erasing/reflashing; the level must persist. Repeat after a power cycle.
+4. Hold Button 2 while resetting, through early boot and its one-second
+   confirmation. RTT must report settings erasure, default QR and brightness
+   128. Release: no accidental brightness change should occur.
+5. Build/flash the forced-loop image:
+
+   ```powershell
+   .\scripts\dev.ps1 build -BuildDir build/watchdog-loop -ExtraConfFile firmware/configs/watchdog-loop.conf -QrLink Representative
+   west flash -d build/watchdog-loop --runner jlink
+   ```
+
+   Leave it running without debugger halts. Three watchdog resets, each after
+   the eight-second application timeout, must reach `watchdog reset loop: safe
+   mode, default QR`. It must then remain alive beyond 30 seconds, ignore short
+   UI presses, and log healthy-counter clearing. Bootloader time adds to reset
+   intervals. Restore the default merged image after this test.
+6. Optional checks: build with `prototype-debug.conf`, flash that directory,
+   confirm module checks/readings coexist with immediate QR/button operation.
+   Preserve the existing QR screening build separately; it retains its original
+   Button 1 next / Button 2 previous controls.
+
+Record the build revision, panel/phone, RTT logs, persistence/factory-reset and
+watchdog outcomes. Measured GPIO timing, interrupted physical flash writes,
+concurrent optional checks and broad optical acceptance remain unverified.
+The owner-reported functional pass is not a measurement of those properties.
 
 On the DK, `firmware/boards/nrf5340dk_nrf5340_cpuapp.overlay` puts the Rev A
 pin roles on the DK's pins where it can: SPIM4 on P0.08–P0.10, matrix LAT and

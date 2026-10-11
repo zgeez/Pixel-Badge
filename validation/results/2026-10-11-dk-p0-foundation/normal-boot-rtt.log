@@ -1,0 +1,14 @@
+*** Booting nRF Connect SDK v3.4.1-b20f8619ba9a ***
+*** Using Zephyr OS v4.4.2-33fa6a7aac6a ***
+[00:00:00.061,370] [0m<inf> app: smart-led-badge starting on nrf5340dk/nrf5340/cpuapp[0m
+[00:00:00.061,401] [0m<inf> prototype: reset cause 0x00000002 (read 0)[0m
+[00:00:00.066,528] [0m<inf> fs_nvs: 8 Sectors of 4096 bytes[0m
+[00:00:00.066,528] [0m<inf> fs_nvs: alloc wra: 0, fe8[0m
+[00:00:00.066,528] [0m<inf> fs_nvs: data wra: 0, 0[0m
+[00:00:00.066,589] [1;33m<wrn> badge_settings: setting schema defaulted[0m
+[00:00:00.066,619] [1;33m<wrn> badge_settings: setting url defaulted[0m
+[00:00:00.066,619] [1;33m<wrn> badge_settings: setting name defaulted[0m
+[00:00:00.066,650] [1;33m<wrn> badge_settings: setting brightness defaulted[0m
+[00:00:00.066,680] [1;33m<wrn> badge_settings: setting mode defaulted[0m
+[00:00:00.107,513] [0m<inf> prototype: badge ready: QR mode[0m
+[00:00:30.111,053] [0m<inf> prototype: healthy boot; reset-loop counter cleared[0m
