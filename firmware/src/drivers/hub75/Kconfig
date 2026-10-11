@@ -1,0 +1,23 @@
+# SPDX-License-Identifier: MIT
+
+config HUB75_DISPLAY
+	bool "HUB75 panel on GPIO (bench display)"
+	default y
+	depends on DT_HAS_SMARTLEDBADGE_HUB75_ENABLED
+	depends on DISPLAY
+	depends on SOC_SERIES_NRF53
+	select GPIO
+	select NRFX_GPPI
+	help
+	  Drives a HUB75 RGB panel from GPIO with a TIMER, DPPI and GPIOTE, as
+	  a monochrome Zephyr display. For the nRF5340 DK bench only; the badge
+	  uses its own matrix driver.
+
+config HUB75_DISPLAY_INIT_BRIGHTNESS
+	int "Brightness at start-up"
+	default 128
+	range 0 255
+	depends on HUB75_DISPLAY
+	help
+	  On-time fraction of each row slot, 0-255. Lower values also lower
+	  the panel supply's average current; the peak per row stays the same.

@@ -2,6 +2,7 @@
 
 menu "Smart LED Badge drivers"
 
+rsource "hub75/Kconfig"
 rsource "icm42688_i2c/Kconfig"
 
 endmenu

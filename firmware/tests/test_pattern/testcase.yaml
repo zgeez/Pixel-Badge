@@ -1,0 +1,12 @@
+# SPDX-License-Identifier: MIT
+#
+# Frame bit layout and display test patterns (hardware independent).
+
+tests:
+  services.test_pattern:
+    tags: display
+    platform_allow:
+      - native_sim
+      - native_sim/native/64
+    integration_platforms:
+      - native_sim

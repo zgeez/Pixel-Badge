@@ -1,0 +1,4 @@
+# SPDX-License-Identifier: MIT
+#
+# Devicetree vendor prefixes for this project's own bindings.
+smartledbadge	Smart LED Badge project

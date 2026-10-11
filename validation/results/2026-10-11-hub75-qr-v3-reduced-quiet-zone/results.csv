@@ -1,0 +1,31 @@
+setting,code,version,ec,payload_chars,quiet_zone_modules,polarity,brightness,phone,app,distance_cm,light,trials,decoded,failed,notes
+1,GitHub V1-L,1,L,"24, uppercase",5/6,normal,255,Nothing 4a Pro (owner wording),Google Lens,varied,indoor,3,3,0,owner: all scanned; in a lit room had to move back for a dimmer code
+2,GitHub V1-L,1,L,"24, uppercase",5/6,normal,64,Nothing 4a Pro (owner wording),Google Lens,varied,indoor,3,3,0,owner: all scanned; in a lit room had to move back for a dimmer code
+3,GitHub V1-L,1,L,"24, uppercase",5/6,normal,16,Nothing 4a Pro (owner wording),Google Lens,varied,indoor,3,3,0,owner: all scanned; in a lit room had to move back for a dimmer code
+4,GitHub V1-L,1,L,"24, uppercase",5/6,inverted,255,Nothing 4a Pro (owner wording),Google Lens,varied,indoor,3,3,0,owner: all scanned; in a lit room had to move back for a dimmer code
+5,GitHub V1-L,1,L,"24, uppercase",5/6,inverted,64,Nothing 4a Pro (owner wording),Google Lens,varied,indoor,3,3,0,owner: all scanned; in a lit room had to move back for a dimmer code
+6,GitHub V1-L,1,L,"24, uppercase",5/6,inverted,16,Nothing 4a Pro (owner wording),Google Lens,varied,indoor,3,3,0,owner: all scanned; in a lit room had to move back for a dimmer code
+7,GitHub V3-H,3,H,24,1/2,normal,255,Nothing 4a Pro (owner wording),Google Lens,varied,indoor,3,3,0,owner: all scanned; in a lit room had to move back for a dimmer code
+8,GitHub V3-H,3,H,24,1/2,normal,64,Nothing 4a Pro (owner wording),Google Lens,varied,indoor,3,3,0,owner: all scanned; in a lit room had to move back for a dimmer code
+9,GitHub V3-H,3,H,24,1/2,normal,16,Nothing 4a Pro (owner wording),Google Lens,varied,indoor,3,3,0,owner: all scanned; in a lit room had to move back for a dimmer code
+10,GitHub V3-H,3,H,24,1/2,inverted,255,Nothing 4a Pro (owner wording),Google Lens,varied,indoor,3,3,0,owner: all scanned; in a lit room had to move back for a dimmer code
+11,GitHub V3-H,3,H,24,1/2,inverted,64,Nothing 4a Pro (owner wording),Google Lens,varied,indoor,3,3,0,owner: all scanned; in a lit room had to move back for a dimmer code
+12,GitHub V3-H,3,H,24,1/2,inverted,16,Nothing 4a Pro (owner wording),Google Lens,varied,indoor,3,3,0,owner: all scanned; in a lit room had to move back for a dimmer code
+13,Portfolio V3-M,3,M,34,1/2,normal,255,Nothing 4a Pro (owner wording),Google Lens,varied,indoor,3,3,0,owner: all scanned; in a lit room had to move back for a dimmer code
+14,Portfolio V3-M,3,M,34,1/2,normal,64,Nothing 4a Pro (owner wording),Google Lens,varied,indoor,3,3,0,owner: all scanned; in a lit room had to move back for a dimmer code
+15,Portfolio V3-M,3,M,34,1/2,normal,16,Nothing 4a Pro (owner wording),Google Lens,varied,indoor,3,3,0,owner: all scanned; in a lit room had to move back for a dimmer code
+16,Portfolio V3-M,3,M,34,1/2,inverted,255,Nothing 4a Pro (owner wording),Google Lens,varied,indoor,3,3,0,owner: all scanned; in a lit room had to move back for a dimmer code
+17,Portfolio V3-M,3,M,34,1/2,inverted,64,Nothing 4a Pro (owner wording),Google Lens,varied,indoor,3,3,0,owner: all scanned; in a lit room had to move back for a dimmer code
+18,Portfolio V3-M,3,M,34,1/2,inverted,16,Nothing 4a Pro (owner wording),Google Lens,varied,indoor,3,3,0,owner: all scanned; in a lit room had to move back for a dimmer code
+19,LinkedIn V3-M,3,M,40,1/2,normal,255,Nothing 4a Pro (owner wording),Google Lens,varied,indoor,3,3,0,owner: all scanned; in a lit room had to move back for a dimmer code
+20,LinkedIn V3-M,3,M,40,1/2,normal,64,Nothing 4a Pro (owner wording),Google Lens,varied,indoor,3,3,0,owner: all scanned; in a lit room had to move back for a dimmer code
+21,LinkedIn V3-M,3,M,40,1/2,normal,16,Nothing 4a Pro (owner wording),Google Lens,varied,indoor,3,3,0,owner: all scanned; in a lit room had to move back for a dimmer code
+22,LinkedIn V3-M,3,M,40,1/2,inverted,255,Nothing 4a Pro (owner wording),Google Lens,varied,indoor,3,3,0,owner: all scanned; in a lit room had to move back for a dimmer code
+23,LinkedIn V3-M,3,M,40,1/2,inverted,64,Nothing 4a Pro (owner wording),Google Lens,varied,indoor,3,3,0,owner: all scanned; in a lit room had to move back for a dimmer code
+24,LinkedIn V3-M,3,M,40,1/2,inverted,16,Nothing 4a Pro (owner wording),Google Lens,varied,indoor,3,3,0,owner: all scanned; in a lit room had to move back for a dimmer code
+25,Resume V3-L,3,L,44,1/2,normal,255,Nothing 4a Pro (owner wording),Google Lens,varied,indoor,3,3,0,owner: passes as well
+26,Resume V3-L,3,L,44,1/2,normal,64,Nothing 4a Pro (owner wording),Google Lens,varied,indoor,3,3,0,owner: passes as well
+27,Resume V3-L,3,L,44,1/2,normal,16,Nothing 4a Pro (owner wording),Google Lens,varied,indoor,3,3,0,owner: passes as well
+28,Resume V3-L,3,L,44,1/2,inverted,255,Nothing 4a Pro (owner wording),Google Lens,varied,indoor,3,3,0,owner: passes as well
+29,Resume V3-L,3,L,44,1/2,inverted,64,Nothing 4a Pro (owner wording),Google Lens,varied,indoor,3,3,0,owner: passes as well
+30,Resume V3-L,3,L,44,1/2,inverted,16,Nothing 4a Pro (owner wording),Google Lens,varied,indoor,3,3,0,owner: passes as well

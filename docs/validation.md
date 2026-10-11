@@ -1,7 +1,8 @@
 # Validation
 
-Status: **one DK bench result**
-([matrix timing](#result-scan-timing-on-the-nrf5340-dk-bench-no-matrix)); no
+Status: **two DK bench results**
+([QR screening](#result-qr-screening-on-the-hub75-bench-panel),
+[matrix timing](#result-scan-timing-on-the-nrf5340-dk-bench-no-matrix)); no
 Rev A results. This document defines what will be measured and how.
 Results are added only after measurement, with the setup and raw data needed to
 reproduce them. Numerical acceptance thresholds are listed here only once they
@@ -44,6 +45,28 @@ not establish optical scan reliability. See the DENSO references in
 [references.md](references.md).
 
 Acceptance criteria: TBD.
+
+#### Result: QR screening on the HUB75 bench panel
+
+Screening only (one phone, three tries, distance varied), not the acceptance
+test.
+
+| Field | Value |
+|---|---|
+| Date | 2026-10-11 |
+| Hardware | nRF5340 DK v2.0.3; 64 × 64 P2 HUB75 panel (2.0 mm pitch, the badge's pitch) through two SN74AHCT245N at 5.00 V; 32 × 32 window, panel turned so the image reads upright |
+| Firmware | QR screening build (`firmware/configs/qr-screening.conf`) of the working tree before commit `b340b0db37b6`, which holds the QR mode. Differences in that commit: HUB75 blanking fixes (blanking is not used by the QR mode) and a run-time settings count. The owner-link codes came from a local code file (`CONFIG_APP_QR_CODES_FILE`), not in the repository |
+| Equipment | Nothing 4a Pro phone (owner's wording) with Google Lens; bench supply |
+| Settings | Run 1: Version 1 codes, levels L, M, Q, representative payloads (19 and 16 characters), full quiet zone (5 and 6 modules). Run 2: the owner's links, one Version 1 code at level L (uppercase, 24 characters, full quiet zone) and four Version 3 codes at levels H, M, M, L (24 to 44 characters) with a 1 to 2 module quiet zone. Each code in normal and inverted polarity at brightness 255, 64 and 16; 195 Hz refresh |
+| Method | Procedure in the result folders' README. Deviations: 3 tries per setting instead of 10, Google Lens instead of the native camera, distance adjusted per setting, decode times not recorded |
+| Raw data | [`validation/results/2026-10-11-hub75-qr-screening/`](../validation/results/2026-10-11-hub75-qr-screening/) and [`validation/results/2026-10-11-hub75-qr-v3-reduced-quiet-zone/`](../validation/results/2026-10-11-hub75-qr-v3-reduced-quiet-zone/): per-setting counts (no photos or video) |
+| Threshold | None accepted. The proposed acceptance rule (9 of 10 within 1 s, 10 of 10 within 3 s) does not apply to a screening |
+| Pass/fail | Screening pass: every setting decoded in all 3 tries (48 settings) |
+
+Observation: the working distance depended on brightness and room light; in a
+lit room the phone had to be further away for a dimmer code. Version 3 codes
+with the reduced quiet zone also scanned, but they remain a nonstandard
+experiment.
 
 ### 2. Electrical correctness
 

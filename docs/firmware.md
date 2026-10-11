@@ -53,8 +53,15 @@ registers hold its last sample, so consumers that need each sample once use
 matching ODRs or, later, the FIFO. Moving the part to SPI only
 changes the bus node and uses `compatible = "invensense,icm42688",
 "invensense,icm4268x"`. Wake-on-motion
-is not implemented yet. The other directories are empty; interfaces will be
-defined as features are implemented.
+is not implemented yet.
+
+The application reaches the display only through Zephyr's display API
+(`zephyr,display` chosen node), as a 32 × 32 monochrome display
+(`PIXEL_FORMAT_MONO01`, rows packed most significant bit first). On the DK the
+backend is a HUB75 panel (below); the badge gets its own matrix driver behind
+the same API. Frames and test patterns live in `firmware/src/services/`
+(`badge/test_pattern.hpp`), and `firmware/src/app/display_demo.cpp` cycles the
+patterns.
 
 ## Logging
 
@@ -105,6 +112,42 @@ RTS P0.11), and P0.10/P0.11 are no longer forwarded to the network core, so
 starting it (for Bluetooth, for example) cannot take matrix MISO and LAT away.
 Adding or changing an overlay needs a pristine build (`-Pristine`, or
 `--pristine` with west).
+
+The overlay also makes a HUB75 RGB panel the DK's display, for bench work
+only: R1, G1, B1, CLK and LAT on P1.11–P1.15, OE on P1.08 and row address A–E
+on P0.04–P0.07 and P0.25, through 5 V buffers (SN74AHCT245). The driver
+(`firmware/src/drivers/hub75`, compatible `smartledbadge,hub75`) shows the
+32 × 32 window in the panel's top half in one colour. TIMER0 times each 160 µs
+row slot (195 Hz refresh): its interrupt latches the row shifted during the
+previous slot and shifts the next row while this one is lit, and a second
+compare switches OE off through DPPI and GPIOTE, so brightness is set by
+hardware. TIMER1 and TIMER2 stay free for the matrix timing test. If the image
+is mirrored left to right, set `mirror-x` on the node.
+
+The DK overlay also puts the IMU (INT1 on P1.04), the PDM microphone (CLK P1.07,
+DATA P1.09) and the NFC tag's field-detect line (P1.06) on their Rev A pins. The
+tag shares the IMU's I²C1 bus on the DK, because its Rev A bus pins are the
+debugger's serial port. At start-up the application runs module checks
+(`firmware/src/app/bringup.cpp`) while the display test patterns run in their
+own thread, then logs an IMU sample and the microphone level every 5 s:
+
+- IMU: identity (checked by the driver), one sample with the gravity magnitude,
+  and the data-ready interrupt rate (100 Hz expected).
+- NFC tag: reads block 00h over I²C and checks that byte 0 reads 04h. The read
+  follows the field-detect guarded procedure in [nfc.md](nfc.md): it does not
+  start while an RF field is present, sends the block address and the read as
+  separate frames (START and STOP), and before and after each frame waits the
+  field-detect latency and checks for a field, so no frame starts until a field
+  that arose during the previous one would have shown. Any RF field
+  or activity fails the check, because the tag then needs full verification
+  before use. The field-detect latency on the DK is not measured yet, so a
+  fixed margin is used. It writes nothing to the tag.
+- Microphone: captures both PDM channels at 16 kHz (clock within the
+  MP34DT01-M's 1–3.25 MHz) and logs the mean, AC RMS and range of each. The
+  DATA pin has a pull-down on the DK, and the check fails when both channels
+  are constant or statistically alike, which is what an unconnected DATA pin
+  gives. Samples stay in the capture buffers and are discarded; only the
+  levels are logged.
 
 Before matrix work on the DK: the interface MCU leaves its UART pins tri-stated
 until a terminal opens the port and asserts DTR, and then drives them. Close
@@ -205,6 +248,25 @@ about ±42 ns, but it distorts the SCK duty cycle; use a faster one to check
 SCK itself. Leave Buttons 3 and 4 unpressed and keep terminals off
 the DK's COM ports (see above).
 
+### QR screening
+
+Building the application with `firmware/configs/qr-screening.conf` replaces the
+display test patterns with QR test codes for the scan-reliability screening
+(validation plan, QR section). Each code is shown in normal and inverted
+polarity at brightness 255, 64 and 16; DK Button 1 steps to the next setting,
+Button 2 back, and RTT logs the setting number.
+
+```powershell
+.\scripts\dev.ps1 build -BuildDir build/qr -ExtraConfFile firmware/configs/qr-screening.conf
+```
+
+The codes come from `scripts/qr/gen_qr_test_codes.py` (segno to encode,
+ZXing-C++ to decode each frame back in both polarities). The committed set uses
+representative Version 1 payloads with the full quiet zone. Codes for other
+payloads, such as personal links, are written to a file outside the repository
+with `--out-cpp` and selected with `CONFIG_APP_QR_CODES_FILE`; Version 2 and 3
+codes fit only with a reduced quiet zone and are experiments.
+
 ## Tests
 
 Tests use Ztest and run with Twister on the `native_sim` host target. They live
@@ -233,3 +295,5 @@ configuration and write order, power-mode/ODR validation (including a
 low-power start-up), invalid-sample handling, unit conversion, and the
 data-ready interrupt path. It proves
 the driver logic, not behavior on the real part.
+`firmware/tests/test_pattern` checks the frame bit layout and the test
+patterns.

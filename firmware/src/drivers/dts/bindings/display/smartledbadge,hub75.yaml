@@ -1,0 +1,66 @@
+# SPDX-License-Identifier: MIT
+
+description: |
+  HUB75 RGB LED panel driven by GPIO (bench display for the nRF5340 DK).
+
+  Shows a monochrome window of width x height pixels in the top half of a
+  1/N-scan panel; the bottom half's data inputs (R2, G2, B2) are tied low.
+  Each row slot of the timer shifts the next row while the current row is
+  lit. The timer's compare event switches OE off through DPPI and GPIOTE, so
+  the on-time does not depend on interrupt latency.
+
+  R1, G1, B1 and CLK must be on one GPIO port.
+
+compatible: "smartledbadge,hub75"
+
+include: display-controller.yaml
+
+properties:
+  r1-gpios:
+    type: phandle-array
+    required: true
+  g1-gpios:
+    type: phandle-array
+    required: true
+  b1-gpios:
+    type: phandle-array
+    required: true
+  clk-gpios:
+    type: phandle-array
+    required: true
+  lat-gpios:
+    type: phandle-array
+    required: true
+    description: Latch, pulsed high.
+  oe-gpios:
+    type: phandle-array
+    required: true
+    description: Output enable, high = outputs off. Use GPIO_ACTIVE_HIGH.
+  addr-gpios:
+    type: phandle-array
+    required: true
+    description: Row address lines, A first.
+
+  panel-columns:
+    type: int
+    required: true
+    description: Pixels shifted per row (the panel's full width).
+
+  timer:
+    type: phandle
+    required: true
+    description: TIMER instance that times the row slots. Keep it disabled.
+
+  row-period-us:
+    type: int
+    default: 160
+    description: Row slot length; refresh = 1 / (rows x period).
+
+  on-color:
+    type: int
+    default: 7
+    description: Colour of a lit pixel, bit 0 red, bit 1 green, bit 2 blue.
+
+  mirror-x:
+    type: boolean
+    description: Reverse the column order if the image appears mirrored.

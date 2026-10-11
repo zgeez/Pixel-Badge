@@ -6,6 +6,27 @@ module = APP
 module-str = Application
 source "subsys/logging/Kconfig.template.log_config"
 
+config APP_QR_SCREENING
+	bool "QR screening instead of the display test patterns"
+	depends on DISPLAY
+	help
+	  Shows the host-generated QR test codes, stepped with Buttons 1 and
+	  2, for the scan-reliability screening.
+
+config APP_QR_CODES_FILE
+	string "QR screening codes source file"
+	depends on APP_QR_SCREENING
+	help
+	  Generated source with the QR screening codes, instead of the
+	  committed representative codes. Used for codes that must stay out
+	  of the repository, such as personal links; generate it with
+	  scripts/qr/gen_qr_test_codes.py --out-cpp.
+
+config APP_DISPLAY_BRIGHTNESS
+	int "Display brightness after the test patterns"
+	default 128
+	range 1 255
+
 endmenu
 
 source "Kconfig.zephyr"
