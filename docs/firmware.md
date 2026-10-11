@@ -1,7 +1,10 @@
 # Firmware
 
-Status: **bootstrap**. The application currently initializes logging and
-prints a startup message. No product features are implemented.
+Status: **bring-up**. On the nRF5340 DK the application shows test patterns
+on a HUB75 bench panel and runs self-checks of the IMU, NFC tag and
+microphone; bench tools cover the matrix scan timing and QR screening. The
+Rev A board definition builds in CI. No product features (display modes,
+BLE, NFC updates, audio) are implemented yet.
 
 ## Platform
 
