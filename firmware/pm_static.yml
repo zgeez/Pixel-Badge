@@ -1,0 +1,36 @@
+# SPDX-License-Identifier: MIT
+# Internal 1 MiB application-core flash. See docs/firmware.md for rationale.
+mcuboot:
+  address: 0x00000
+  size: 0x10000
+  region: flash_primary
+mcuboot_pad:
+  address: 0x10000
+  size: 0x200
+  region: flash_primary
+app:
+  address: 0x10200
+  size: 0x4fe00
+  region: flash_primary
+mcuboot_primary:
+  address: 0x10000
+  size: 0x50000
+  region: flash_primary
+  span: [mcuboot_pad, app]
+mcuboot_primary_app:
+  address: 0x10200
+  size: 0x4fe00
+  region: flash_primary
+  span: [app]
+mcuboot_secondary:
+  address: 0x60000
+  size: 0x50000
+  region: flash_primary
+network_update_reserved:
+  address: 0xb0000
+  size: 0x48000
+  region: flash_primary
+settings_storage:
+  address: 0xf8000
+  size: 0x8000
+  region: flash_primary
