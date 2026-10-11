@@ -30,16 +30,23 @@ firmware) would hold only seconds of raw audio anyway.
 
 Voice recording is allowed, visibly and without storing audio on the badge:
 
-- A recording starts only from the paired app or a button long-press.
+- A recording starts only from the paired app or a button long-press, and
+  only when the bonded phone is connected over the encrypted link and the app
+  is subscribed to the audio stream. If it is not, a long-press does not enter
+  the recording mode and the matrix briefly shows that recording is
+  unavailable.
 - Recording is its own display mode: the matrix shows REC and a live level bar
   for the whole recording. It cannot run behind another mode.
 - Audio is streamed live, compressed with IMA ADPCM at 16 kHz (about
   64 kbit/s), over the encrypted, bonded BLE link to the paired app, which
   stores the recording.
-- A recording stops when the link drops, when the display is turned off or
-  blanked, or at the maximum length set in the settings.
-- Raw samples exist on the badge only in volatile buffers; none reach flash,
-  NVS/settings, logs or crash dumps.
+- The user stops a recording with a button press or from the app. It also
+  stops when the link drops or the app unsubscribes, when the display is
+  turned off or blanked, or at the maximum length set in the settings.
+- Audio data, raw samples and the encoded ADPCM stream alike, exists on the
+  badge only in volatile buffers (capture, encoding and Bluetooth transmit
+  queues) and is discarded when the recording ends; none reaches flash,
+  NVS/settings, logs, telemetry or crash dumps.
 
 This supersedes the "no stored microphone audio" part of 0001. Audio
 visualization remains as decided there.
@@ -49,9 +56,10 @@ visualization remains as decided there.
 The firmware needs a recording mode, an audio GATT service with ADPCM
 encoding, and the stop conditions above; the app needs recording and playback
 screens. Recording is new scope and must not delay the minimum viable demo.
-The audio privacy review (validation section 8) now covers transmission: no
-audio is sent without the recording mode shown, the mode cannot be left or
-hidden while recording, and every stop condition works.
+The audio privacy review (validation section 8) now covers encoded audio and
+transmission: no audio is sent without the recording mode shown, a recording
+cannot start without a ready receiver, the mode cannot be left or hidden while
+recording, and the manual stop and every automatic stop condition work.
 
 ## References
 

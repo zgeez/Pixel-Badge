@@ -82,20 +82,26 @@ The badge visualizes sound and can record voice for playback in the phone app
 ([ADR 0011](decisions/0011-visible-voice-recording.md)). Recording is visible
 and never stored on the badge:
 
-- It starts only from the paired app or a button long-press, and runs as its
-  own display mode: the matrix shows REC and a live level bar for the whole
-  recording. It cannot run behind another mode.
+- It starts only from the paired app or a button long-press, and only when
+  the bonded phone is connected over the encrypted link and the app is
+  subscribed to the audio stream; otherwise a long-press briefly shows that
+  recording is unavailable and nothing is captured for sending.
+- It runs as its own display mode: the matrix shows REC and a live level bar
+  for the whole recording. It cannot run behind another mode.
 - Audio is streamed live, compressed (IMA ADPCM at 16 kHz), over the encrypted
   Bluetooth link to the paired app, which stores the recording.
-- It stops when the link drops, when the display is turned off or blanked, or
-  at the maximum length set in the settings.
+- The user stops it with a button press or from the app. It also stops when
+  the link drops or the app unsubscribes, when the display is turned off or
+  blanked, or at the maximum length set in the settings.
 
-Raw microphone samples exist on the badge only in volatile/transient buffers,
-for visualization or while being streamed. No raw samples may reach flash,
-NVS/settings, external storage, logs, crash dumps, or other persistent storage.
+Audio data, both raw microphone samples and the encoded ADPCM stream, exists
+on the badge only in volatile/transient buffers (capture, DSP, encoding and
+Bluetooth transmit queues) and is discarded when visualization or the recording
+ends. No audio data may reach flash, NVS/settings, external storage, logs,
+telemetry, crash dumps, or other persistent storage.
 Review capture, DSP, transmission, logging, persistence, and fault/dump data
 flows before release, including debug configurations. Persistent crash dumps
-must exclude sample buffers or be disabled. Verification requirements are in
+must exclude audio buffers or be disabled. Verification requirements are in
 [validation.md](validation.md#8-microphone-and-audio-processing); no audio
 feature or completed privacy audit exists yet (the bring-up check only logs
 levels).
