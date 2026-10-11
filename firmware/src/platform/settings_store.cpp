@@ -13,19 +13,35 @@ namespace badge
 {
 namespace
 {
+struct LoadContext {
+	SettingsService &service;
+	int read_error = 0;
+};
+
 int read_setting(const char *key, size_t length, settings_read_cb read, void *argument,
 		 void *context)
 {
-	auto &service = *static_cast<SettingsService *>(context);
+	auto &load = *static_cast<LoadContext *>(context);
+	if (load.read_error != 0) {
+		return load.read_error;
+	}
 	for (unsigned i = 0; i < static_cast<unsigned>(Field::kCount); ++i) {
 		const Field field = static_cast<Field>(i);
 		if (strcmp(key, field_name(field)) != 0) {
 			continue;
 		}
 		uint8_t bytes[kNameMax];
-		if (length == 0 || length > sizeof(bytes) ||
-		    read(argument, bytes, length) != static_cast<ssize_t>(length) ||
-		    !service.load(field, bytes, length)) {
+		if (length == 0 || length > sizeof(bytes)) {
+			LOG_WRN("invalid setting %s; using default", field_name(field));
+			break;
+		}
+		const ssize_t rc = read(argument, bytes, length);
+		if (rc != static_cast<ssize_t>(length)) {
+			load.read_error = rc < 0 ? static_cast<int>(rc) : -EIO;
+			LOG_ERR("setting %s read failed (%d)", field_name(field), load.read_error);
+			return load.read_error;
+		}
+		if (!load.service.load(field, bytes, length)) {
 			LOG_WRN("invalid setting %s; using default", field_name(field));
 		}
 		break;
@@ -52,7 +68,13 @@ int load_settings(SettingsService &service, bool factory_reset)
 	}
 	int rc = settings_subsys_init();
 	if (rc == 0) {
-		rc = settings_load_subtree_direct("badge", read_setting, &service);
+		LoadContext load{service};
+		rc = settings_load_subtree_direct("badge", read_setting, &load);
+		/* The pinned SDK discards backend callback errors in the direct
+		 * loader. Preserve the first read failure independently. */
+		if (rc == 0) {
+			rc = load.read_error;
+		}
 	}
 	if (rc != 0) {
 		service.begin_load();

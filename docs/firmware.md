@@ -6,7 +6,8 @@ reset-loop safe mode. On 2026-10-11 the owner reported all six foundation
 bench steps passed. A separate direct RTT capture confirms normal QR boot
 and healthy-counter clearing; it does not capture the earlier button,
 persistence, factory-reset or forced-watchdog tests. That pass predates the
-display/schema recovery corrections; those changes require a new bench run.
+display, schema and settings-read recovery corrections; the revised image
+requires a new bench run.
 See the [foundation result](validation.md#result-prototype-foundation-on-the-dk).
 Peripheral bring-up checks and QR screening remain separate options. BLE,
 NFC updates and audio modes are not implemented yet. Rev A remains a board
@@ -116,8 +117,11 @@ value. Schema recovery publishes the schema last after writing all defaults;
 it is not a general multi-field transaction. The host
 flash-simulator test interrupts a name replacement at each byte boundary and
 remounts the actual backend. Arbitrary bit corruption is detected with the
-data CRC and handled as a missing/invalid value; it is distinct from power-cut
-recovery. No keys or audio are stored in P0. NVS itself is not encrypted.
+data CRC. A per-setting read failure (including a CRC error or short read)
+discards partially loaded settings, selects defaults and safe mode, and disables
+writes for that boot. Semantically invalid records still default without an I/O
+failure. This is distinct from power-cut recovery. No keys or audio are stored
+in P0. NVS itself is not encrypted.
 See [ADR 0012](decisions/0012-prototype-foundation.md) for the storage choice.
 
 | DK control | Action |
@@ -328,7 +332,8 @@ development signing key and supplies no production signing credentials.
 The owner reports the six steps below passed on 2026-10-11 for the initial P0
 image. The [record](validation.md#result-prototype-foundation-on-the-dk)
 separates this report from the narrower direct RTT evidence. Repeat after
-display/schema recovery changes; that revised image has not been bench-tested.
+display, schema and settings-read recovery changes; the revised image has not
+been bench-tested.
 
 Use the existing HUB75 wiring and power procedure below. Close all DK COM
 terminals, use RTT, and keep Buttons 3/4 untouched. In an NCS v3.4.1 terminal:

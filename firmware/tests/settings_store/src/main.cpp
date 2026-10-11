@@ -128,6 +128,25 @@ ZTEST(settings_store, test_factory_reset_reload_invalid_value_and_power_cuts)
 	zassert_true(saw_defaults && saw_saved);
 	TC_PRINT("Schema recovery checked %u interrupted flash byte positions\n",
 		 recovery_bytes + 1);
+	/* Corrupt committed value bytes after NVS enumeration can still find
+	 * the record. The full read detects its CRC and must fail the load even
+	 * though the pinned direct-loader API returns success. */
+	const char crc_name[] = "CRC TEST NAME";
+	zassert_ok(
+		reloaded.save(Field::kName, crc_name, sizeof(crc_name) - 1, store_field, nullptr));
+	unsigned matches = 0;
+	for (size_t offset = 0; offset + sizeof(crc_name) - 1 <= area->fa_size; ++offset) {
+		if (memcmp(memory + area->fa_off + offset, crc_name, sizeof(crc_name) - 1) == 0) {
+			memory[area->fa_off + offset] ^= 1;
+			++matches;
+		}
+	}
+	zassert_equal(matches, 1);
+	zassert_equal(load_settings(reloaded, false), -EIO);
+	zassert_equal(strcmp(reloaded.values().name, kDefaultSettings.name), 0);
+	zassert_equal(strcmp(reloaded.values().url, kDefaultSettings.url), 0);
+	zassert_equal(reloaded.values().brightness, kDefaultSettings.brightness);
+	zassert_equal(reloaded.values().default_mode, kDefaultSettings.default_mode);
 	flash_area_close(area);
 }
 
