@@ -38,7 +38,7 @@ LOG_MODULE_REGISTER(hub75, CONFIG_DISPLAY_LOG_LEVEL);
 #define TICKS_PER_US   16
 /* OE stays off for at least this long at the end of each slot. */
 #define MIN_OFF_US     2
-/* Skip switching a row on if the off compare is closer than this. */
+/* Time allowed between scheduling the off compare and switching OE on. */
 #define ON_MARGIN      (1 * TICKS_PER_US)
 
 struct hub75_port_pin {
@@ -147,10 +147,19 @@ static void hub75_isr(const void *arg)
 	nrf_gpio_port_out_clear(cfg->lat_pin.port, cfg->lat_pin.mask);
 
 	if (data->on_ticks > 0) {
+		/* The off compare is set from now, so every nonzero brightness
+		 * gets its full on-time, and the row is always off by the end of
+		 * the slot. A late interrupt skips the row rather than leave it
+		 * on. */
+		uint32_t last = (cfg->row_period_us - MIN_OFF_US) * TICKS_PER_US;
+		uint32_t now;
+		uint32_t off_at;
+
 		nrf_timer_task_trigger(cfg->timer, NRF_TIMER_TASK_CAPTURE2);
-		/* A late interrupt skips the row rather than leave it on. */
-		if (nrf_timer_cc_get(cfg->timer, NRF_TIMER_CC_CHANNEL2) + ON_MARGIN <
-		    data->on_ticks) {
+		now = nrf_timer_cc_get(cfg->timer, NRF_TIMER_CC_CHANNEL2);
+		off_at = MIN(now + ON_MARGIN + data->on_ticks, last);
+		if (now + ON_MARGIN < off_at) {
+			nrf_timer_cc_set(cfg->timer, NRF_TIMER_CC_CHANNEL1, off_at);
 			oe_task(cfg, data->oe_ch, true);
 		}
 	}
@@ -283,8 +292,8 @@ static int hub75_set_brightness(const struct device *dev, const uint8_t brightne
 	struct hub75_data *data = dev->data;
 
 	data->brightness = brightness;
+	/* Used from the next row: the interrupt sets the off compare per row. */
 	data->on_ticks = on_ticks_for(cfg, brightness);
-	nrf_timer_cc_set(cfg->timer, NRF_TIMER_CC_CHANNEL1, MAX(data->on_ticks, 1));
 	return 0;
 }
 
