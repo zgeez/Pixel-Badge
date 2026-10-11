@@ -124,6 +124,29 @@ compare switches OE off through DPPI and GPIOTE, so brightness is set by
 hardware. TIMER1 and TIMER2 stay free for the matrix timing test. If the image
 is mirrored left to right, set `mirror-x` on the node.
 
+The DK overlay also puts the IMU (INT1 on P1.04), the PDM microphone (CLK P1.07,
+DATA P1.09) and the NFC tag's field-detect line (P1.06) on their Rev A pins. The
+tag shares the IMU's I²C1 bus on the DK, because its Rev A bus pins are the
+debugger's serial port. At start-up the application runs module checks
+(`firmware/src/app/bringup.cpp`) while the display test patterns run in their
+own thread, then logs an IMU sample and the microphone level every 5 s:
+
+- IMU: identity (checked by the driver), one sample with the gravity magnitude,
+  and the data-ready interrupt rate (100 Hz expected).
+- NFC tag: reads block 00h over I²C and checks that byte 0 reads 04h. The read
+  follows the field-detect guarded procedure in [nfc.md](nfc.md): it does not
+  start while an RF field is present, sends the block address and the read as
+  separate frames (START and STOP, at least 50 µs apart) inside a field-detect
+  watch window, and discards and retries the read if RF activity is seen. The
+  field-detect latency on the DK is not measured yet, so a fixed margin is
+  used. It writes nothing to the tag.
+- Microphone: captures both PDM channels at 16 kHz (clock within the
+  MP34DT01-M's 1–3.25 MHz) and logs the mean, AC RMS and range of each. The
+  DATA pin has a pull-down on the DK, and the check fails when both channels
+  are constant or statistically alike, which is what an unconnected DATA pin
+  gives. Samples stay in the capture buffers and are discarded; only the
+  levels are logged.
+
 Before matrix work on the DK: the interface MCU leaves its UART pins tri-stated
 until a terminal opens the port and asserts DTR, and then drives them. Close
 every terminal on the DK's J-Link COM ports and log over RTT instead. If one was

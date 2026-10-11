@@ -10,6 +10,7 @@ project(smart_led_badge LANGUAGES C CXX)
 
 target_sources(app PRIVATE
 	src/main.cpp
+	src/app/bringup.cpp
 	src/services/test_pattern.cpp
 )
 target_sources_ifdef(CONFIG_DISPLAY app PRIVATE src/app/display_demo.cpp)
