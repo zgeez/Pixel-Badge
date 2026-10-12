@@ -416,11 +416,16 @@ int Ntag::begin_provision(const char *url, size_t length, const uint8_t credenti
 	if (rc == 0) {
 		rc = read_block(0x3a, configuration);
 	}
-	if (rc != 0) {
-		return rc;
+	if (rc == 0 && (metadata[0] != 4 || (configuration[6] & 3) != 0)) {
+		rc = -EPERM;
 	}
-	if (metadata[0] != 4 || (configuration[6] & 3) != 0) {
-		return -EPERM;
+	if (rc != 0) {
+		/* Preflight reads acquire tag arbitration too. Attempt guarded
+		 * cleanup on rejection/read failure, retaining the original error. */
+		if (!busy_) {
+			(void)release();
+		}
+		return rc;
 	}
 	memcpy(uid, metadata, 7);
 	metadata[0] = 4; /* byte 04 -> 7-bit address 02 */

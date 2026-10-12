@@ -15,6 +15,8 @@ struct Tag {
 	bool busy_forever = false, drop_write = false;
 	bool fail_error_clear = false, drop_error_clear = false;
 	unsigned fail_program_writes = 0, error_clears = 0;
+	unsigned releases = 0;
+	int release_error = 0, fail_read_block = -1;
 	uint32_t frame_us = 0;
 	bool fail_disarm = false;
 	bool pulse_on_enable = false, field_on_enable = false, fail_enable = false;
@@ -96,7 +98,13 @@ struct Tag {
 		if (t.frames == t.fail_frame) {
 			++t.edges;
 		}
-		return address == t.address ? 0 : -EIO;
+		if (address != t.address) {
+			return -EIO;
+		}
+		/* Successful I2C addressing takes arbitration until explicit release.
+		 * Do not simulate watchdog expiry: the host must clean up itself. */
+		t.session[6] |= 0x40;
+		return 0;
 	}
 	static int write(void *p, uint8_t address, const uint8_t *data, size_t size)
 	{
@@ -114,6 +122,12 @@ struct Tag {
 			t.register_read = true;
 		} else if (size == 4) {
 			zassert_equal(data[0], 0xfe);
+			if (data[1] == 6 && data[2] == 0x40 && data[3] == 0) {
+				++t.releases;
+				if (t.release_error != 0) {
+					return t.release_error;
+				}
+			}
 			if (data[1] == 6 && data[2] == 4 && data[3] == 0) {
 				++t.error_clears;
 				if (t.fail_error_clear) {
@@ -158,6 +172,9 @@ struct Tag {
 		} else {
 			zassert_true(t.clock >= t.done, "EEPROM read during programming");
 			zassert_equal(size, 16);
+			if (t.selector == t.fail_read_block) {
+				return -EIO;
+			}
 			memcpy(data, t.memory[t.selector], 16);
 			if (t.selector == 0x39) {
 				memset(data + 4, 0, 6);
@@ -290,6 +307,69 @@ ZTEST(ntag, test_reject_unprotected_and_irreversible_writes)
 	configuration[6] = 3;
 	zassert_equal(tag.write_block(0x3a, configuration), -EPERM);
 	zassert_equal(model.writes, 0);
+}
+
+ZTEST(ntag, test_rejected_provisioning_releases_arbitration_without_programming)
+{
+	const uint8_t synthetic[] = {1, 2, 3, 4, 5, 6};
+	for (unsigned reason = 0; reason < 4; ++reason) {
+		Tag model;
+		if (reason == 0) {
+			model.memory[0][0] = 5;
+		} else {
+			model.memory[0x3a][6] = reason; /* Each REG_LOCK combination. */
+		}
+		model.session[6] = 0x10; /* Release preserves unrelated status. */
+		uint8_t previous[sizeof(model.memory)], uid[7];
+		memcpy(previous, model.memory, sizeof(previous));
+		memset(uid, 0xaa, sizeof(uid));
+		Ntag tag(model.io());
+		zassert_equal(tag.begin_provision("HTTPS://A.B/X", 13, synthetic, uid), -EPERM);
+		zassert_equal(model.session[6], 0x10);
+		zassert_equal(model.releases, 1);
+		zassert_equal(model.writes, 0);
+		zassert_mem_equal(model.memory, previous, sizeof(previous));
+		for (uint8_t byte : uid) {
+			zassert_equal(byte, 0xaa);
+		}
+		zassert_false(model.locked || model.armed);
+	}
+}
+
+ZTEST(ntag, test_preflight_read_failure_releases_arbitration)
+{
+	const uint8_t blocks[] = {0, 0x38, 0x39, 0x3a};
+	const uint8_t synthetic[] = {1, 2, 3, 4, 5, 6};
+	for (uint8_t block : blocks) {
+		Tag model;
+		model.fail_read_block = block;
+		Ntag tag(model.io());
+		uint8_t uid[7];
+		zassert_equal(tag.begin_provision("HTTPS://A.B/X", 13, synthetic, uid), -EIO);
+		zassert_equal(model.session[6] & 0x40, 0);
+		zassert_equal(model.releases, 1);
+		zassert_equal(model.writes, 0);
+		zassert_false(model.locked || model.armed);
+	}
+}
+
+ZTEST(ntag, test_failed_cleanup_preserves_the_original_preflight_error)
+{
+	const uint8_t synthetic[] = {1, 2, 3, 4, 5, 6};
+	for (unsigned reason = 0; reason < 2; ++reason) {
+		Tag model;
+		model.memory[0x3a][6] = 1;
+		model.fail_read_block = reason == 0 ? -1 : 0x39;
+		model.release_error = -ETIMEDOUT;
+		Ntag tag(model.io());
+		uint8_t uid[7];
+		zassert_equal(tag.begin_provision("HTTPS://A.B/X", 13, synthetic, uid),
+			      reason == 0 ? -EPERM : -EIO);
+		zassert_equal(model.session[6] & 0x40, 0x40);
+		zassert_equal(model.releases, 1);
+		zassert_equal(model.writes, 0);
+		zassert_false(model.locked || model.armed);
+	}
 }
 
 ZTEST(ntag, test_failed_fd_guard_revokes_previous_proof)
