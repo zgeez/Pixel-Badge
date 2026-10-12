@@ -324,9 +324,10 @@ int Ntag::inspect(uint8_t uid[7], bool protected_policy)
 		return rc;
 	}
 	if (metadata[0] != 0x04 || configuration[0] != 0x01 || (configuration[6] & ~3) != 0 ||
-	    (protected_policy && (memcmp(metadata + 12, kCc, 4) != 0 || (metadata[10] & 9) != 9 ||
-				  auth[15] != 4 || access[0] != 0 || access[12] != 4 ||
-				  configuration[1] != 2 || configuration[5] != 0))) {
+	    (protected_policy &&
+	     (address_ != 0x02 || memcmp(metadata + 12, kCc, 4) != 0 || (metadata[10] & 9) != 9 ||
+	      auth[15] != 4 || access[0] != 0 || access[12] != 4 || configuration[1] != 2 ||
+	      configuration[5] != 0))) {
 		return -EACCES;
 	}
 	memcpy(uid, metadata, 7);
@@ -490,7 +491,9 @@ int Ntag::begin_provision(const char *url, size_t length, const uint8_t credenti
 int Ntag::finish_provision(const uint8_t uid[7])
 {
 	uint8_t metadata[16];
-	int rc = read_block(0, metadata);
+	/* Only begin_provision may repair the address. Do not silently restore it
+	 * while publishing CC locks and accepting an earlier RF proof. */
+	int rc = address_ == 0x02 ? read_block(0, metadata) : -EACCES;
 	if (rc == 0 && memcmp(metadata, uid, 7) != 0) {
 		rc = -EACCES;
 	}

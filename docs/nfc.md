@@ -203,6 +203,10 @@ RF activity during frames or an unreliable FD guard revokes credential proof;
 lost proof requires fresh two-session provisioning. Trusted local SWD/MCU
 access is assumed. No REG_LOCK or irreversible configuration write is offered.
 Address byte `04h` means seven-bit address `02h`, not `04h` or the factory `55h`.
+Protected-policy verification, synchronization and provisioning finalization
+require the active address `02h`. Block 0's fixed `04h` UID readback cannot
+verify the address. A tag discovered at `55h` requires explicit provisioning;
+normal synchronization cannot repair its address or republish the receipt.
 The CC lock bytes are `09 00` (L_CC + BL_CC); ordinary updates clear other
 static/dynamic RF locks. The helper rejects other GET_VERSION variants.
 

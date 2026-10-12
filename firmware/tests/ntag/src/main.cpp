@@ -274,6 +274,47 @@ ZTEST(ntag, test_provision_policy_and_sync)
 	zassert_equal(model.memory[0x3a][6], 0); /* never REG_LOCK */
 }
 
+ZTEST(ntag, test_factory_address_cannot_validate_a_protected_tag)
+{
+	const uint8_t synthetic[] = {1, 2, 3, 4, 5, 6};
+	for (unsigned operation = 0; operation < 3; ++operation) {
+		Tag model;
+		Ntag provisioner(model.io());
+		uint8_t uid[7];
+		provision(model, provisioner, uid);
+		/* Address corruption is invisible in block 0's UID0 readback. */
+		model.address = 0x55;
+		zassert_equal(model.memory[0][0], 4);
+		uint8_t previous[sizeof(model.memory)], output[7];
+		memcpy(previous, model.memory, sizeof(previous));
+		memset(output, 0xaa, sizeof(output));
+		const unsigned writes = model.writes;
+		Ntag tag(model.io()); /* Model a new boot with intact protection. */
+		zassert_ok(tag.initialize());
+		zassert_equal(tag.address(), 0x55);
+		const int rc = operation == 0
+				       ? tag.verify_policy(output)
+				       : (operation == 1 ? tag.synchronize("HTTPS://A.B/X", 13)
+							 : tag.finish_provision(uid));
+		zassert_equal(rc, -EACCES);
+		zassert_equal(model.writes, writes);
+		zassert_equal(model.address, 0x55);
+		zassert_mem_equal(model.memory, previous, sizeof(previous));
+		for (uint8_t byte : output) {
+			zassert_equal(byte, 0xaa);
+		}
+		zassert_equal(model.session[6] & 0x40, 0);
+		zassert_false(model.locked || model.armed);
+		/* Recovery must go through a fresh explicit provisioning run. */
+		zassert_ok(tag.begin_provision("HTTPS://A.B/X", 13, synthetic, uid));
+		zassert_equal(tag.address(), 2);
+		zassert_ok(tag.finish_provision(uid));
+		zassert_ok(tag.verify_policy(output));
+		zassert_mem_equal(output, uid, sizeof(uid));
+		zassert_ok(tag.synchronize("HTTPS://A.B/X", 13));
+	}
+}
+
 ZTEST(ntag, test_busy_timeout_and_ack_without_programming)
 {
 	Tag model;
