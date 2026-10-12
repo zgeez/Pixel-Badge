@@ -41,6 +41,9 @@ jobs:
       - name: Check repository hygiene
         run: python scripts/ci/check_hygiene.py
 
+      - name: Test local QR configuration
+        run: python scripts/qr/test_configure_default_url.py
+
   firmware-build:
     name: firmware-build
     runs-on: ubuntu-24.04
@@ -78,8 +81,13 @@ jobs:
         with:
           name: firmware-nrf5340dk
           path: |
+            smart-led-badge/build/nrf5340dk/merged.hex
+            smart-led-badge/build/nrf5340dk/partitions.yml
+            smart-led-badge/build/nrf5340dk/zephyr/.config
+            smart-led-badge/build/nrf5340dk/mcuboot/zephyr/zephyr.elf
+            smart-led-badge/build/nrf5340dk/mcuboot/zephyr/.config
             smart-led-badge/build/nrf5340dk/firmware/zephyr/zephyr.elf
-            smart-led-badge/build/nrf5340dk/firmware/zephyr/zephyr.hex
+            smart-led-badge/build/nrf5340dk/firmware/zephyr/zephyr.signed.hex
             smart-led-badge/build/nrf5340dk/firmware/zephyr/zephyr.map
             smart-led-badge/build/nrf5340dk/firmware/zephyr/.config
           # Needed for .config; only the paths listed above are uploaded.
@@ -100,6 +108,31 @@ jobs:
           BUILD_DIR="${GITHUB_WORKSPACE}/smart-led-badge/build/qr" \
             EXTRA_CONF_FILE="${GITHUB_WORKSPACE}/smart-led-badge/firmware/configs/qr-screening.conf" \
             bash smart-led-badge/scripts/ci/build-firmware.sh
+
+      - name: Build prototype with optional bring-up checks
+        run: |
+          export ZEPHYR_BASE="${GITHUB_WORKSPACE}/ncs/zephyr"
+          BUILD_DIR="${GITHUB_WORKSPACE}/smart-led-badge/build/prototype-debug" \
+            EXTRA_CONF_FILE="${GITHUB_WORKSPACE}/smart-led-badge/firmware/configs/prototype-debug.conf" \
+            bash smart-led-badge/scripts/ci/build-firmware.sh
+
+      - name: Build watchdog reset-loop bench configuration
+        run: |
+          export ZEPHYR_BASE="${GITHUB_WORKSPACE}/ncs/zephyr"
+          BUILD_DIR="${GITHUB_WORKSPACE}/smart-led-badge/build/watchdog-loop" \
+            EXTRA_CONF_FILE="${GITHUB_WORKSPACE}/smart-led-badge/firmware/configs/watchdog-loop.conf" \
+            bash smart-led-badge/scripts/ci/build-firmware.sh
+
+      - name: Upload prototype bench images
+        uses: actions/upload-artifact@v7
+        with:
+          name: firmware-prototype-bench
+          path: |
+            smart-led-badge/build/qr/merged.hex
+            smart-led-badge/build/prototype-debug/merged.hex
+            smart-led-badge/build/watchdog-loop/merged.hex
+          if-no-files-found: error
+          retention-days: 14
 
       # Rev A board definition (firmware/boards/smart_led_badge): both cores
       # build, so devicetree or pin-map errors fail CI before hardware exists.

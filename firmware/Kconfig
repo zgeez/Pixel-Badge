@@ -27,6 +27,33 @@ config APP_DISPLAY_BRIGHTNESS
 	default 128
 	range 1 255
 
+config APP_PROTOTYPE
+	bool "Prototype badge application"
+	default y if BOARD_NRF5340DK_NRF5340_CPUAPP
+	depends on DISPLAY && !APP_QR_SCREENING
+	select FLASH
+	select FLASH_MAP
+	select FLASH_PAGE_LAYOUT
+	select NVS
+	select NVS_DATA_CRC
+	select SETTINGS
+	select WATCHDOG
+	select REBOOT
+	select HWINFO
+
+config APP_BRINGUP_CHECKS
+	bool "Run optional peripheral bring-up checks"
+	default y if !APP_PROTOTYPE
+	help
+	  Runs outside the normal badge loop. Off in the default prototype.
+
+config APP_WATCHDOG_TEST_LOOP
+	bool "Bench fault injection: reset until safe mode"
+	depends on APP_PROTOTYPE
+	help
+	  Never enable in normal firmware. Stops the main-loop watchdog feed
+	  before a healthy boot; safe mode resumes feeding after three resets.
+
 endmenu
 
 source "Kconfig.zephyr"

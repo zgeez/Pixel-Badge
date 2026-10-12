@@ -1,0 +1,16 @@
+# SPDX-License-Identifier: MIT
+
+choice BOOTLOADER
+	default BOOTLOADER_MCUBOOT if SOC_NRF5340_CPUAPP
+endchoice
+
+choice MCUBOOT_MODE
+	default MCUBOOT_MODE_SWAP_USING_MOVE if SOC_NRF5340_CPUAPP
+endchoice
+
+# NCS v3.4.1 still supports PM on nRF53; deliberately opt in to the
+# committed static layout rather than use the SDK's default DTS partitioning.
+config PARTITION_MANAGER
+	default y if SOC_NRF5340_CPUAPP
+
+source "share/sysbuild/Kconfig"

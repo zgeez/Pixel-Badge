@@ -1,0 +1,9 @@
+# SPDX-License-Identifier: MIT
+tests:
+  services.settings_store:
+    tags: [badge, settings]
+    platform_allow:
+      - native_sim
+      - native_sim/native/64
+    integration_platforms:
+      - native_sim
