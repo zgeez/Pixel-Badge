@@ -20,6 +20,7 @@ target_sources(app PRIVATE
 add_subdirectory(lib/qrcodegen)
 target_link_libraries(app PRIVATE badge_qrcodegen)
 target_sources_ifdef(CONFIG_APP_NFC app PRIVATE src/app/nfc.cpp)
+target_sources_ifdef(CONFIG_APP_NFC app PRIVATE src/services/url_update.cpp)
 target_sources_ifdef(CONFIG_DISPLAY app PRIVATE src/app/display_demo.cpp)
 if(CONFIG_APP_PROTOTYPE)
 	# Read sysbuild overrides too; a link change must not retain an old cache value.

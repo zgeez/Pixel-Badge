@@ -156,10 +156,18 @@ only establishes reading; it does not establish RF-write protection.
 - Interrupt provisioning before confirmation, reboot, and check that firmware
   refuses normal NFC updates without a verified receipt. Repeat provisioning.
   Do not claim physical torn-write coverage from host fault-injection tests.
-- An update can persist the desired URL and display its QR before NFC fails.
+- A URL update previews the candidate QR with settings unchanged. Only a
+  successful display submission and guarded NFC verification permit the final
+  settings write. Failure or timeout restores the old QR/mode, keeps the durable
+  URL and attempts guarded tag rollback if tag work began. A late acknowledgement
+  cannot commit a cancelled request. Check that a display error, a consumed
+  request timeout and a tag failure leave the old URL after reboot; these cases
+  have software regressions, but physical fault-injection acceptance is pending.
   Failure is reported, and status retains the last read/verified NFC URL when
-  available. The external tag can contain the old, empty or incomplete record
-  after interruption; it must stay out of service until recovered. A clean
+  available. Failed rollback or power loss between the devices' writes can
+  leave the external tag with old, new, empty or incomplete data: settings and
+  EEPROM are not one physical atomic transaction. Keep it out of service until
+  recovered. Restart uses the persisted URL. A clean
   restart reconciles a retained trusted receipt; a lost receipt requires fresh
   provisioning. A factory reset erases the receipt but leaves tag EEPROM.
 

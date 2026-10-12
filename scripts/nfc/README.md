@@ -32,6 +32,13 @@ Confirm requires the pending UID and expires after 120 seconds. It is issued
 only by the trusted host after successful one-use Android RF proof; the mailbox
 is not a security boundary against a debugger owner.
 
+`set-url` previews QR content while settings remain unchanged, verifies the tag,
+then persists the URL. Display/tag failure or timeout restores the old display
+state and attempts guarded tag rollback; the desired status URL remains the
+persisted value. A failed rollback leaves the tag unverified and the command
+unsuccessful. Physical power loss across separate settings/tag writes still
+requires restart reconciliation or explicit provisioning after receipt loss.
+
 The Android helper uses native `NfcA`, checks the exact 1 kB GET_VERSION reply,
 and never displays/stores/logs tag credentials. A localhost-only HTTP session
 through `adb reverse`, protected by a random bearer nonce, carries a one-use

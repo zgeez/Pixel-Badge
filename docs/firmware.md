@@ -457,8 +457,13 @@ must be explicitly provisioned again; its old EEPROM URL is not erased.
 `firmware/configs/nfc-provisioning.conf` enables the temporary SWD mailbox and
 host/Android provisioning tools. It also permits a bench URL change that is
 persisted, rendered as QR and written/read back on the tag before success.
-An NFC failure can leave the desired QR and old/incomplete tag data different;
-the command reports failure and exposes the last verified tag URL. Normal
+URL changes preview the candidate QR without modifying settings. They persist
+the URL only after successful display submission and guarded tag verification.
+A failure or timeout restores the previous QR/mode and leaves the durable URL
+unchanged; tag work that started is followed by a guarded rollback attempt.
+Late display/tag completion cannot commit a cancelled request. A failed rollback
+can leave tag data different or incomplete: the command reports failure, exposes
+the last verified tag URL and keeps the tag out of service. Normal
 builds omit this interface. BLE/app destination selection is P2. Build, flash,
 RF proof, passive-read and recovery instructions are in
 [nfc-prototype.md](nfc-prototype.md).

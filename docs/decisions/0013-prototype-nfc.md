@@ -34,6 +34,9 @@ frames or an unreliable FD guard revoke the cached credential proof; a restart
 or lost receipt then requires explicit provisioning. An unchanged verified URL
 avoids EEPROM writes. Updates clear extra RF locks while retaining CC locks.
 Display and NFC completion both gate bench configuration success.
+Preview URL changes without persisting settings; commit only after both
+verifications pass. On error/timeout restore the previous display state and
+attempt guarded tag rollback. Late completion cannot commit a cancelled change.
 
 ## Consequences
 

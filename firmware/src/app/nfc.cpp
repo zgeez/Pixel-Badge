@@ -3,6 +3,7 @@
 #include "badge/nfc_platform.hpp"
 #include "badge/settings_store.hpp"
 #include "badge/modes.hpp"
+#include "badge/url_update.hpp"
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/settings/settings.h>
@@ -27,9 +28,7 @@ bool proof;
  * Reject its receipts and SWD protocol so an old helper cannot finalize. */
 constexpr uint8_t kProofVersion = 2;
 int last_result = -EAGAIN;
-bool url_request, url_waiting, display_pending;
-char requested[kPayloadMax + 1];
-int url_result;
+UrlUpdate url_update;
 
 struct Receipt {
 	uint8_t bytes[9]{};
@@ -64,7 +63,7 @@ int store_receipt()
 	return settings_save_one("nfc/verified", bytes, sizeof(bytes));
 }
 
-int synchronize(Ntag &tag)
+int synchronize(Ntag &tag, const char *url)
 {
 	if (!proof) {
 		return -EACCES;
@@ -98,7 +97,7 @@ int synchronize(Ntag &tag)
 		}
 	}
 	if (rc == 0) {
-		rc = tag.synchronize(desired, strlen(desired));
+		rc = tag.synchronize(url, strlen(url));
 	}
 	if (tag.rf_events() != events) {
 		proof = false;
@@ -108,7 +107,7 @@ int synchronize(Ntag &tag)
 		rc = store_receipt();
 	}
 	if (rc == 0) {
-		memcpy(verified, desired, sizeof(verified));
+		memcpy(verified, url, strlen(url) + 1);
 	}
 	return rc;
 }
@@ -147,30 +146,42 @@ void publish(Ntag &tag, int result, uint32_t sequence)
 
 int change_url(Ntag &tag, const char *url, size_t length)
 {
-	if (!valid_url(url, length)) {
-		return -EINVAL;
-	}
 	k_mutex_lock(&state_mutex, K_FOREVER);
-	memcpy(requested, url, length);
-	requested[length] = '\0';
-	url_result = -EINPROGRESS;
-	url_waiting = url_request = true;
+	int rc = url_update.begin(url, length, k_uptime_get());
 	k_mutex_unlock(&state_mutex);
-	const int64_t deadline = k_uptime_get() + 3000;
-	int rc = -EINPROGRESS;
-	while (rc == -EINPROGRESS && k_uptime_get() < deadline) {
-		k_sleep(K_MSEC(20));
+	if (rc != 0) {
+		return rc;
+	}
+	while (true) {
+		char target[kPayloadMax + 1];
 		k_mutex_lock(&state_mutex, K_FOREVER);
-		rc = url_result;
+		const bool work = url_update.take_tag(target, k_uptime_get());
+		const bool done = url_update.phase() == UrlUpdate::Phase::kDone;
+		if (done) {
+			rc = url_update.result();
+			if (rc == 0) {
+				memcpy(desired, url, length);
+				desired[length] = '\0';
+			} else if (url_update.rollback_result() != 0) {
+				LOG_WRN("NFC URL rollback failed (%d); tag remains unverified",
+					url_update.rollback_result());
+			}
+		}
 		k_mutex_unlock(&state_mutex);
+		if (done) {
+			return rc;
+		}
+		if (work) {
+			const int result = synchronize(tag, target);
+			k_mutex_lock(&state_mutex, K_FOREVER);
+			url_update.tag_result(result, k_uptime_get());
+			k_mutex_unlock(&state_mutex);
+		} else {
+			/* Cancellation restores main-loop state before completion. A
+			 * permanently stalled main loop resets through its watchdog. */
+			k_sleep(K_MSEC(20));
+		}
 	}
-	k_mutex_lock(&state_mutex, K_FOREVER);
-	url_waiting = url_request = false;
-	k_mutex_unlock(&state_mutex);
-	if (rc == -EINPROGRESS) {
-		return -ETIMEDOUT;
-	}
-	return rc == 0 ? synchronize(tag) : rc;
 }
 
 void commands(Ntag &tag)
@@ -238,13 +249,13 @@ void commands(Ntag &tag)
 				}
 				proof = rc == 0;
 				if (rc == 0) {
-					rc = synchronize(tag);
+					rc = synchronize(tag, desired);
 				}
 				last_result = rc;
 			}
 			pending = false;
 		} else if (command == 5) {
-			rc = synchronize(tag);
+			rc = synchronize(tag, desired);
 			last_result = rc;
 		}
 		erase_sensitive(credentials, sizeof(credentials));
@@ -269,7 +280,7 @@ void worker(void *, void *, void *)
 	if (proof) {
 		memcpy(expected_uid, receipt.bytes + 1, sizeof(expected_uid));
 	}
-	last_result = writable ? synchronize(tag) : -EPERM;
+	last_result = writable ? synchronize(tag, desired) : -EPERM;
 	LOG_INF("NFC boot result %d; %s", last_result,
 		last_result == 0 ? "QR URL verified"
 				 : "needs verification/provisioning; remove reader field");
@@ -293,41 +304,15 @@ void start_nfc(const char *url, bool allow_writes)
 bool poll_nfc(SettingsService &settings, Modes &modes)
 {
 	k_mutex_lock(&state_mutex, K_FOREVER);
-	const bool pending = url_request;
-	char input[kPayloadMax + 1];
-	if (pending) {
-		memcpy(input, requested, sizeof(input));
-		url_request = false;
-	}
+	const bool changed = url_update.poll(settings, modes, store_field, nullptr, k_uptime_get());
 	k_mutex_unlock(&state_mutex);
-	if (!pending) {
-		return false;
-	}
-	int rc = settings.save(Field::kUrl, input, strlen(input), store_field, nullptr);
-	if (rc == 0 && !modes.configure(settings.values())) {
-		rc = -EIO;
-	}
-	if (rc == 0 && modes.active() != Mode::kQr) {
-		modes.next(0);
-	}
-	k_mutex_lock(&state_mutex, K_FOREVER);
-	if (rc == 0) {
-		memcpy(desired, settings.values().url, sizeof(desired));
-		display_pending = true;
-	} else {
-		url_result = rc;
-	}
-	k_mutex_unlock(&state_mutex);
-	return rc == 0;
+	return changed;
 }
 
 void nfc_display_result(int result)
 {
 	k_mutex_lock(&state_mutex, K_FOREVER);
-	if (display_pending && url_waiting && result == 0) {
-		url_result = 0;
-		display_pending = false;
-	}
+	url_update.display_result(result, k_uptime_get());
 	k_mutex_unlock(&state_mutex);
 }
 } // namespace badge
