@@ -11,6 +11,7 @@
 
 #include "icm4268x_reg.h"
 #include "icm42688_emul.h"
+#include "bus_lock.h"
 
 #define B0(reg) ((uint8_t)FIELD_GET(REG_ADDRESS_MASK, (reg)))
 
@@ -155,7 +156,13 @@ ZTEST(icm42688_i2c, test_data_ready_trigger)
 	zassert_equal(icm42688_emul_get(emul, 0, B0(REG_INT_SOURCE0)), BIT_UI_DRDY_INT1_EN);
 
 	icm42688_emul_set(emul, 0, B0(REG_INT_STATUS), BIT_DATA_RDY_INT);
+	/* The deferred IRQ reader must not enter a guarded NFC bus interval. */
+	zassert_ok(badge_bus_lock());
 	zassert_ok(gpio_emul_input_set(int1.port, int1.pin, 1));
+	k_sleep(K_MSEC(10));
+	zassert_equal(k_sem_take(&drdy_sem, K_NO_WAIT), -EBUSY);
+	zassert_equal(icm42688_emul_get(emul, 0, B0(REG_INT_STATUS)), BIT_DATA_RDY_INT);
+	badge_bus_unlock();
 	zassert_ok(k_sem_take(&drdy_sem, K_MSEC(100)), "handler not called");
 	zassert_equal(icm42688_emul_get(emul, 0, B0(REG_INT_STATUS)), 0, "status cleared");
 	zassert_ok(gpio_emul_input_set(int1.port, int1.pin, 0));

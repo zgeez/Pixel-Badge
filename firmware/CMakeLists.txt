@@ -12,7 +12,14 @@ target_sources(app PRIVATE
 	src/main.cpp
 	src/app/bringup.cpp
 	src/services/test_pattern.cpp
+	src/services/qr.cpp
+	src/services/ndef.cpp
+	src/services/ntag.cpp
+	src/platform/nfc_transport.cpp
 )
+add_subdirectory(lib/qrcodegen)
+target_link_libraries(app PRIVATE badge_qrcodegen)
+target_sources_ifdef(CONFIG_APP_NFC app PRIVATE src/app/nfc.cpp)
 target_sources_ifdef(CONFIG_DISPLAY app PRIVATE src/app/display_demo.cpp)
 if(CONFIG_APP_PROTOTYPE)
 	# Read sysbuild overrides too; a link change must not retain an old cache value.
@@ -43,10 +50,7 @@ if(CONFIG_APP_PROTOTYPE)
 	endif()
 	target_include_directories(app PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
 	target_compile_definitions(app PRIVATE BADGE_CONFIGURED_DEFAULT_URL=1)
-	add_subdirectory(lib/qrcodegen)
-	target_link_libraries(app PRIVATE badge_qrcodegen)
 	target_sources(app PRIVATE
-		src/services/qr.cpp
 		src/services/settings.cpp
 		src/services/buttons.cpp
 		src/services/boot_guard.cpp
