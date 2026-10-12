@@ -75,7 +75,7 @@ private:
 	uint32_t rf_events_ = 0;
 	bool busy_ = false;
 	uint64_t last_observed_ = 0;
-	int frame(const uint8_t *tx, uint8_t *rx, size_t length);
+	int frame(const uint8_t *tx, uint8_t *rx, size_t length, bool *attempted = nullptr);
 	int read_bytes(const uint8_t *selector, size_t length, uint8_t *output, size_t size);
 	int wait_ready(uint64_t started);
 	int release();

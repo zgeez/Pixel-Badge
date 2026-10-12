@@ -40,8 +40,11 @@ void erase_sensitive(void *buffer, size_t length)
 	}
 }
 
-int Ntag::frame(const uint8_t *tx, uint8_t *rx, size_t length)
+int Ntag::frame(const uint8_t *tx, uint8_t *rx, size_t length, bool *attempted)
 {
+	if (attempted != nullptr) {
+		*attempted = false;
+	}
 	if (io_.fd_latency_us > kNtagMaxFdLatencyUs) {
 		return -ERANGE;
 	}
@@ -60,6 +63,9 @@ int Ntag::frame(const uint8_t *tx, uint8_t *rx, size_t length)
 	}
 	const bool transferred = rc == 0;
 	if (transferred) {
+		if (attempted != nullptr) {
+			*attempted = true;
+		}
 		rc = tx != nullptr ? io_.write(io_.context, address_, tx, length)
 				   : io_.read(io_.context, address_, rx, length);
 		last_observed_ = io_.now_us(io_.context);
@@ -154,7 +160,21 @@ int Ntag::wait_ready(uint64_t started)
 		uint8_t status = 0;
 		const int rc = read_register(6, status);
 		if (rc != 0) {
-			return rc;
+			if (rc != -EAGAIN && rc != -EIO && rc != -ENXIO && rc != -EBUSY &&
+			    rc != -ETIMEDOUT) {
+				return rc;
+			}
+			/* Retry only session-register reads while programming remains
+			 * uncertain. A short bounded delay also advances time when a
+			 * failed lock/arm callback performs no I/O. Never restart the
+			 * original write timer or issue another EEPROM command here. */
+			const uint64_t elapsed = io_.now_us(io_.context) - started;
+			if (elapsed >= 5000) {
+				return -ETIMEDOUT;
+			}
+			const uint32_t delay = static_cast<uint32_t>(5000 - elapsed);
+			io_.wait_us(io_.context, delay < 50 ? delay : 50);
+			continue;
 		}
 		if (last_observed_ - started >= 5000) {
 			return -ETIMEDOUT;
@@ -200,19 +220,29 @@ int Ntag::write_block(uint8_t block, const uint8_t input[16], bool credentials)
 		erase_sensitive(data, sizeof(data));
 		return rc;
 	}
-	/* Even an errored/contended write may have started programming. Do not
-	 * permit another EEPROM command until completion has been observed. */
-	rc = frame(data, nullptr, sizeof(data));
+	/* Once handed to the transport, even an errored write may have started
+	 * programming. A guard rejection before handoff starts no write timer. */
+	bool attempted;
+	const uint32_t events = rf_events_;
+	rc = frame(data, nullptr, sizeof(data), &attempted);
 	const uint64_t started = last_observed_;
-	busy_ = true;
+	busy_ = attempted;
 	if (block == 0 && rc == 0) {
 		address_ = input[0] >> 1;
 	}
 	erase_sensitive(data, sizeof(data));
 	const int unlocked = io_.lock(io_.context, false);
+	if (!attempted) {
+		return rc != 0 ? rc : unlocked;
+	}
 	const int ready = wait_ready(started);
 	if (rc != 0 || unlocked != 0 || ready != 0) {
 		return rc != 0 ? rc : (unlocked != 0 ? unlocked : ready);
+	}
+	if (rf_events_ != events) {
+		/* Observing completion permits reconciliation, but an RF-affected
+		 * poll still requires the full metadata/data revalidation path. */
+		return -EAGAIN;
 	}
 	uint8_t verified[16];
 	rc = read_block(block, verified);

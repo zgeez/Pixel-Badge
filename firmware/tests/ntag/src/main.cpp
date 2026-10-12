@@ -17,6 +17,11 @@ struct Tag {
 	unsigned fail_program_writes = 0, error_clears = 0;
 	unsigned releases = 0;
 	int release_error = 0, fail_read_block = -1;
+	bool programming_pending = false, status_failure_forever = false;
+	bool status_lock_forever = false, ambiguous_write_error = false;
+	unsigned status_failures = 0, status_lock_failures = 0, status_polls = 0;
+	int status_error = -EIO, status_lock_error = -EBUSY;
+	unsigned status_lock_errors = 0;
 	uint32_t frame_us = 0;
 	bool fail_disarm = false;
 	bool pulse_on_enable = false, field_on_enable = false, fail_enable = false;
@@ -37,6 +42,14 @@ struct Tag {
 	static int lock(void *p, bool acquire)
 	{
 		auto &t = *static_cast<Tag *>(p);
+		if (acquire && t.programming_pending &&
+		    (t.status_lock_forever || t.status_lock_failures != 0)) {
+			if (t.status_lock_failures != 0) {
+				--t.status_lock_failures;
+			}
+			++t.status_lock_errors;
+			return t.status_lock_error;
+		}
 		zassert_equal(t.locked, !acquire);
 		t.locked = acquire;
 		return 0;
@@ -155,6 +168,11 @@ struct Tag {
 				t.memory[0][0] = 4;
 			}
 			t.done = t.clock + (t.busy_forever ? 10000000 : 4000);
+			t.programming_pending = true;
+			if (t.ambiguous_write_error) {
+				return -EIO; /* Programming began, but the transport reports
+						failure. */
+			}
 		}
 		return 0;
 	}
@@ -167,8 +185,20 @@ struct Tag {
 		}
 		if (t.register_read) {
 			zassert_equal(size, 1);
+			if (t.reg == 6 && t.programming_pending) {
+				++t.status_polls;
+				if (t.status_failure_forever || t.status_failures != 0) {
+					if (t.status_failures != 0) {
+						--t.status_failures;
+					}
+					return t.status_error;
+				}
+			}
 			data[0] = t.reg == 6 ? (t.session[6] & ~2) | (t.clock < t.done ? 2 : 0)
 					     : t.session[t.reg];
+			if (t.reg == 6 && (data[0] & 2) == 0) {
+				t.programming_pending = false;
+			}
 		} else {
 			zassert_true(t.clock >= t.done, "EEPROM read during programming");
 			zassert_equal(size, 16);
@@ -259,6 +289,115 @@ ZTEST(ntag, test_busy_timeout_and_ack_without_programming)
 	zassert_equal(tag.read_block(1, model.memory[1]), -EBUSY);
 	zassert_equal(tag.synchronize("HTTPS://A.B/Y", 13), -EBUSY);
 	zassert_equal(model.writes, writes);
+}
+
+ZTEST(ntag, test_unattempted_write_does_not_poison_busy_state)
+{
+	for (unsigned fault = 0; fault < 3; ++fault) {
+		Tag model;
+		model.clock = 100000; /* Any old last_observed timestamp is stale. */
+		model.rf = fault == 0;
+		model.pulse_on_enable = fault == 1;
+		model.fail_field_read = fault == 2 ? 1 : 0;
+		Ntag tag(model.io());
+		uint8_t data[16]{};
+		zassert_equal(tag.write_block(2, data), fault == 2 ? -EIO : -EAGAIN);
+		zassert_equal(model.frames, 0);
+		zassert_equal(model.writes, 0);
+		zassert_equal(model.status_polls, 0);
+		zassert_true(model.clock < 101000); /* No completion wait for a rejected frame. */
+		zassert_false(model.locked || model.armed);
+		model.rf = model.pulse_on_enable = false;
+		zassert_ok(tag.read_block(0, data));
+		zassert_ok(tag.write_block(2, data));
+		zassert_equal(model.writes, 1);
+	}
+}
+
+ZTEST(ntag, test_started_write_with_transport_error_remains_busy_until_observed)
+{
+	Tag model;
+	model.ambiguous_write_error = model.busy_forever = true;
+	Ntag tag(model.io());
+	uint8_t data[16]{};
+	zassert_equal(tag.write_block(2, data), -EIO);
+	zassert_equal(model.writes, 1);
+	zassert_true(model.status_polls > 0);
+	zassert_equal(tag.read_block(0, data), -EBUSY);
+	zassert_equal(tag.write_block(2, data), -EBUSY);
+	zassert_equal(model.writes, 1);
+}
+
+ZTEST(ntag, test_transient_status_reads_retry_without_restarting_programming)
+{
+	constexpr int errors[] = {-EAGAIN, -EIO, -ENXIO, -ETIMEDOUT};
+	for (int error : errors) {
+		Tag model;
+		auto io = model.io();
+		io.fd_latency_us = 0;
+		model.status_failures = 1;
+		model.status_error = error;
+		Ntag tag(io);
+		uint8_t data[16]{};
+		zassert_ok(tag.write_block(2, data));
+		zassert_equal(model.status_polls, 2);
+		zassert_equal(model.writes, 1);
+		zassert_true(model.clock >= model.done);
+		zassert_ok(tag.read_block(2, data));
+	}
+}
+
+ZTEST(ntag, test_transient_status_lock_failure_retries_with_time_progress)
+{
+	constexpr int errors[] = {-EBUSY, -EAGAIN, -ETIMEDOUT};
+	for (int error : errors) {
+		Tag model;
+		model.status_lock_failures = 1;
+		model.status_lock_error = error;
+		Ntag tag(model.io()); /* Default 500 us still fits an immediate lock retry. */
+		uint8_t data[16]{};
+		zassert_ok(tag.write_block(2, data));
+		zassert_equal(model.status_lock_errors, 1);
+		zassert_equal(model.status_polls, 1);
+		zassert_equal(model.writes, 1);
+	}
+}
+
+ZTEST(ntag, test_rf_affected_status_poll_clears_busy_but_requires_revalidation)
+{
+	Tag model;
+	auto io = model.io();
+	io.fd_latency_us = 0;
+	model.fail_frame = 3; /* Write, status selector, then RF-affected status data. */
+	Ntag tag(io);
+	uint8_t data[16]{};
+	zassert_equal(tag.write_block(2, data), -EAGAIN);
+	zassert_equal(tag.rf_events(), 1);
+	zassert_true(tag.tainted());
+	zassert_equal(model.writes, 1);
+	zassert_ok(tag.read_block(2, data)); /* Completion observed; not stuck EBUSY. */
+}
+
+ZTEST(ntag, test_persistent_status_failures_remain_bounded_and_block_eeprom)
+{
+	for (unsigned fault = 0; fault < 3; ++fault) {
+		Tag model;
+		auto io = model.io();
+		io.fd_latency_us = 0;
+		model.status_lock_forever = fault == 0;
+		model.status_failure_forever = fault != 0;
+		model.status_error = fault == 2 ? -ENODEV : -EIO;
+		Ntag tag(io);
+		uint8_t data[16]{};
+		zassert_equal(tag.write_block(2, data), fault == 2 ? -ENODEV : -ETIMEDOUT);
+		zassert_true(model.clock <= 5050);
+		zassert_true(model.status_polls < 20);
+		zassert_true(model.status_lock_errors < 30);
+		zassert_equal(model.writes, 1);
+		zassert_equal(tag.read_block(2, data), -EBUSY);
+		zassert_equal(tag.write_block(2, data), -EBUSY);
+		zassert_equal(model.writes, 1);
+	}
 }
 
 ZTEST(ntag, test_rf_transition_revalidation_and_no_active_field_writes)

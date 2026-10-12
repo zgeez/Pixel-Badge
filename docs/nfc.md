@@ -182,6 +182,16 @@ If clear/readback fails, further EEPROM commands remain blocked. This follows
 [NXP Table 14](https://www.nxp.com/docs/en/data-sheet/NT3H2111_2211.pdf); no new
 hardware recovery or timing acceptance is claimed.
 
+Only a frame handed to the transport enters EEPROM busy/completion tracking;
+a pre-frame guard rejection returns its error without starting a write timer.
+After a write starts, transient guarded NS_REG read/address/lock failures retry
+while the original STOP-based 5 ms budget has room for another guarded sample.
+Retries issue no further EEPROM command and use a short bounded delay when no
+I/O occurred. A fatal error, exhausted guard budget or missing completion keeps
+EEPROM commands blocked. An RF-affected poll that eventually observes completion
+still requires full metadata/data reconciliation and revokes cached credential
+proof at the runtime layer. See [NXP errata §2.3.1 and §4](https://www.nxp.com/docs/en/errata/ES_NT3H2111_2211.pdf).
+
 The receipt at `nfc/verified` contains only a version, UID and RF-proof version.
 Proof version 2 rejects old receipts from the ambiguous v0.2 verifier; those
 tags require fresh explicit provisioning. The corrected v0.3 helper requires
