@@ -9,8 +9,15 @@ persistence, factory-reset or forced-watchdog tests. That pass predates the
 display, schema and settings-read recovery corrections; the revised image
 requires a new bench run.
 See the [foundation result](validation.md#result-prototype-foundation-on-the-dk).
-Peripheral bring-up checks and QR screening remain separate options. BLE,
-NFC updates and audio modes are not implemented yet. Rev A remains a board
+Peripheral bring-up checks and QR screening remain separate options. P1 NFC
+updates and explicit RF provisioning are implemented and host-tested. Provisioning
+has historical SWD/RTT confirmation, but helper v0.2 could mistake an RF I/O
+error for password rejection; repeat provisioning with v0.3 is pending.
+On 2026-10-12 the owner reported LinkedIn URL
+reads before power-off, while off and after restoration passed. Protection,
+timing and broader phone/content acceptance remain pending.
+See the [P1 procedure](nfc-prototype.md). BLE and audio modes remain future work.
+Rev A remains a board
 compatibility build with no badge matrix backend.
 
 ## Platform
@@ -413,15 +420,12 @@ count, and the microphone level every 5 s:
 
 - IMU: identity (checked by the driver), one sample with the gravity magnitude,
   and the data-ready interrupt rate (100 Hz expected).
-- NFC tag: reads block 00h over I²C and checks that byte 0 reads 04h. The read
-  follows the field-detect guarded procedure in [nfc.md](nfc.md): it does not
-  start while an RF field is present, sends the block address and the read as
-  separate frames (START and STOP), and before and after each frame waits the
-  field-detect latency and checks for a field, so no frame starts until a field
-  that arose during the previous one would have shown. Any RF field
-  or activity fails the check, because the tag then needs full verification
-  before use. The field-detect latency on the DK is not measured yet, so a
-  fixed margin is used. It writes nothing to the tag.
+- NFC tag: the P1 worker owns runtime verification and the FD latch; the
+  bring-up check logs delegation to that service. In builds without the worker,
+  the shared transport initializes volatile NC_REG for field detection, reads
+  block 00h and checks UID byte 0 (`04h`). It writes no EEPROM. Frames use the
+  guarded procedure in [nfc.md](nfc.md), STOP-separated reads and the same bus
+  mutex as IMU fetch/trigger setup. The DK FD-latency margin is unmeasured.
 - Microphone: captures both PDM channels at 32 kHz with the clock near 2 MHz
   (the MP34DT01-M's range is 1–3.25 MHz, 2.4 MHz typical; at 1.25 MHz the
   quiet level was over three times higher) and logs the mean, AC RMS and
@@ -439,6 +443,30 @@ every terminal on the DK's J-Link COM ports and log over RTT instead. If one was
 opened, power-cycle the DK by unplugging its USB cable. For captures that do not
 need the debugger, the nRF ONLY switch (SW6) disconnects the interface MCU
 completely, including SWD, so flashing and RTT stop working until it is set back.
+
+### P1 NFC service
+
+The default prototype starts a dedicated NFC worker with the persisted URL.
+It synchronizes only a tag with a matching verified UID/profile receipt and
+valid access policy. Safe mode or settings I/O failure disables writes.
+The fixed-buffer service uses EEPROM, public RF reads, protected RF writes,
+reversible CC locks and no SRAM mirroring/pass-through. The `nfc/verified`
+NVS key stores no password. Factory reset removes it, so the external tag
+must be explicitly provisioned again; its old EEPROM URL is not erased.
+
+`firmware/configs/nfc-provisioning.conf` enables the temporary SWD mailbox and
+host/Android provisioning tools. It also permits a bench URL change that is
+persisted, rendered as QR and written/read back on the tag before success.
+URL changes preview the candidate QR without modifying settings. They persist
+the URL only after successful display submission and guarded tag verification.
+A failure or timeout restores the previous QR/mode and leaves the durable URL
+unchanged; tag work that started is followed by a guarded rollback attempt.
+Late display/tag completion cannot commit a cancelled request. A failed rollback
+can leave tag data different or incomplete: the command reports failure, exposes
+the last verified tag URL and keeps the tag out of service. Normal
+builds omit this interface. BLE/app destination selection is P2. Build, flash,
+RF proof, passive-read and recovery instructions are in
+[nfc-prototype.md](nfc-prototype.md).
 
 ### Rev A board
 

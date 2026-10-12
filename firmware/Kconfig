@@ -54,6 +54,30 @@ config APP_WATCHDOG_TEST_LOOP
 	  Never enable in normal firmware. Stops the main-loop watchdog feed
 	  before a healthy boot; safe mode resumes feeding after three resets.
 
+config APP_NFC
+	bool "Persistent NFC URL service"
+	default y if APP_PROTOTYPE
+	depends on APP_PROTOTYPE && I2C && GPIO
+
+config APP_NFC_FD_LATENCY_US
+	int "Field-detect latency margin in microseconds"
+	default 500
+	range 0 500
+	help
+	  The prototype value is an unmeasured margin, not a validated latency.
+	  Measure field-detect timing before hardware acceptance.
+	  This transport supports at most 500 us, reserving status-frame and
+	  scheduling headroom within the fixed 5 ms EEPROM deadline. Higher
+	  measured latencies require a different transport design, not a longer
+	  write timeout. The portable engine rejects unsupported values before I/O.
+
+config APP_NFC_DEBUG_COMMANDS
+	bool "Debug-link NFC provisioning and URL commands"
+	depends on APP_NFC
+	help
+	  Explicit development command interface. No irreversible configuration
+	  locks are supported. Credentials remain transient and are never logged.
+
 endmenu
 
 source "Kconfig.zephyr"

@@ -8,6 +8,10 @@ passive NFC tag that shares the same link even when the badge is switched off.
 
 **Status:** prototype firmware foundation implemented: QR/name modes, persistent
 settings, two-button controls, MCUboot and watchdog recovery on the DK target.
+P1 NFC provisioning completed with helper v0.2, but factory-password rejection
+needs a fresh check with the corrected v0.3 verifier. The owner reports LinkedIn
+URL reads work powered, powered off and after restoration. Remaining checks are in the
+[phone bench procedure](docs/nfc-prototype.md).
 The owner reports the initial P0 bench procedure passed; later display/schema
 recovery corrections need a new bench run. Rev A has a schematic and board
 definition; its hardware-specific firmware comes later. See

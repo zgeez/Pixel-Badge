@@ -38,6 +38,17 @@ void Modes::next(uint32_t now)
 	}
 }
 
+bool Modes::configure(const Settings &settings)
+{
+	Frame qr;
+	if (safe_ || !encode_url(settings.url, strlen(settings.url), qr)) {
+		return false;
+	}
+	settings_ = settings;
+	qr_ = qr;
+	return true;
+}
+
 void Modes::orientation(Rotation rotation)
 {
 	current_rotation_ = rotation;

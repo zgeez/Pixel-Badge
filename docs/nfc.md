@@ -1,6 +1,9 @@
 # Passive NFC content and provisioning
 
-Status: **design decided; no hardware/security test results**. Rev A part:
+Status: **design accepted; corrected RF provisioning check pending; powered/off/restore URL
+reads owner-reported passed; full P1 acceptance pending**. See the [prototype bench procedure](nfc-prototype.md)
+and [ADR 0013](decisions/0013-prototype-nfc.md) for implementation and evidence
+limits. Rev A part:
 **NXP NT3H2111W0FHKH** (NTAG I²C plus 1 kB, XQFN-8 1.6 × 1.6 mm), a single
 footprint with no TSSOP alternative; development hardware uses a separate
 NTAG breakout. Coil tuning remains prototype-dependent. The configured contact URL is
@@ -146,3 +149,74 @@ requirement.
 
 Required evidence: [validation §6](validation.md#6-nfc). Primary document links
 and versions: [references.md](references.md#component-datasheets).
+
+## DK implementation and limits
+
+`services/ndef.cpp` encodes/decodes a bounded short URI record;
+`services/ntag.cpp` implements guarded STOP-separated frames, write-completion
+polling/readback, policy checks, lock clearing and bounded reconciliation.
+`platform/nfc_transport.cpp` supplies hardware timing, FD interrupts and the
+shared I2C mutex. `app/nfc.cpp` owns the worker and gates configuration success
+on display submission and verified NFC completion. The explicit development
+configuration enables SWD provisioning; the normal image omits that mailbox.
+Normal boot never generates credentials or provisions a tag.
+
+The FD guard clears its latch before enabling both-edge interrupts and samples
+the field before and after enabling. It retains completed handoff pulses for
+the pre-frame edge check; an active field or GPIO error prevents that frame.
+Physical FD timing remains unmeasured.
+
+The transport supports FD margins from 0 to 500 microseconds; Kconfig and the
+portable engine reject larger values before I/O. Status polling schedules its
+first sample around the nominal 4 ms programming time, still requires BUSY to
+clear within the fixed 5 ms deadline and rejects late samples. It avoids starting
+another poll when even its pre-sample guards would exhaust the deadline. The
+default 500 microseconds remains unmeasured: higher measured latency needs a
+different transport design rather than a relaxed deadline. See the
+[NXP errata §2.3.1](https://www.nxp.com/docs/en/errata/ES_NT3H2111_2211.pdf).
+
+On a completed write with EEPROM_WR_ERR set, the service reports failure and
+clears only that bit through a guarded session-register write, then checks the
+clear. This permits bounded verified retries without hiding the failed write.
+If clear/readback fails, further EEPROM commands remain blocked. This follows
+[NXP Table 14](https://www.nxp.com/docs/en/data-sheet/NT3H2111_2211.pdf); no new
+hardware recovery or timing acceptance is claimed.
+
+Only a frame handed to the transport enters EEPROM busy/completion tracking;
+a pre-frame guard rejection returns its error without starting a write timer.
+After a write starts, transient guarded NS_REG read/address/lock failures retry
+while the original STOP-based 5 ms budget has room for another guarded sample.
+Retries issue no further EEPROM command and use a short bounded delay when no
+I/O occurred. A fatal error, exhausted guard budget or missing completion keeps
+EEPROM commands blocked. An RF-affected poll that eventually observes completion
+still requires full metadata/data reconciliation and revokes cached credential
+proof at the runtime layer. See [NXP errata §2.3.1 and §4](https://www.nxp.com/docs/en/errata/ES_NT3H2111_2211.pdf).
+
+The receipt at `nfc/verified` contains only a version, UID and RF-proof version.
+Proof version 2 rejects old receipts from the ambiguous v0.2 verifier; those
+tags require fresh explicit provisioning. The corrected v0.3 helper requires
+the exact wrong-password NAK (`00h`, datasheet Table 17) in the fresh factory
+password session. CRC/parity, arbitration, AUTHLIM and transport errors never
+prove password rejection. A healthy public read cannot reinterpret an I/O error.
+It is invalidated before I2C synchronization and restored after a clean check.
+RF activity during frames or an unreliable FD guard revokes credential proof;
+lost proof requires fresh two-session provisioning. Trusted local SWD/MCU
+access is assumed. No REG_LOCK or irreversible configuration write is offered.
+Address byte `04h` means seven-bit address `02h`, not `04h` or the factory `55h`.
+Protected-policy verification, synchronization and provisioning finalization
+require the active address `02h`. Block 0's fixed `04h` UID readback cannot
+verify the address. A tag discovered at `55h` requires explicit provisioning;
+normal synchronization cannot repair its address or republish the receipt.
+The CC lock bytes are `09 00` (L_CC + BL_CC); ordinary updates clear other
+static/dynamic RF locks. The helper rejects other GET_VERSION variants.
+
+The DK retains its shared 400 kHz IMU bus and has no switched tag supply. Its
+500 microsecond FD margin is unmeasured; SCL high/low timing is also unmeasured.
+The hardware recovery sequence above applies to the Rev A design, not the DK.
+The development fixture requires reader removal and whole-fixture power
+cycling after bounded recovery fails. No coil, passive-read, RF-protection or
+timing acceptance is established by compilation or host simulation.
+
+This prototype emits the bounded URI TLV using AN11786's minimal initialization
+example. It does not emit a Lock Control TLV or claim complete NFC Forum Type 2
+mapping conformance. Broader message/memory-map support requires that review.

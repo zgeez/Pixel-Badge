@@ -52,4 +52,27 @@ ZTEST(modes, test_brightness_cycle)
 	zassert_equal(next_brightness(17), 64);
 }
 
+ZTEST(modes, test_configure_preserves_rotation_and_rejects_invalid_url)
+{
+	Modes modes;
+	modes.start(kDefaultSettings, false);
+	modes.orientation(Rotation::k90);
+	modes.next(10);
+	modes.next(20);
+	Settings changed = kDefaultSettings;
+	strcpy(changed.url, "HTTPS://A.B/X");
+	zassert_true(modes.configure(changed));
+	Frame base, expected, actual;
+	zassert_true(encode_url(changed.url, strlen(changed.url), base));
+	rotate(base, expected, Rotation::k90);
+	modes.render(actual, 30);
+	zassert_mem_equal(expected.bytes, actual.bytes, sizeof(actual.bytes));
+	strcpy(changed.url, "invalid");
+	zassert_false(modes.configure(changed));
+	modes.render(actual, 40);
+	zassert_mem_equal(expected.bytes, actual.bytes, sizeof(actual.bytes));
+	modes.start(kDefaultSettings, true);
+	zassert_false(modes.configure(changed));
+}
+
 ZTEST_SUITE(modes, nullptr, nullptr, nullptr, nullptr, nullptr);

@@ -4,14 +4,15 @@
  * Bring-up self-tests through Zephyr driver APIs:
  * - IMU: identity (checked by the driver at init), one sample, gravity
  *   magnitude at rest, and the data-ready interrupt rate.
- * - NFC tag (NT3H2111): read block 00h over I2C (read only) and the field
- *   detect level. No EEPROM writes: they need the tag's write procedure.
+ * - NFC tag (NT3H2111): delegated guarded read/session setup, or runtime NFC
+ *   status when the service owns the tag. No EEPROM writes in the self-check.
  * - Microphone: PDM capture on both channels; mean, AC RMS and range of each. Raw
  *   samples stay in the capture buffers and are discarded; only levels are
  *   logged.
  */
 
 #include "badge/bringup.hpp"
+#include "badge/nfc_platform.hpp"
 
 #include <stdint.h>
 
@@ -98,7 +99,11 @@ int imu_read(int32_t accel_mms2[3], int32_t gyro_mdps[3])
 
 	/* The first samples after power-up are not ready yet (-EAGAIN). */
 	for (int i = 0; i < 10 && err == -EAGAIN; i++) {
-		err = sensor_sample_fetch(imu);
+		err = bench_bus_lock();
+		if (err == 0) {
+			err = sensor_sample_fetch(imu);
+			bench_bus_unlock();
+		}
 		if (err == -EAGAIN) {
 			k_msleep(20);
 		}
@@ -151,7 +156,11 @@ int imu_check()
 	}
 
 	atomic_set(&drdy_count, 0);
-	err = sensor_trigger_set(imu, &drdy_trigger, on_drdy);
+	err = bench_bus_lock();
+	if (err == 0) {
+		err = sensor_trigger_set(imu, &drdy_trigger, on_drdy);
+		bench_bus_unlock();
+	}
 	if (err != 0) {
 		LOG_ERR("IMU: FAIL, data-ready trigger %d", err);
 		return failed + 1;
@@ -169,152 +178,14 @@ int imu_check()
 #endif
 
 #if HAVE_NTAG
-const struct device *const ntag_bus = DEVICE_DT_GET(DT_PHANDLE(USER_NODE, ntag_i2c_bus));
-constexpr uint16_t kNtagAddr = 0x55;
-
-#if DT_NODE_HAS_PROP(USER_NODE, nfc_fd_gpios) && defined(CONFIG_GPIO)
-/*
- * Every I2C transaction is guarded by field detect, as docs/nfc.md requires
- * (NXP errata ES_NT3H2111_2211 section 2.1): RF activity during I2C can turn a
- * read into an unintended EEPROM write. FD must signal RF field on and off
- * (the tag's FD setting; not yet verified on the bench click). The FD latency
- * is not measured on the DK yet, so kFdLatencyUs is an assumed margin.
- */
-const struct gpio_dt_spec ntag_fd = GPIO_DT_SPEC_GET(USER_NODE, nfc_fd_gpios);
-struct gpio_callback ntag_fd_cb;
-atomic_t ntag_fd_edges;
-constexpr uint32_t kFdLatencyUs = 500;
-static_assert(20 + kFdLatencyUs >= 50, "the FD wait doubles as the 50 us frame gap");
-
-void on_ntag_fd(const struct device *, struct gpio_callback *, uint32_t)
-{
-	atomic_inc(&ntag_fd_edges);
-}
-
-bool ntag_field_active()
-{
-	return gpio_pin_get_dt(&ntag_fd) > 0;
-}
-
-/* True once FD has had time to show any field that arose before this call:
- * waits 20 us plus the FD latency, then checks the level and the latch. */
-bool ntag_rf_seen_after_wait()
-{
-	k_busy_wait(20 + kFdLatencyUs);
-	return ntag_field_active() || atomic_get(&ntag_fd_edges) != 0;
-}
-
-/* Reads one 16-byte block: block address and data as two frames, each with
- * START and STOP. Every frame is guarded on both sides: the FD wait and check
- * run before it and after it, so no frame starts until any field that arose
- * during the previous one would have shown on FD. Nothing more is sent once a
- * field or an edge is seen (rf_seen). */
-int ntag_read_block(uint8_t block, uint8_t out[16], bool &rf_seen)
-{
-	atomic_set(&ntag_fd_edges, 0);
-	int err = gpio_pin_interrupt_configure_dt(&ntag_fd, GPIO_INT_EDGE_BOTH);
-
-	if (err != 0) {
-		return err;
-	}
-	/* Armed first, so a field arriving after this check is still caught. */
-	rf_seen = ntag_field_active() || ntag_rf_seen_after_wait();
-	if (!rf_seen) {
-		err = i2c_write(ntag_bus, &block, 1, kNtagAddr);
-		/* This wait is also the gap between frames (at least 50 us). */
-		rf_seen = ntag_rf_seen_after_wait();
-	}
-	if (!rf_seen && err == 0) {
-		err = i2c_read(ntag_bus, out, 16, kNtagAddr);
-		rf_seen = ntag_rf_seen_after_wait();
-	}
-	(void)gpio_pin_interrupt_configure_dt(&ntag_fd, GPIO_INT_DISABLE);
-	return err;
-}
-
-/* Between checks FD is only watched (no I2C), so the periodic log can show
- * whether the tag sees a reader's field. */
-void ntag_watch_field()
-{
-	atomic_set(&ntag_fd_edges, 0);
-	(void)gpio_pin_interrupt_configure_dt(&ntag_fd, GPIO_INT_EDGE_BOTH);
-}
-
-void ntag_log_field()
-{
-	if (ntag_fd_cb.handler != NULL) {
-		LOG_INF("NFC tag: field detect %s, %d edges in 5 s",
-			ntag_field_active() ? "active" : "inactive",
-			static_cast<int>(atomic_set(&ntag_fd_edges, 0)));
-	}
-}
-
-int ntag_check_once()
-{
-	uint8_t b[16];
-
-	if (!device_is_ready(ntag_bus) || !gpio_is_ready_dt(&ntag_fd)) {
-		LOG_ERR("NFC tag: FAIL, I2C bus or field-detect GPIO not ready");
-		return 1;
-	}
-	/* FD is open drain; the pull-up keeps an unconnected pin inactive. */
-	int err = gpio_pin_configure_dt(&ntag_fd, GPIO_INPUT | GPIO_PULL_UP);
-
-	if (err == 0 && ntag_fd_cb.handler == NULL) {
-		gpio_init_callback(&ntag_fd_cb, on_ntag_fd, BIT(ntag_fd.pin));
-		err = gpio_add_callback(ntag_fd.port, &ntag_fd_cb);
-	}
-	if (err != 0) {
-		LOG_ERR("NFC tag: FAIL, field-detect setup %d", err);
-		return 1;
-	}
-	bool rf_seen = false;
-
-	err = ntag_read_block(0x00, b, rf_seen);
-	if (rf_seen) {
-		/* The check does not retry: RF activity around a read may have
-		 * written EEPROM, so the tag's address, configuration and NDEF
-		 * blocks need full verification before use (docs/nfc.md), which
-		 * this read-only check does not do. */
-		LOG_ERR("NFC tag: FAIL, RF field or activity during the check; keep phones "
-			"away, and re-verify the tag before use");
-		return 1;
-	}
-	if (err != 0) {
-		LOG_ERR("NFC tag: FAIL, no answer at 0x%02x (%d)", kNtagAddr, err);
-		return 1;
-	}
-	LOG_HEXDUMP_INF(b, sizeof(b), "NFC tag: block 00h");
-	/* Byte 0 of block 00h always reads 04h over I2C (docs/nfc.md). */
-	if (b[0] != 0x04) {
-		LOG_ERR("NFC tag: FAIL, block 00h byte 0 is 0x%02x, expected 0x04", b[0]);
-		return 1;
-	}
-	LOG_INF("NFC tag: OK, CC %02x %02x %02x %02x", b[12], b[13], b[14], b[15]);
-	return 0;
-}
-
 int ntag_check()
 {
-	int failed = ntag_check_once();
-
-	if (ntag_fd_cb.handler != NULL) {
-		ntag_watch_field();
-	}
-	return failed;
+	return nfc_bringup_check();
 }
-#else
-int ntag_check()
-{
-	/* Without field detect the read cannot be guarded (docs/nfc.md). */
-	LOG_WRN("NFC tag: skipped, no field-detect line to guard I2C reads");
-	return 0;
-}
-
 void ntag_log_field()
 {
+	nfc_log_field();
 }
-#endif
 #endif
 
 #if HAVE_MIC

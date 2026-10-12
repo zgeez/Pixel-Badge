@@ -1,7 +1,8 @@
 # ADR 0012: Prototype settings, QR encoder and boot layout
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-11
+- Accepted by owner: 2026-10-12
 
 ## Context
 

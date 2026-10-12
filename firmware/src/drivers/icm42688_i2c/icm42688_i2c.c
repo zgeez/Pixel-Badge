@@ -23,6 +23,7 @@
 #include <zephyr/sys/util.h>
 
 #include "icm4268x_reg.h"
+#include "bus_lock.h"
 
 LOG_MODULE_REGISTER(icm42688_i2c, CONFIG_SENSOR_LOG_LEVEL);
 
@@ -107,17 +108,31 @@ static int select_bank(const struct device *dev, uint8_t bank)
 static int reg_write(const struct device *dev, uint8_t bank, uint8_t reg, uint8_t val)
 {
 	const struct icm42688_i2c_config *cfg = dev->config;
-	int ret = select_bank(dev, bank);
-
-	return ret ? ret : i2c_reg_write_byte_dt(&cfg->i2c, reg, val);
+	int ret = badge_bus_lock();
+	if (ret != 0) {
+		return ret;
+	}
+	ret = select_bank(dev, bank);
+	if (ret == 0) {
+		ret = i2c_reg_write_byte_dt(&cfg->i2c, reg, val);
+	}
+	badge_bus_unlock();
+	return ret;
 }
 
 static int reg_read(const struct device *dev, uint8_t bank, uint8_t reg, uint8_t *buf, uint32_t len)
 {
 	const struct icm42688_i2c_config *cfg = dev->config;
-	int ret = select_bank(dev, bank);
-
-	return ret ? ret : i2c_burst_read_dt(&cfg->i2c, reg, buf, len);
+	int ret = badge_bus_lock();
+	if (ret != 0) {
+		return ret;
+	}
+	ret = select_bank(dev, bank);
+	if (ret == 0) {
+		ret = i2c_burst_read_dt(&cfg->i2c, reg, buf, len);
+	}
+	badge_bus_unlock();
+	return ret;
 }
 
 static int reg_update(const struct device *dev, uint8_t bank, uint8_t reg, uint8_t mask,

@@ -6,6 +6,7 @@
 #include "badge/display_health.hpp"
 #include "badge/modes.hpp"
 #include "badge/settings_store.hpp"
+#include "badge/nfc.hpp"
 
 #include <zephyr/device.h>
 #include <zephyr/drivers/display.h>
@@ -130,6 +131,9 @@ void run_prototype()
 	uint32_t last_render = 0;
 	LOG_INF("badge ready: %s mode%s", modes.active() == Mode::kQr ? "QR" : "name",
 		safe ? " (safe)" : "");
+#if defined(CONFIG_APP_NFC)
+	start_nfc(safe ? kDefaultSettings.url : settings.values().url, !safe && load_rc == 0);
+#endif
 	while (true) {
 		const uint32_t now = static_cast<uint32_t>(k_uptime_get() - started_at);
 		if (IS_ENABLED(CONFIG_APP_WATCHDOG_TEST_LOOP) && !safe) {
@@ -137,6 +141,9 @@ void run_prototype()
 			k_sleep(K_FOREVER);
 		}
 		bool changed = false;
+#if defined(CONFIG_APP_NFC)
+		changed = poll_nfc(settings, modes);
+#endif
 		for (unsigned i = 0; buttons_ready && i < 2; ++i) {
 			const int level = gpio_pin_get_dt(&buttons[i]);
 			if (level < 0) {
@@ -179,6 +186,9 @@ void run_prototype()
 								  : settings.values().brightness);
 			const uint32_t completed =
 				static_cast<uint32_t>(k_uptime_get() - started_at);
+#if defined(CONFIG_APP_NFC)
+			nfc_display_result(modes.active() == Mode::kQr ? rc : -EAGAIN);
+#endif
 			const bool recovering = display_health.recovering();
 			display_health.report(rc, completed);
 			if (rc != 0) {
