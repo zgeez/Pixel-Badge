@@ -10,16 +10,18 @@ in the other documents in `docs/` and are marked TBD or provisional.
    zero-padded).
 2. Fill it in with status `Proposed` and open a pull request.
 3. When the owner approves the decision, change the status to `Accepted` in
-   the same pull request; the decision takes effect when that pull request is
-   merged.
+   the pull request and record the approval date. Approval may be recorded in
+   the pull request or an explicit owner instruction; the repository publishes
+   the decision when the change is merged.
 4. Do not rewrite accepted ADRs; supersede them with a new ADR and update the
    old one's status.
 
 ## Index
 
 The records below capture the owner-selected Rev A scope and architecture.
-Each was approved by the owner in the pull request that introduced it and
-takes effect when that pull request is merged, following the process above. Acceptance records a design choice, not
+Owner approval is recorded in the introducing pull request or a dated explicit
+instruction, following the process above. ADRs 0012 and 0013 were explicitly
+accepted on 2026-10-12. Acceptance records a design choice, not
 measured validation; prototype-dependent values remain provisional within each
 decision.
 
@@ -36,4 +38,5 @@ decision.
 | [0009](0009-dual-orientation-dual-mounting.md) | Portrait and landscape wear with firmware rotation; magnetic and lanyard mounting (amends 0006 and 0008) | Accepted |
 | [0010](0010-single-sided-assembly.md) | Single-sided assembly: all components on the front; rear holds the battery, its connector and the carrier; regional thickness targets (amends 0006 and 0008) | Accepted |
 | [0011](0011-visible-voice-recording.md) | Visible voice recording streamed to the phone app; no audio stored on the badge (amends 0001) | Accepted |
-| [0012](0012-prototype-foundation.md) | Prototype settings, QR encoder and MCUboot flash layout | Proposed |
+| [0012](0012-prototype-foundation.md) | Prototype settings, QR encoder and MCUboot flash layout | Accepted |
+| [0013](0013-prototype-nfc.md) | Guarded NFC updates and explicit two-session RF provisioning | Accepted |

@@ -257,6 +257,17 @@ Acceptance criteria: TBD.
 
 ### 6. NFC
 
+P1 DK implementation and owner steps: [nfc-prototype.md](nfc-prototype.md).
+Host tests and builds do not establish physical acceptance. The Nothing 4a
+Pro and iPhone 13 are the planned owner phone set. The
+[DK provisioning workflow](../validation/results/2026-10-11-dk-p1-provisioning/README.md)
+completed with direct SWD/RTT confirmation. On 2026-10-12 the owner reported
+LinkedIn URL reads before power-off, while off and after restoration passed.
+The v0.2 verifier accepted ambiguous RF transport errors as factory-password
+rejection. Its workflow result does not prove rejection; repeat provisioning
+with corrected helper v0.3 and firmware proof version 2 remains pending.
+Broader content/phone comparisons, protection and timing results remain pending.
+
 Purpose: verify tap reliability and read range across phone models with the
 battery, magnets, and rear carrier installed, with the badge on and off.
 
