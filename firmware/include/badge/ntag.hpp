@@ -5,6 +5,10 @@
 
 namespace badge
 {
+/* Four guards precede the first NS_REG sample; later samples must still
+ * observe a nominal 4 ms write before the fixed 5 ms deadline. */
+constexpr uint32_t kNtagMaxFdLatencyUs = 500;
+
 /* Arm only from a disarmed state. The edge latch must survive interrupt
  * enable; Ntag checks it after the pre-frame settling interval. */
 struct NtagFieldIo {

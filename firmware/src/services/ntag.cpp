@@ -42,6 +42,9 @@ void erase_sensitive(void *buffer, size_t length)
 
 int Ntag::frame(const uint8_t *tx, uint8_t *rx, size_t length)
 {
+	if (io_.fd_latency_us > kNtagMaxFdLatencyUs) {
+		return -ERANGE;
+	}
 	int rc = io_.arm(io_.context, true);
 	if (rc != 0) {
 		return rc;
@@ -134,7 +137,20 @@ int Ntag::wait_ready(uint64_t started)
 	/* now_us is the hardware-backed cycle counter on Zephyr. The deadline
 	 * begins at the write's STOP, before the post-frame RF guard. A status
 	 * sampled before expiry may finish its RF guard after expiry. */
+	const uint32_t guard = io_.fd_latency_us + 20 < 50 ? 50 : io_.fd_latency_us + 20;
+	/* Sparse guarded polls can straddle the entire 4-to-5 ms completion
+	 * window. Place the first sample at or after the nominal 4 ms program
+	 * time, reserving its three pre-sample guards. Never infer completion
+	 * from this delay: BUSY and ERR still decide the outcome. */
+	const uint64_t poll_at = 4000 - 3 * guard;
+	const uint64_t elapsed = io_.now_us(io_.context) - started;
+	if (elapsed < poll_at) {
+		io_.wait_us(io_.context, static_cast<uint32_t>(poll_at - elapsed));
+	}
 	while (io_.now_us(io_.context) - started < 5000) {
+		if (io_.now_us(io_.context) - started + 3 * guard >= 5000) {
+			return -ETIMEDOUT;
+		}
 		uint8_t status = 0;
 		const int rc = read_register(6, status);
 		if (rc != 0) {
@@ -144,8 +160,22 @@ int Ntag::wait_ready(uint64_t started)
 			return -ETIMEDOUT;
 		}
 		if ((status & kBusy) == 0) {
+			if ((status & kWriteError) != 0) {
+				/* Table 14: this error is latched until written to zero.
+				 * Keep EEPROM commands blocked unless clear/readback succeeds;
+				 * the failed program operation still returns an error. */
+				int cleared = write_register(6, kWriteError, 0);
+				uint8_t after = kWriteError;
+				if (cleared == 0) {
+					cleared = read_register(6, after);
+				}
+				if (cleared == 0 && (after & (kBusy | kWriteError)) == 0) {
+					busy_ = false;
+				}
+				return cleared != 0 ? cleared : -EIO;
+			}
 			busy_ = false;
-			return (status & kWriteError) != 0 ? -EIO : 0;
+			return 0;
 		}
 	}
 	return -ETIMEDOUT;
@@ -153,6 +183,9 @@ int Ntag::wait_ready(uint64_t started)
 
 int Ntag::write_block(uint8_t block, const uint8_t input[16], bool credentials)
 {
+	if (io_.fd_latency_us > kNtagMaxFdLatencyUs) {
+		return -ERANGE;
+	}
 	if (busy_) {
 		return -EBUSY;
 	}
@@ -208,6 +241,9 @@ int Ntag::release()
 
 int Ntag::initialize()
 {
+	if (io_.fd_latency_us > kNtagMaxFdLatencyUs) {
+		return -ERANGE;
+	}
 	/* Try only the documented factory and personalized addresses. Never
 	 * scan the shared IMU bus for arbitrary targets. */
 	const uint8_t addresses[] = {0x02, 0x55};

@@ -13,6 +13,9 @@ struct Tag {
 	uint8_t selector = 0, reg = 0;
 	bool locked = false, armed = false, register_read = false, rf = false;
 	bool busy_forever = false, drop_write = false;
+	bool fail_error_clear = false, drop_error_clear = false;
+	unsigned fail_program_writes = 0, error_clears = 0;
+	uint32_t frame_us = 0;
 	bool fail_disarm = false;
 	bool pulse_on_enable = false, field_on_enable = false, fail_enable = false;
 	unsigned field_reads = 0, fail_field_read = 0;
@@ -89,6 +92,7 @@ struct Tag {
 	{
 		zassert_true(t.locked && t.armed);
 		++t.frames;
+		t.clock += t.frame_us;
 		if (t.frames == t.fail_frame) {
 			++t.edges;
 		}
@@ -110,15 +114,29 @@ struct Tag {
 			t.register_read = true;
 		} else if (size == 4) {
 			zassert_equal(data[0], 0xfe);
+			if (data[1] == 6 && data[2] == 4 && data[3] == 0) {
+				++t.error_clears;
+				if (t.fail_error_clear) {
+					return -EIO;
+				}
+				if (t.drop_error_clear) {
+					return 0;
+				}
+			}
 			t.session[data[1]] = (t.session[data[1]] & ~data[2]) | (data[3] & data[2]);
 		} else {
 			zassert_equal(size, 17);
 			zassert_true(t.clock >= t.done, "EEPROM command during programming");
 			++t.writes;
-			if (!t.drop_write) {
+			const bool failed = t.fail_program_writes != 0;
+			if (failed) {
+				--t.fail_program_writes;
+				t.session[6] |= 4; /* Stays set until explicitly cleared. */
+			}
+			if (!t.drop_write && !failed) {
 				memcpy(t.memory[data[0]], data + 1, 16);
 			}
-			if (data[0] == 0 && !t.drop_write) {
+			if (data[0] == 0 && !t.drop_write && !failed) {
 				t.address = data[1] >> 1;
 				t.memory[0][0] = 4;
 			}
@@ -135,7 +153,8 @@ struct Tag {
 		}
 		if (t.register_read) {
 			zassert_equal(size, 1);
-			data[0] = t.reg == 6 ? (t.clock < t.done ? 2 : 0) : t.session[t.reg];
+			data[0] = t.reg == 6 ? (t.session[6] & ~2) | (t.clock < t.done ? 2 : 0)
+					     : t.session[t.reg];
 		} else {
 			zassert_true(t.clock >= t.done, "EEPROM read during programming");
 			zassert_equal(size, 16);
@@ -298,6 +317,92 @@ ZTEST(ntag, test_arm_preserves_completed_handoff_pulse)
 	zassert_equal(model.frames, 0);
 	zassert_equal(model.writes, 0);
 	zassert_false(model.locked || model.armed);
+}
+
+ZTEST(ntag, test_latched_program_error_is_reported_then_cleared_for_retry)
+{
+	Tag model;
+	Ntag tag(model.io());
+	uint8_t uid[7], data[16]{};
+	provision(model, tag, uid);
+	model.session[6] = 0x40; /* Clear must preserve I2C_LOCKED. */
+	model.fail_program_writes = 1;
+	zassert_equal(tag.write_block(2, data), -EIO);
+	zassert_equal(model.session[6], 0x40);
+	zassert_equal(model.error_clears, 1);
+	zassert_ok(tag.write_block(2, data));
+}
+
+ZTEST(ntag, test_reconciliation_recovers_a_single_error_but_bounds_repeated_errors)
+{
+	constexpr unsigned attempts[] = {1, 10};
+	for (unsigned failures : attempts) {
+		Tag model;
+		Ntag tag(model.io());
+		uint8_t uid[7];
+		provision(model, tag, uid);
+		const unsigned previous = model.writes;
+		model.fail_program_writes = failures;
+		const int rc = tag.synchronize("HTTPS://A.B/Y", 13);
+		zassert_equal(rc, failures == 1 ? 0 : -EIO);
+		zassert_equal(model.error_clears, failures == 1 ? 1 : 3);
+		zassert_equal(model.writes - previous, failures == 1 ? 4 : 3);
+		if (rc == 0) {
+			char url[kPayloadMax + 1];
+			zassert_ok(tag.read_url(url));
+			zassert_equal(strcmp(url, "HTTPS://A.B/Y"), 0);
+		}
+	}
+}
+
+ZTEST(ntag, test_failed_or_dropped_error_clear_blocks_further_programming)
+{
+	for (unsigned fault = 0; fault < 2; ++fault) {
+		Tag model;
+		Ntag tag(model.io());
+		uint8_t uid[7], data[16]{};
+		provision(model, tag, uid);
+		model.fail_program_writes = 1;
+		model.fail_error_clear = fault == 0;
+		model.drop_error_clear = fault == 1;
+		zassert_equal(tag.write_block(2, data), -EIO);
+		const unsigned writes = model.writes;
+		zassert_equal(tag.write_block(2, data), -EBUSY);
+		zassert_equal(model.writes, writes);
+		zassert_equal(model.session[6] & 4, 4);
+	}
+}
+
+ZTEST(ntag, test_supported_fd_margins_complete_programming_with_frame_time)
+{
+	for (uint32_t margin = 0; margin <= kNtagMaxFdLatencyUs; margin += 25) {
+		Tag model;
+		model.frame_us = 100; /* Conservative status-frame time, not a measurement. */
+		auto io = model.io();
+		io.fd_latency_us = margin;
+		Ntag tag(io);
+		uint8_t uid[7];
+		provision(model, tag, uid);
+		zassert_ok(tag.synchronize("HTTPS://A.B/Y", 13));
+	}
+}
+
+ZTEST(ntag, test_unsupported_fd_margins_are_rejected_before_any_io)
+{
+	constexpr uint32_t unsupported[] = {501, 2000, UINT32_MAX};
+	for (uint32_t margin : unsupported) {
+		Tag model;
+		auto io = model.io();
+		io.fd_latency_us = margin;
+		Ntag tag(io);
+		uint8_t data[16]{};
+		zassert_equal(tag.initialize(), -ERANGE);
+		zassert_equal(tag.read_block(0, data), -ERANGE);
+		zassert_equal(tag.write_block(2, data), -ERANGE);
+		zassert_equal(model.frames, 0);
+		zassert_equal(model.writes, 0);
+		zassert_false(model.armed || model.locked);
+	}
 }
 
 ZTEST(ntag, test_arm_checks_field_across_enable_and_errors)

@@ -166,6 +166,22 @@ the field before and after enabling. It retains completed handoff pulses for
 the pre-frame edge check; an active field or GPIO error prevents that frame.
 Physical FD timing remains unmeasured.
 
+The transport supports FD margins from 0 to 500 microseconds; Kconfig and the
+portable engine reject larger values before I/O. Status polling schedules its
+first sample around the nominal 4 ms programming time, still requires BUSY to
+clear within the fixed 5 ms deadline and rejects late samples. It avoids starting
+another poll when even its pre-sample guards would exhaust the deadline. The
+default 500 microseconds remains unmeasured: higher measured latency needs a
+different transport design rather than a relaxed deadline. See the
+[NXP errata §2.3.1](https://www.nxp.com/docs/en/errata/ES_NT3H2111_2211.pdf).
+
+On a completed write with EEPROM_WR_ERR set, the service reports failure and
+clears only that bit through a guarded session-register write, then checks the
+clear. This permits bounded verified retries without hiding the failed write.
+If clear/readback fails, further EEPROM commands remain blocked. This follows
+[NXP Table 14](https://www.nxp.com/docs/en/data-sheet/NT3H2111_2211.pdf); no new
+hardware recovery or timing acceptance is claimed.
+
 The receipt at `nfc/verified` contains only a version, UID and RF-proof version.
 Proof version 2 rejects old receipts from the ambiguous v0.2 verifier; those
 tags require fresh explicit provisioning. The corrected v0.3 helper requires

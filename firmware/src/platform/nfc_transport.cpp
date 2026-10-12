@@ -112,6 +112,7 @@ NtagIo nfc_transport()
 #else
 	constexpr uint32_t margin = 500;
 #endif
+	static_assert(margin <= kNtagMaxFdLatencyUs, "FD margin exceeds write polling budget");
 	return {nullptr, lock_bus, arm, field, edge_count, write, read, wait, time, margin};
 }
 

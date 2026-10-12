@@ -62,10 +62,14 @@ config APP_NFC
 config APP_NFC_FD_LATENCY_US
 	int "Field-detect latency margin in microseconds"
 	default 500
-	range 0 2000
+	range 0 500
 	help
 	  The prototype value is an unmeasured margin, not a validated latency.
 	  Measure field-detect timing before hardware acceptance.
+	  This transport supports at most 500 us, reserving status-frame and
+	  scheduling headroom within the fixed 5 ms EEPROM deadline. Higher
+	  measured latencies require a different transport design, not a longer
+	  write timeout. The portable engine rejects unsupported values before I/O.
 
 config APP_NFC_DEBUG_COMMANDS
 	bool "Debug-link NFC provisioning and URL commands"
