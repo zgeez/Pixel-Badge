@@ -23,7 +23,8 @@ design opens on any machine without local path changes.
 
 | Library item | Source |
 |---|---|
-| Symbol `MDBT53-P1M`, footprint `Raytac_MDBT53-P1M` | KiCad 10.0.6 conversion of Raytac's `MDBT53_230719.lbr` (Footprint & Design Guide 241021); pads checked against the source; Raytac antenna keep-out added as a rule area; pin electrical types set from the Ver.E §2.5 pin table (power pins `power_in`, so ERC checks they are driven). Raytac's 3D model is not redistributed here; the footprint uses the project envelope model (below) |
+| Symbol `E73-2G4M08S1C`, footprint `Ebyte_E73-2G4M08S1C` | U401 (nRF52840 module). Pin numbers, names and the land pattern from the Ebyte E73-2G4M08S1C specification (pin table; section 3 drawing, bottom view mirrored to the top view): 25 castellated pads at 1.27 mm and 15 inner 0.8 mm pads; castellated lands extend 0.3 mm beyond the 13 × 18 mm body. Antenna keep-out (all layers) at the ceramic-antenna end as a rule area; Ebyte gives no keep-out drawing. Symbol pins reuse the earlier MDBT53 pin locations so the MCU sheet wiring carried over. The footprint uses the project envelope model (below) |
+| Symbol `MDBT53-P1M`, footprint `Raytac_MDBT53-P1M` (no longer placed) | KiCad 10.0.6 conversion of Raytac's `MDBT53_230719.lbr` (Footprint & Design Guide 241021); pads checked against the source; Raytac antenna keep-out added as a rule area; pin electrical types set from the Ver.E §2.5 pin table (power pins `power_in`, so ERC checks they are driven). Raytac's 3D model is not redistributed here; the footprint uses the project envelope model (below) |
 | Symbol `TPS63802`, footprint `Texas_DLA0010A` | Drawn from TI SLVSEU9D: pins and electrical types from Table 7-1; pads from the DLA0010A land pattern example (drawing 4223750/D 03/2019), body 2.0 × 3.0 mm |
 | Symbol `TPS61023`, footprint `Texas_DRL0006A` | Drawn from TI SLVSF14B: pins from the pin-function table; pads from the DRL0006A land pattern example (drawing 4223266/F 11/2024) |
 | Symbol `ICM-42688-P` (footprint: KiCad `LGA-14_3x2.5mm_P0.5mm_LayoutBorder3x4y`) | Drawn from TDK DS-000347 Rev 1.2 Table 9; KiCad footprint pad centres (±1.1625, ±0.9125 mm) and numbering checked against §10.2 |
@@ -56,6 +57,7 @@ clearance and carrier checks only:
 | `Texas_DLA0010A.step` | 2.0 × 3.0 × 1.0 max | TI drawing 4223750/D (VSON-HR, 1 mm max height) |
 | `Texas_RYK0018A.step` | 3.0 × 2.5 × 0.8 max | TI drawing 4226526/A (WQFN-HR, 0.8 mm max height) |
 | `NXP_XQFN-8_SOT902-3.step` | 1.6 × 1.6 × 0.5 | NXP SOT902-3 package description |
+| `Ebyte_E73-2G4M08S1C.step` | 13.0 × 18.0 × 3.0, antenna end coloured | Ebyte specification section 3 (body and thickness) |
 | `Raytac_MDBT53-P1M.step` | 9.3 × 14.3 × 1.6, antenna end coloured | Raytac footprint outline and module height |
 | `USB_C_Receptacle_HRO_TYPE-C-31-M-12.step` | 8.94 × 7.3 × 3.26 shell | Footprint outline, HRO height |
 
