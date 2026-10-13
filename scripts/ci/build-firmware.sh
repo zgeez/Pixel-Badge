@@ -16,6 +16,9 @@ BUILD_DIR="${BUILD_DIR:-${repo_root}/build/nrf5340dk}"
 EXTRA_CONF_FILE="${EXTRA_CONF_FILE:-}"
 
 extra_args=()
+if [ -n "${SB_EXTRA_CONF_FILE:-}" ]; then
+    extra_args+=("-DSB_EXTRA_CONF_FILE=${SB_EXTRA_CONF_FILE}")
+fi
 if [ -n "${EXTRA_CONF_FILE}" ]; then
     # Sysbuild otherwise forwards a global fragment to MCUboot as well.
     if [ "$(cd "${APP_DIR}" && pwd)" = "${repo_root}/firmware" ] && [[ "${BOARD}" == */cpuapp ]]; then
@@ -28,5 +31,5 @@ fi
 # BOARD_ROOT makes the Rev A board (firmware/boards) visible to sysbuild too.
 # Zephyr also reads EXTRA_CONF_FILE from the environment in every image.
 # Pass it only through the image-scoped command argument prepared above.
-env -u EXTRA_CONF_FILE west build --pristine=auto -b "${BOARD}" -d "${BUILD_DIR}" "${APP_DIR}" \
+env -u EXTRA_CONF_FILE -u SB_EXTRA_CONF_FILE west build --pristine=auto -b "${BOARD}" -d "${BUILD_DIR}" "${APP_DIR}" \
     -- -DBOARD_ROOT="${repo_root}/firmware" ${extra_args[@]+"${extra_args[@]}"}

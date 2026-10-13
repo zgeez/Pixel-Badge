@@ -39,6 +39,8 @@ param(
     [string] $App = 'firmware',
     # Optional Kconfig fragment added to the application image.
     [string] $ExtraConfFile,
+    # Optional sysbuild-only fragment (for example the P2 BLE controller).
+    [string] $SysbuildConfFile,
     # Selects the local .env build default; stored settings still take precedence.
     [ValidateSet('Portfolio', 'LinkedIn', 'GitHub', 'Resume', 'Representative')]
     [string] $QrLink = 'Portfolio',
@@ -163,6 +165,10 @@ function Invoke-Build {
     # BOARD_ROOT makes the Rev A board (firmware/boards) visible to sysbuild too.
     $boardRoot = (Join-Path $RepoRoot 'firmware').Replace('\', '/')
     $cmakeArgs = @("-DBOARD_ROOT=$boardRoot")
+    if ($SysbuildConfFile) {
+        $sbConf = (Resolve-Path -LiteralPath $SysbuildConfFile).Path.Replace('\', '/')
+        $cmakeArgs += "-DSB_EXTRA_CONF_FILE=$sbConf"
+    }
     if ($App -eq 'firmware') {
         $cmakeArgs += "-DBADGE_QR_LINK=$($QrLink.ToUpperInvariant())"
     }
@@ -177,13 +183,16 @@ function Invoke-Build {
         $cmakeArgs += "-D${confKey}=$conf"
     }
     $previousExtraConf = $env:EXTRA_CONF_FILE
+    $previousSbExtraConf = $env:SB_EXTRA_CONF_FILE
     try {
         Remove-Item Env:EXTRA_CONF_FILE -ErrorAction SilentlyContinue
+        Remove-Item Env:SB_EXTRA_CONF_FILE -ErrorAction SilentlyContinue
         Invoke-Native west (@('build', "--pristine=$pristineArg", '-b', $Board,
             '-d', (Join-Path $RepoRoot $BuildDir), (Join-Path $RepoRoot $App),
             '--') + $cmakeArgs)
     } finally {
         $env:EXTRA_CONF_FILE = $previousExtraConf
+        $env:SB_EXTRA_CONF_FILE = $previousSbExtraConf
     }
 }
 

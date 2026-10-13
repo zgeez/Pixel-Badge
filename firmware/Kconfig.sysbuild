@@ -13,4 +13,14 @@ endchoice
 config PARTITION_MANAGER
 	default y if SOC_NRF5340_CPUAPP
 
+config BADGE_BLE
+	bool "Build prototype BLE and network-core controller"
+	depends on SOC_NRF5340_CPUAPP
+
+config NRF_DEFAULT_IPC_RADIO
+	default y if BADGE_BLE
+
+config NETCORE_IPC_RADIO_BT_HCI_IPC
+	default y if BADGE_BLE
+
 source "share/sysbuild/Kconfig"
