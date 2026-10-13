@@ -1,7 +1,7 @@
 # smart-led-badge
 
 A wearable smart identity/networking badge with a 32×32 monochrome white LED
-matrix, built on the Nordic nRF5340 with Zephyr RTOS. It shows a scannable QR
+matrix, built on Nordic nRF5 SoCs with Zephyr RTOS. It shows a scannable QR
 link and name/identity, runs a motion-driven fluid simulation and an audio
 visualization, is configured over BLE from a companion phone app, and carries a
 passive NFC tag that shares the same link even when the badge is switched off.
@@ -46,7 +46,7 @@ Rev A scope:
 
 | | |
 |---|---|
-| MCU | Nordic nRF5340: nRF5340 DK for development; Raytac MDBT53-P1M module on the badge |
+| MCU | Nordic nRF52840 on the badge (Ebyte E73-2G4M08S1C module, [ADR 0015](docs/decisions/0015-nrf52840-e73-module.md)); prototype firmware runs on the nRF5340 DK until the Rev A port |
 | Firmware | nRF Connect SDK v3.4.1 / Zephyr RTOS, C++17 |
 | Tests | Ztest, Twister (`native_sim`) |
 | Hardware | KiCad 10.0.6, 4-layer PCB (≤ 112 × 74 mm), JLCPCB assembly (provisional) |

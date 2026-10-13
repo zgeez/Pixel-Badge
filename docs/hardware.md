@@ -12,8 +12,8 @@ Items marked provisional may change. Electrical values come from primary datashe
 
 | | Development | Rev A badge |
 |---|---|---|
-| MCU | nRF5340 DK | Raytac MDBT53-P1M module (nRF5340) |
-| Debug | On-board debugger (SWD, RTT) | SWD header, UART test pads, test points |
+| MCU | nRF5340 DK (prototype firmware) | Ebyte E73-2G4M08S1C module (nRF52840), [ADR 0015](decisions/0015-nrf52840-e73-module.md) |
+| Debug | On-board debugger (SWD, RTT) | SWD header (RTT), test points; no UART or spare GPIO pads |
 | Display | Off-the-shelf HUB75 panel (below) | 32×32 white SMD LED matrix on the badge PCB |
 | NFC | NFC tag breakout (planned) | NFC tag (NTAG I²C plus family) with PCB coil |
 | Power | USB / bench supply | Independently protected 1-cell LiPo with USB-C charging |
@@ -45,7 +45,7 @@ scheme is not the badge design.
   the battery, its connector body and the carrier.
 - **Matrix:** 32×32 white SMD LEDs, 2.0 mm pitch (provisional, pending QR
   validation), 1:32 multiplexing (provisional). Two TI TLC59283 constant-current
-  column drivers and high-side row switches (provisional); refresh timed by nRF5340
+  column drivers and high-side row switches (provisional); refresh timed by nRF52840
   peripherals; column current set by R_IREF to 18.0 mA nominal (up to about
   19.4 mA with driver and resistor tolerance at 25 °C, the figure the battery
   limit uses) and adjustable downward only. If the scan stops, a retriggerable
@@ -60,9 +60,9 @@ scheme is not the badge design.
   URL updates; provision per [nfc.md](nfc.md), not factory defaults. Test
   access on the tag's VCC, SDA, SCL and FD.
 - **USB-C:** charging and USB 2.0 data (5 V sink, no USB Power Delivery), ESD
-  protected, on an edge. VBUS feeds both the charger input and MDBT53-P1M
-  VBUS pin 44, with the module USB supply circuit described in
-  [power.md](power.md); D+ → pin 46, D− → pin 48.
+  protected, on an edge. VBUS feeds both the charger input and the E73
+  VBUS pin 27, with the module USB supply circuit described in
+  [power.md](power.md); D+ → pin 31, D− → pin 29.
   CC1 and CC2 each have their own 5.1 kΩ, 1% Rd to ground, present with the
   switch off/battery absent; no joined CC pins or USB PD controller.
 - **Power:** protected 1-cell LiPo pack (Adafruit 328, 2500 mAh, genuine
@@ -74,7 +74,7 @@ scheme is not the badge design.
   charging-only state, by USB presence; TPS61023 boost LED rail with load
   disconnect, enabled by firmware. See [power.md](power.md).
   Battery state comes from a default-off high-side-switched VBAT divider to
-  nRF5340 SAADC, not the regulated logic rail; final sensing values and firmware
+  nRF52840 SAADC, not the regulated logic rail; final sensing values and firmware
   thresholds await design calculations and pack characterization.
 - **Runtime:** about eight hours under representative career-fair use is the
   design target, not a measured capability. Capacity alone does not establish
@@ -113,8 +113,7 @@ Selection is not validation: nothing below has been measured on Rev A.
 
 | Function | Part | Status |
 |---|---|---|
-| MCU module | Raytac MDBT53-P1M, Raytac Ver.E §8.1.2 reference circuit (normal voltage, DC/DC) | Selected; drawn |
-| Module DC/DC inductors | 2 × TDK MLZ1608M100WT000 (10 µH, 0603) | Selected; drawn |
+| MCU module | Ebyte E73-2G4M08S1C (nRF52840, ceramic antenna, 13 × 18 × 3.0 mm), normal voltage mode; DC/DC inductors, 32 MHz crystal and DECx/DECUSB capacitors inside the module (Ebyte §5.1) | Selected; drawn ([ADR 0015](decisions/0015-nrf52840-e73-module.md)) |
 | Charger / power path | TI BQ25620 (switching, I²C, BC1.2) | Selected; drawn; ≈ 1 A charge |
 | Logic rail (3.3 V) | TI TPS63802, Murata DFE201612E-R47M (0.47 µH) | Selected; drawn |
 | LED rail | TI TPS61023, Coilcraft XGL4020-102MEC (1.0 µH, 2.1 mm) | Selected; VLED setting provisional |
@@ -123,7 +122,7 @@ Selection is not validation: nothing below has been measured on Rev A.
 | NFC tag | NXP NT3H2111W0FHKH (XQFN-8) | Selected; drawn; footprint per NXP's reflow footprint; coil tuning prototype-dependent |
 | IMU | TDK ICM-42688-P on I²C | Conditional (real-part verification pending); drawn |
 | Microphone | Knowles SPH0641LM4H-1, 0.8 mm PCB acoustic hole | Conditional (lifecycle check); drawn |
-| 32.768 kHz crystal | Micro Crystal CM7V-T1A, 9 pF | Selected; drawn |
+| 32.768 kHz crystal | Micro Crystal CM7V-T1A, 9 pF, with 2 × 12 pF C0G external loads | Selected; drawn; load value calculated, not measured |
 | SWD header | ARM Cortex 10-pin, 2 × 5, 1.27 mm SMD (hanxia HX PZ1.27-2x5P TP), for the nRF5340 DK debug out | Selected; drawn; footprint checked against the vendor land pattern |
 | USB ESD | TI TPD4E05U06 (D+, D−, CC1, CC2) | Selected |
 | Battery | Adafruit 328, protected 2500 mAh LiPo; JST S2B-PH-K-S(LF)(SN) through-hole side-entry header, inserted from the rear and hand-soldered from the front by default | Selected; header pin 1 = BAT−, pin 2 = BAT+ (Adafruit convention) |
@@ -143,7 +142,7 @@ Selection is not validation: nothing below has been measured on Rev A.
   firmware low-battery cutoff is additional control.
 - SWD access, reset access, and power test points (VBAT, VBUS, logic rail, LED
   rail, charger/system rail).
-- UART test pads for fallback logging.
+- No UART or spare GPIO pads: all module GPIO are used; logging is over RTT.
 - Matrix timing test points (clock, latch, blank, row select).
 - Removable links for current measurement where useful.
 - Battery-voltage measurement and sense-node access, with an error budget and
@@ -151,12 +150,12 @@ Selection is not validation: nothing below has been measured on Rev A.
 
 ## Schematic preparation and review
 
-- Verify the module symbol pin → footprint pad → datasheet pin mapping against
-  Raytac Ver.E §2.5, including VBUS (44), D+ (46), D− (48), VDD (38), and
-  VDDH (41). For the proposed regulated normal-voltage supply, follow §8.1
-  (VDD and VDDH connected together) and the selected §8.1.2 circuit.
-- Transcribe the module-level USB supply conditioning and decoupling from
-  Raytac §8.1.2; reconcile it with Nordic USBREG and reference circuitry.
+- The module symbol pin → footprint pad mapping follows the Ebyte E73-2G4M08S1C
+  pin table, including VCC (19), VDDH (23), DCCH (25, open), VBUS (27),
+  D− (29) and D+ (31). Normal voltage mode: VCC and VDDH both on 3V3.
+- The module-level USB supply conditioning (R401, C402) was taken from
+  Raytac §8.1.2 for the MDBT53 and kept for the E73; reconcile it with the
+  nRF52840 USBREG specification and Ebyte's §5.1 reference circuit.
   Check hot-plug, USB absent, switch off with USB attached, back-powering,
   source resistance, capacitor ratings, and the complete connector inrush
   budget. A 0 Ω measurement link does not provide electrical isolation when
@@ -172,29 +171,26 @@ Selection is not validation: nothing below has been measured on Rev A.
   [nfc.md](nfc.md). Route field detect for NXP's RF/I²C errata handling.
   Irreversible locks are applied only on the verified event build; rejected
   RF-write tests are required.
-- The project footprint `Raytac_MDBT53-P1M` is KiCad's conversion of Raytac's
-  own library in the **241021** package (`MDBT53_230719.lbr`): 65 pads checked
-  against the source, the vendor antenna keep-out added as a rule area on every
-  copper layer, and pin names matching the Ver.E §2.5 table. Before layout,
-  compare it visually with the Ver.E §§2.1–2.3 drawings. Keep the battery,
-  magnets, and carrier clear of the keep-out.
+- The project footprint `Ebyte_E73-2G4M08S1C` is drawn from the Ebyte §3
+  drawing (bottom view mirrored to the top view): 25 castellated pads at
+  1.27 mm and 15 inner 0.8 mm pads, every centre checked against the drawing's
+  dimensions; castellated lands extend 0.3 mm beyond the body. Ebyte gives no
+  antenna keep-out drawing; the project keep-out covers every copper layer at
+  the antenna end, which faces the bottom board edge. Keep the battery,
+  magnets, and carrier clear of it.
 - External 32.768 kHz crystal: Micro Crystal CM7V-T1A, CL 9 pF, ±20 ppm,
-  RS ≤ 70 kΩ, which meets the package's recommended specification. The Rev A
-  devicetree must set the nRF5340 internal load capacitance to 9 pF (the DK
-  uses 7 pF); external load-capacitor footprints are fitted but not populated.
-- Module supply follows Raytac Ver.E §8.1.2: VDD = VDDH = 3V3 with 4.7 µF,
-  10 µH + 1 µF on DCC/DECR and DCCD/DECD, and module VBUS through 2.2 Ω with
-  4.7 µF. Nordic's nRF5340 reference BOM lists 10 µH, ±20%, 0603 inductors at
-  50 mA and 80 mA without stating the rating basis. The TDK MLZ1608M100WT000
-  is specified at 90 mA maximum for at most a 50% inductance drop (its 250 mA
-  figure is a typical 20 °C temperature-rise reference). Its suitability is a
-  document comparison; regulator ripple and stability are checked at bring-up.
-  USB D+/D− reach the module through 0 Ω links; Raytac's figure shows 27 Ω
-  series resistors, so the links can take them if USB testing calls for it.
+  RS ≤ 70 kΩ. The nRF52840 has no internal LFXO load capacitance, so C405/C406
+  are fitted with 12 pF C0G (2 × 9 pF less the pin and board stray, a
+  calculation still to be checked against the Product Specification's pin
+  capacitance and measured at bring-up).
+- Module supply: VCC = VDDH = 3V3 with 4.7 µF (C401) and module VBUS through
+  2.2 Ω with 4.7 µF (R401, C402). The DC/DC inductors are inside the E73, so
+  the board has none. USB D+/D− reach the module through 0 Ω links, which can
+  take series resistors if USB testing calls for it.
 - Debugging uses the nRF5340 DK's debug out (P19) through a 10-pin 1.27 mm
   flat cable; the badge grounds pin 3, which selects the external target.
   Nordic requires the target voltage to match the DK, and a DK on USB alone
-  runs at 3 V. For the 3.3 V badge, the DK's nRF5340 is supplied with 3.3 V on
+  runs at 3 V. For the 3.3 V badge, the DK's own nRF5340 is supplied with 3.3 V on
   P21 (SW10 VEXT->nRF on, SW9 at VDD; 1.7–3.6 V allowed), which also sets
   the DK's voltage follower, with USB still connected for the debugger. P19
   pin 1 only supplies power when DK solder bridge SB47 is shorted; it stays
