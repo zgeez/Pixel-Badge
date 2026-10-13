@@ -3,7 +3,7 @@
 	(generator "pcbnew")
 	(generator_version "10.0")
 	(layer "F.Cu")
-	(descr "Ebyte E73-2G4M08S1C (nRF52840, ceramic antenna), 13.0 x 18.0 x 3.0 mm, 43 pads: 25 castellated at 1.27 mm pitch plus 15 inner 0.8 mm pads. From the Ebyte specification section 3 drawing (bottom view mirrored to top view). Castellated lands extend 0.3 mm beyond the body. Antenna keep-out (all layers) at the +y end, which goes at the board edge; Ebyte gives no keep-out drawing.")
+	(descr "Ebyte E73-2G4M08S1C (nRF52840, ceramic antenna), 13.0 x 18.0 x 3.0 mm, 43 pads: 28 castellated at 1.27 mm pitch plus 15 inner 0.8 mm pads. From the Ebyte specification section 3 drawing (bottom view mirrored to top view). Castellated lands extend 0.3 mm beyond the body. Antenna keep-out (all layers) at the +y end, which goes at the board edge; Ebyte gives no keep-out drawing.")
 	(tags "nRF52840 BLE module castellated Ebyte E73")
 	(property "Reference" "REF**"
 		(at -5.5 -10.6 0)
