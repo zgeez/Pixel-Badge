@@ -88,9 +88,15 @@ USB presence powers the logic rail through the charger's PG output (see
 with the power switch OFF. No PD is used.
 
 USB-C is a standard 5 V sink with USB 2.0 data; no USB Power Delivery. VBUS
-branches to the charger/power-path input **and** the MDBT53-P1M dedicated USB
-VBUS input (pin 44). D+ connects to pin 46 and D− to pin 48. The module's
+branches to the charger/power-path input **and** the module's dedicated USB
+VBUS input (E73 pin 27). D+ connects to pin 31 and D− to pin 29. The module's
 normal device supply is provided separately by the regulated logic rail.
+
+**Module change.** Rev A now uses the Ebyte E73-2G4M08S1C (nRF52840,
+[ADR 0015](decisions/0015-nrf52840-e73-module.md)). Ebyte's §5.1 reference
+circuit places the DECUSB capacitor inside the module. The R401/C402 branch
+below was derived for the MDBT53/nRF5340 and is kept unchanged; its limits are
+reviewed against the nRF52840 USBREG specification before relying on them.
 
 Nordic's nRF5340 Product Specification, **USBREG — USB regulator control**, says
 the USB peripheral needs the dedicated 5 V VBUS supply in addition to the main
@@ -307,7 +313,7 @@ prototype-dependent.
 
 ## Battery-state measurement
 
-Rev A selects a **default-off, high-side-switched VBAT divider into nRF5340
+Rev A selects a **default-off, high-side-switched VBAT divider into nRF52840
 SAADC**, measuring the protected pack output upstream of the charger power
 path. SYS can differ from VBAT on USB; measuring the regulated MCU supply does
 not establish battery voltage. No dedicated fuel gauge is selected.

@@ -1245,7 +1245,7 @@
 			(embedded_fonts no)
 		)
 	)
-	(text "NFC (Rev A) - design notes\n\nNXP NT3H2111W0FHKH (Rev. 3.6; errata Rev. 4.1) on its own I2C bus (TWIM2, 100 kHz). VCC, bus and FD pull-ups come from\nthe NFC_PWR GPIO (P1.10), on only during updates; RF reads are passive. VOUT (energy harvesting) unused.\nCoil: 30 x 25 mm, 6 turns, 0.4/0.3 mm, F.Cu with one In1.Cu crossover; no copper inside the coil region;\nbattery and magnets outside it (DEC-008). Resonance tuned down to about 14.5 MHz with C1102/C1103 (C0G).\nTest points on VCC, SDA, SCL, FD for bus and field-detect timing. Provisioning policy: docs/nfc.md. Nothing measured."
+	(text "NFC (Rev A) - design notes\n\nNXP NT3H2111W0FHKH (Rev. 3.6; errata Rev. 4.1) on its own I2C bus (nRF52840 TWIM1, 100 kHz; TWIM0 serves I2C1). VCC, bus and FD pull-ups come from\nthe NFC_PWR GPIO (P1.00), on only during updates; RF reads are passive. VOUT (energy harvesting) unused.\nCoil: 30 x 25 mm, 6 turns, 0.4/0.3 mm, F.Cu with one In1.Cu crossover; no copper inside the coil region;\nbattery and magnets outside it (DEC-008). Resonance tuned down to about 14.5 MHz with C1102/C1103 (C0G).\nTest points on VCC, SDA, SCL, FD for bus and field-detect timing. Provisioning policy: docs/nfc.md. Nothing measured."
 		(exclude_from_sim no)
 		(at 50.8 152.4 0)
 		(effects

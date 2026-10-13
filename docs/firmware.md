@@ -206,7 +206,7 @@ until safe mode is reached. Use it only for the bench procedure below.
 ## Logging
 
 - Primary: Zephyr logging with the SEGGER RTT backend (enabled in `prj.conf`).
-- Fallback on the custom board: UART test pads.
+- Rev A has no UART pads (all module GPIO are used); RTT is the only log path.
 
 No project-specific logging abstraction is used.
 
@@ -514,9 +514,14 @@ app-key enrollment, firmware updates and iOS packaging are later work.
 
 ### Rev A board
 
+**Out of date:** Rev A hardware now uses the Ebyte E73-2G4M08S1C (nRF52840,
+[ADR 0015](decisions/0015-nrf52840-e73-module.md)). The board definition below
+still describes the earlier MDBT53-P1M (nRF5340) schematic and its pin map; it
+builds, but does not match the Rev A hardware until the nRF52840 port.
+
 `firmware/boards/smart_led_badge/` defines the Rev A board (Raytac
 MDBT53-P1M, nRF5340), based on Zephyr's `raytac_mdbt53_db_40` board. The
-application-core devicetree follows the Rev A schematic:
+application-core devicetree follows the earlier Rev A schematic:
 - SPIM4 for the matrix chain, with GPIOs for LAT, BLANK, ARM and SAFE.
 - TWIM1 for the IMU and charger at 400 kHz, and TWIM2 for the NTAG at 100 kHz.
 - PDM microphone; SAADC channels for VBAT, CC1, CC2 and VLED with the gains

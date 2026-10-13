@@ -937,7 +937,7 @@
 			(embedded_fonts no)
 		)
 	)
-	(text "IMU (Rev A) - design notes\n\nTDK ICM-42688-P (DS-000347 Rev 1.2) on I2C1 with the BQ25620 (pull-ups on the charger sheet), address 0x68.\nVDD = VDDIO = 3V3 (1.71-3.6 V); bypass per the datasheet BOM: 0.1 uF + 2.2 uF X7R on VDD, 10 nF X7R on VDDIO.\nRESV pins 2, 3, 7, 10, 11 to GND (allowed by Table 9). INT1 data-ready; pin 9 is INT2 (PIN9_FUNCTION reset default).\nSPI fallback: fit R903/R904 and move the node to SPIM1 (P1.02 SCK, P1.03 MOSI, P1.08 MISO, P0.31 CSN);\nthe charger then needs another bus. Status: conditional on real-part verification. Nothing measured."
+	(text "IMU (Rev A) - design notes\n\nTDK ICM-42688-P (DS-000347 Rev 1.2) on I2C1 with the BQ25620 (pull-ups on the charger sheet), address 0x68.\nVDD = VDDIO = 3V3 (1.71-3.6 V); bypass per the datasheet BOM: 0.1 uF + 2.2 uF X7R on VDD, 10 nF X7R on VDDIO.\nRESV pins 2, 3, 7, 10, 11 to GND (allowed by Table 9). INT1 data-ready; pin 9 is INT2 (PIN9_FUNCTION reset default).\nNo SPI fallback: the E73 module change (DEC-017) left no GPIO for it; R903/R904 removed. Status: conditional on real-part verification. Nothing measured."
 		(exclude_from_sim no)
 		(at 50.8 152.4 0)
 		(effects
@@ -984,16 +984,6 @@
 	)
 	(wire
 		(pts
-			(xy 180.34 125.73) (xy 180.34 123.19)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "00df2e83-f508-42b3-a356-3cdb309fb9bc")
-	)
-	(wire
-		(pts
 			(xy 76.2 88.9) (xy 71.12 88.9)
 		)
 		(stroke
@@ -1031,16 +1021,6 @@
 			(type default)
 		)
 		(uuid "2ee9f667-e23a-4e1c-b607-ccc5b10c45ab")
-	)
-	(wire
-		(pts
-			(xy 180.34 133.35) (xy 180.34 135.89)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "325a10d5-29e8-4f0c-a86b-b6b555e95b9f")
 	)
 	(wire
 		(pts
@@ -1131,16 +1111,6 @@
 			(type default)
 		)
 		(uuid "813c8617-abfc-4f67-98d3-3ae278b59596")
-	)
-	(wire
-		(pts
-			(xy 165.1 125.73) (xy 165.1 123.19)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "85befdfc-a715-4ba0-b651-482fcd6b7e73")
 	)
 	(wire
 		(pts
@@ -1264,16 +1234,6 @@
 	)
 	(wire
 		(pts
-			(xy 165.1 133.35) (xy 165.1 135.89)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "f702bf01-5e00-468b-aec6-2f475caf88c9")
-	)
-	(wire
-		(pts
 			(xy 180.34 67.31) (xy 180.34 69.85)
 		)
 		(stroke
@@ -1301,26 +1261,6 @@
 			(type default)
 		)
 		(uuid "ff3e03ac-165f-4c50-a136-ad15c5676285")
-	)
-	(label "IMU_AD0"
-		(at 165.1 123.19 90)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left bottom)
-		)
-		(uuid "0702b65f-a86f-47e2-b7bb-a6a87a93c168")
-	)
-	(label "IMU_CS"
-		(at 180.34 123.19 90)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left bottom)
-		)
-		(uuid "6cbf5f8e-d9e2-492e-93da-5f64f2ee9355")
 	)
 	(label "IMU_AD0"
 		(at 180.34 95.25 90)
@@ -1362,29 +1302,6 @@
 		)
 		(uuid "faf06256-ee31-4781-a1bb-1fe053d0b731")
 	)
-	(global_label "IMU_SDO_FB"
-		(shape passive)
-		(at 165.1 135.89 270)
-		(fields_autoplaced yes)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right)
-		)
-		(uuid "34224fbe-951f-47d8-9ce9-5f2c8f92e763")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 165.1 135.89 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-	)
 	(global_label "IMU_INT2"
 		(shape passive)
 		(at 132.08 86.36 0)
@@ -1398,29 +1315,6 @@
 		(uuid "68bcbf72-7079-46b0-9633-16c2350a52be")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
 			(at 132.08 86.36 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-	)
-	(global_label "IMU_CS_FB"
-		(shape passive)
-		(at 180.34 135.89 270)
-		(fields_autoplaced yes)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right)
-		)
-		(uuid "81037f6b-6002-44a2-9fc7-3c6083c20bee")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 180.34 135.89 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2653,98 +2547,6 @@
 		)
 	)
 	(symbol
-		(lib_id "Device:R")
-		(at 165.1 129.54 0)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp yes)
-		(uuid "b91f3507-a6ff-4687-86cc-d5cbf8bff531")
-		(property "Reference" "R903"
-			(at 167.64 128.27 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Value" "DNP"
-			(at 167.64 130.81 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
-			(at 165.1 129.54 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 165.1 129.54 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "Resistor"
-			(at 165.1 129.54 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Note" "SPI fallback: AP_SDO to P1.08 (SPIM1 MISO)"
-			(at 165.1 129.54 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "ce75caff-45a6-4a47-929b-b2a2099b2987")
-		)
-		(pin "2"
-			(uuid "960a4102-781a-4616-8067-ee68186cd58a")
-		)
-		(instances
-			(project "smart-led-badge"
-				(path "/fefc8d4a-8637-4143-b210-9149e35f9884/2b5ea0fb-6411-4b41-8224-1525d366da27"
-					(reference "R903")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
 		(lib_id "power:GND")
 		(at 165.1 69.85 0)
 		(unit 1)
@@ -3220,98 +3022,6 @@
 			(project "smart-led-badge"
 				(path "/fefc8d4a-8637-4143-b210-9149e35f9884/2b5ea0fb-6411-4b41-8224-1525d366da27"
 					(reference "R901")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Device:R")
-		(at 180.34 129.54 0)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp yes)
-		(uuid "f8ea8561-61e5-4055-94de-b2cff98f3311")
-		(property "Reference" "R904"
-			(at 182.88 128.27 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Value" "DNP"
-			(at 182.88 130.81 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
-			(at 180.34 129.54 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 180.34 129.54 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "Resistor"
-			(at 180.34 129.54 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Note" "SPI fallback: AP_CS to P0.31 (SPIM1 CSN)"
-			(at 180.34 129.54 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "ac13bbab-0c80-454f-85bf-356d108ca0de")
-		)
-		(pin "2"
-			(uuid "b54e0a66-6bfb-48e6-af43-e3feee194294")
-		)
-		(instances
-			(project "smart-led-badge"
-				(path "/fefc8d4a-8637-4143-b210-9149e35f9884/2b5ea0fb-6411-4b41-8224-1525d366da27"
-					(reference "R904")
 					(unit 1)
 				)
 			)
