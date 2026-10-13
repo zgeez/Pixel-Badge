@@ -1258,7 +1258,7 @@
 			(embedded_fonts no)
 		)
 	)
-	(text "Matrix column drivers (Rev A) - design notes\n\n2 x TI TLC59283 (SBVS199C), RGE VQFN-24, VCC = 3V3, cascaded: MOSI -> U601 SIN, U601 SOUT -> U602 SIN, U602 SOUT -> MTX_MISO\n(SPIM4 readback) and the row-chain SER (row sheet). SCLK = MTX_SCK, LAT = MTX_LAT (also latches the row 595s).\nBLANK = BLANK_TLC = MTX_BLANK OR SAFE (row sheet); internal 500k pull-up on BLANK, 500k pull-down on LAT.\nR_IREF 2.94k sets 18.0 mA per column nominal; with TLC59283 IOLC tolerance and the 1% resistor up to about 19.4 mA at 25 C,\nthe current the pack's 1.5 A limit is checked against (docs/power.md).\nAdjust only upward in resistance (series 0 ohm position). Columns COL0-COL31 sink the LED cathodes.\nHeadroom design value 0.8 V (IOLC spec point). Thermal pad to GND with vias. Nothing measured."
+	(text "Matrix column drivers (Rev A) - design notes\n\n2 x TI TLC59283 (SBVS199C), RGE VQFN-24, VCC = 3V3, cascaded: MOSI -> U601 SIN, U601 SOUT -> U602 SIN, U602 SOUT -> MTX_MISO\n(SPIM3 readback) and the row-chain SER (row sheet). SCLK = MTX_SCK, LAT = MTX_LAT (also latches the row 595s).\nBLANK = BLANK_TLC = MTX_BLANK OR SAFE (row sheet); internal 500k pull-up on BLANK, 500k pull-down on LAT.\nR_IREF 2.94k sets 18.0 mA per column nominal; with TLC59283 IOLC tolerance and the 1% resistor up to about 19.4 mA at 25 C,\nthe current the pack's 1.5 A limit is checked against (docs/power.md).\nAdjust only upward in resistance (series 0 ohm position). Columns COL0-COL31 sink the LED cathodes.\nHeadroom design value 0.8 V (IOLC spec point). Thermal pad to GND with vias. Nothing measured."
 		(exclude_from_sim no)
 		(at 50.8 203.2 0)
 		(effects
