@@ -97,6 +97,28 @@ void rotate(const Frame &source, Frame &destination, Rotation rotation)
 	destination = rotated;
 }
 
+void draw_passkey(Frame &frame, uint32_t passkey)
+{
+	frame.clear();
+	uint32_t divisor = 100000;
+	for (unsigned i = 0; i < 6; ++i) {
+		const uint16_t pixels = glyph('0' + (passkey / divisor) % 10);
+		divisor /= 10;
+		for (unsigned y = 0; y < 5; ++y) {
+			for (unsigned x = 0; x < 3; ++x) {
+				if ((pixels & (1U << (14 - y * 3 - x))) != 0) {
+					for (unsigned dy = 0; dy < 2; ++dy) {
+						for (unsigned dx = 0; dx < 2; ++dx) {
+							frame.set(5 + (i % 3) * 8 + x * 2 + dx,
+								  3 + (i / 3) * 16 + y * 2 + dy);
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
 void draw_name(Frame &frame, const char *name, uint32_t elapsed_ms)
 {
 	frame.clear();
