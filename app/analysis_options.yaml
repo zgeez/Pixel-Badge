@@ -1,0 +1,2 @@
+# SPDX-License-Identifier: MIT
+include: package:flutter_lints/flutter.yaml
