@@ -136,7 +136,8 @@ and subsequent authorized MCU updates.
   M2 carrier holes; final at the PCB release.
 - NFC coil tuning and provisioning bytes (verified on a development tag; see
   [nfc.md](nfc.md)).
-- IMU: ICM-42688-P on I²C until real-part verification; SPI is the fallback.
+- IMU: ICM-42688-P on I²C until real-part verification; Rev A has no SPI
+  fallback ([ADR 0015](decisions/0015-nrf52840-e73-module.md)).
 - Microphone lifecycle confirmation.
 - Final button placement (front strip or the edge below the field) at outline
   freeze ([ADR 0008](decisions/0008-landscape-front-buttons.md)).

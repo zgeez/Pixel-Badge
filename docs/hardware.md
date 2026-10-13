@@ -81,7 +81,7 @@ scheme is not the badge design.
   runtime; validate the agreed usage profile in [validation.md](validation.md).
 - **Sensors:** TDK ICM-42688-P 6-axis IMU on I²C (**conditional**: project I²C
   driver passes build and emulator tests; real-part I²C, interrupt and
-  wake-on-motion checks pending), with SPI-fallback links; Knowles
+  wake-on-motion checks pending), with no SPI fallback on Rev A; Knowles
   SPH0641LM4H-1 PDM microphone (lifecycle not yet confirmed).
 - **User interface:** worn landscape or portrait, with the displayed content
   rotated by firmware from the IMU's orientation
@@ -172,7 +172,7 @@ Selection is not validation: nothing below has been measured on Rev A.
   Irreversible locks are applied only on the verified event build; rejected
   RF-write tests are required.
 - The project footprint `Ebyte_E73-2G4M08S1C` is drawn from the Ebyte §3
-  drawing (bottom view mirrored to the top view): 25 castellated pads at
+  drawing (bottom view mirrored to the top view): 28 castellated pads at
   1.27 mm and 15 inner 0.8 mm pads, every centre checked against the drawing's
   dimensions; castellated lands extend 0.3 mm beyond the body. Ebyte gives no
   antenna keep-out drawing; the project keep-out covers every copper layer at
