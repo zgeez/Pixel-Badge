@@ -1,0 +1,4 @@
+[00:32:38.472,198] <inf> badge_ble: BLE new pairing policy: allowed
+[00:33:08.533,569] <err> bt_smp: SMP Timeout (flags:0x0000a828 allowed_cmds:0x00004028)
+[00:33:08.533,721] <inf> badge_ble: BLE security outcome: level 1 error 9
+[00:33:08.534,240] <inf> badge_ble: BLE pairing failed (9)

@@ -1,0 +1,3 @@
+[00:00:00.061,645] <inf> prototype: reset cause 0x00000002 (read 0)
+[00:00:00.148,406] <inf> prototype: badge ready: QR mode
+[00:00:30.156,250] <inf> prototype: healthy boot; reset-loop counter cleared
