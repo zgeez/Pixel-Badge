@@ -1,0 +1,11 @@
+# SPDX-License-Identifier: MIT
+tests:
+  services.ble_protocol:
+    tags: [badge, ble]
+    platform_allow: [native_sim, native_sim/native/64]
+    integration_platforms: [native_sim]
+  services.ble_protocol.target_errno:
+    tags: [badge, ble]
+    platform_allow: [native_sim, native_sim/native/64]
+    integration_platforms: [native_sim]
+    extra_args: [BADGE_SIMULATE_TARGET_ERRNO=ON]

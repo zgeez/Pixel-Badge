@@ -65,6 +65,7 @@ public final class ProvisionActivity extends Activity implements NfcAdapter.Read
                 worker.execute(() -> {
                     try {
                         JSONObject challenge = request("challenge", null);
+                        if (challenge.getInt("proof_version") != NfcProof.VERSION) { throw new IllegalStateException(); }
                         uid = decode(challenge.getString("uid"), 7);
                         pwd = decode(challenge.getString("pwd"), 4);
                         pack = decode(challenge.getString("pack"), 2);
@@ -73,7 +74,7 @@ public final class ProvisionActivity extends Activity implements NfcAdapter.Read
                     } catch (Exception ignored) { fail("Could not fetch the computer challenge."); }
                 });
             } else if (flow.startSecond()) {
-                arm("Check 2 of 2 ready: tap again and hold still for the factory-password rejection check.");
+                arm("Check 2 of 2 ready: tap again and hold still to confirm the generated password in a fresh session.");
             } else {
                 fail("The verification session is no longer active.");
             }
@@ -107,9 +108,8 @@ public final class ProvisionActivity extends Activity implements NfcAdapter.Read
                 radio.connect();
                 if (!NfcProof.supportedTag(radio::transceive)) { throw new IllegalStateException(); }
                 radio.setTimeout(2000);
+                if (!NfcProof.verifiedSession(radio::transceive, pwd, pack)) { throw new IllegalStateException(); }
                 if (step == 1) {
-                    if (!NfcProof.generatedPassword(radio::transceive, pwd, pack)) { throw new IllegalStateException(); }
-                    clearCredentials();
                     // Close communication before exposing the next button.
                     radio.close();
                     if (!flow.firstPassed()) { return; }
@@ -132,23 +132,19 @@ public final class ProvisionActivity extends Activity implements NfcAdapter.Read
                         } catch (RuntimeException ignored) { fail("Could not monitor tag removal."); }
                     });
                 } else {
-                    try {
-                        if (!NfcProof.factoryPasswordRejected(radio::transceive)) { throw new IllegalStateException(); }
-                    } catch (java.io.IOException inconclusive) {
-                        fail("Check 2 is inconclusive: no reliable password-rejection reply. Provisioning was not confirmed. Retry with a reader that exposes the tag's NAK response.");
-                        return;
-                    }
+                    clearCredentials();
                     if (paused || flow.state() != VerificationFlow.State.SECOND_CHECKING) { return; }
                     JSONObject result = new JSONObject();
                     result.put("uid", hex(uid));
                     result.put("generated_ok", true);
-                    result.put("factory_rejected", true);
+                    result.put("repeated_generated_ok", true);
                     result.put("fresh_sessions", true);
                     result.put("proof_version", NfcProof.VERSION);
                     if (!request("proof", result).getBoolean("accepted")) { throw new IllegalStateException(); }
                     if (!flow.secondPassed()) { return; }
                     runOnUiThread(() -> {
-                        adapter.disableReaderMode(this);
+                        // Keep NDEF dispatch suppressed while the tag is still
+                        // in range. Reader mode ends when the activity pauses.
                         status.setText("Both RF checks passed. Remove the phone from the tag and finish on the computer.");
                         action.setEnabled(false);
                     });
@@ -206,12 +202,12 @@ public final class ProvisionActivity extends Activity implements NfcAdapter.Read
     }
 
     private void fail(String reason) {
-        flow.abort();
+        final boolean firstFailure = flow.abort();
         clearCredentials();
+        if (!firstFailure) { return; }
         runOnUiThread(() -> {
-            if (adapter != null) {
-                try { adapter.disableReaderMode(this); } catch (RuntimeException ignored) {}
-            }
+            // Keep reader mode until onPause: restoring ordinary NFC polling
+            // here can open the tag URL and hide the actual check failure.
             status.setText(reason + " Verification stopped; restart provisioning from the computer.");
             action.setEnabled(false);
         });
@@ -222,7 +218,10 @@ public final class ProvisionActivity extends Activity implements NfcAdapter.Read
         paused = true;
         if (flow.state() != VerificationFlow.State.COMPLETE) {
             fail("The helper lost focus or the phone locked.");
-        } else if (adapter != null) { adapter.disableReaderMode(this); }
+        }
+        if (adapter != null) {
+            try { adapter.disableReaderMode(this); } catch (RuntimeException ignored) {}
+        }
         clearCredentials();
         super.onPause();
     }

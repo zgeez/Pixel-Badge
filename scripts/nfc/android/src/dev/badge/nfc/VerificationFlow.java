@@ -25,5 +25,11 @@ public final class VerificationFlow {
     public synchronized boolean removed() { return move(State.WAIT_REMOVAL, State.SECOND_READY); }
     public synchronized boolean startSecond() { return move(State.SECOND_READY, State.SECOND_ARMED); }
     public synchronized boolean secondPassed() { return move(State.SECOND_CHECKING, State.COMPLETE); }
-    public synchronized void abort() { if (state != State.COMPLETE) { state = State.FAILED; } }
+    /** Only the first failure owns the diagnostic; later lifecycle callbacks
+     * cannot replace it with a generic focus-loss message. */
+    public synchronized boolean abort() {
+        if (state == State.COMPLETE || state == State.FAILED) { return false; }
+        state = State.FAILED;
+        return true;
+    }
 }

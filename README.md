@@ -12,6 +12,11 @@ P1 NFC provisioning completed with helper v0.2, but factory-password rejection
 needs a fresh check with the corrected v0.3 verifier. The owner reports LinkedIn
 URL reads work powered, powered off and after restoration. Remaining checks are in the
 [phone bench procedure](docs/nfc-prototype.md).
+P2 BLE configuration and the Android-first Flutter app are implemented for
+development: secure passkey pairing, confirmed link selection, name, brightness
+and mode. Firmware/app software checks pass; end-to-end phone acceptance is
+pending. See [BLE protocol and bench steps](docs/ble-protocol.md) and
+[app setup](app/README.md).
 The owner reports the initial P0 bench procedure passed; later display/schema
 recovery corrections need a new bench run. Rev A has a schematic and board
 definition; its hardware-specific firmware comes later. See
@@ -51,6 +56,7 @@ Rev A scope:
 
 ```
 firmware/    Zephyr application (src/, include/, boards/, tests/)
+app/         Android-first Flutter BLE configuration app
 hardware/    KiCad project, libraries, mechanical files
 docs/        Architecture, firmware, hardware, validation, bring-up, ADRs
 scripts/     Developer (dev.ps1) and CI helper scripts

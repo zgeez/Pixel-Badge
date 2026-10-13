@@ -1,6 +1,6 @@
 # P1 NFC prototype bench
 
-Status: **corrected provisioning check pending; powered/off/restore reads owner-reported passed;
+Status: **proof3 provisioning completed and retained after normal BLE restore; powered/off/restore reads owner-reported passed;
 remaining acceptance pending**. The owner has
 an NFC Tag 2 Click connected to the nRF5340 DK, a Nothing 4a Pro and an iPhone
 13. On 2026-10-12 the owner reported LinkedIn URL reads work before power-off,
@@ -12,14 +12,31 @@ Full acceptance remains pending. These steps use the
 existing DK wiring and the HUB75 panel; they do not validate the Rev A coil,
 carrier or switched tag supply.
 
+On 2026-10-12, helper v0.5 completed both positive checks, the host accepted
+proof3 and firmware finalized. Readytrue and matching Portfolio URL were
+confirmed; normal BLE restoration retained proof/ready1/result0 and healthy
+boot. See [the positive-proof result](../validation/results/2026-10-12-dk-positive-nfc-proof/README.md).
+Broader protection/timing and new contact-link acceptance remain pending.
+
 The 2026-10-11 workflow used helper v0.2, which could mistake a transport error
 for factory-password rejection. Its recorded completion is historical evidence,
-not proof of that rejection. The corrected firmware, host and helper v0.3 use
-proof version 2 and reject old receipts/protocols. Rebuild, flash, install v0.3
-and explicitly provision again; ordinary URL taps do not complete this gate.
-No corrected-image phone or FD timing test has been performed yet.
+not proof of that rejection. The corrected firmware, host and helper v0.3 used
+proof version 2 and rejected old receipts/protocols. That workflow required
+fresh explicit provisioning; ordinary URL taps cannot supply verification.
+During the P2 follow-up, helper v0.4 was installed and the owner reported
+**Check 2 is inconclusive**. No host proof was accepted or receipt restored.
+The explicit rejection response remains unverified; FD timing tests are pending.
+Helper v0.4 retains reader mode after a check failure or completion until the
+activity pauses, and preserves the first error instead of replacing it with
+focus loss caused by ordinary URL dispatch.
 
 ## Build and install the bench tools
+
+The commands below use helper v0.5/proof version 3, accepted by the owner in
+[ADR 0014](decisions/0014-positive-nfc-provisioning-proof.md) on 2026-10-12.
+Previously installed v0.4/proof2 images do not match these new host tools;
+build, flash and install the matching versions together. The two-session
+provisioning run passed; repeat it after a lost receipt/factory reset.
 
 From the repository root in PowerShell:
 
@@ -72,23 +89,23 @@ challenge, missing/rejected proof and a numbered firmware-command failure.
 2. On Android, press **Authenticate tag**, then tap the Click. The helper
    checks GET_VERSION for the NTAG I2C plus 1 kB, checks the UID and verifies
    that the generated password returns the generated PACK.
-3. Lift the phone completely away until the RF field is absent. Helper v0.3
+3. Lift the phone completely away until the RF field is absent. Helper v0.5
    waits for removal detection before enabling **Start check 2 of 2**. Press
    that button and tap again. Expect **Check 2 of 2 ready** before the tap and
-   **Check 2 of 2: tag detected** while it runs. In this fresh session the factory
-   password must be rejected while public CC reads continue working. Physical
+   **Check 2 of 2: tag detected** while it runs. In this fresh session the
+   generated password must authenticate again with an exact PACK match and
+   healthy public CC reads before and after authentication. Physical
    removal is essential; closing an NFC connection alone does not reset RF
    authentication. Keep the helper in the foreground throughout the two checks.
    If it loses focus, it now shows a stopped-session error; restart from the
    computer. It keeps reader mode active between checks to prevent an ordinary
    NDEF tap from opening a browser, and keeps the screen awake. Removal detection
    helps the workflow; manual RF-field removal remains required for acceptance.
-   Rejection requires an explicit `00h` wrong-password NAK. A timeout, lost PACK,
-   `IOException`, other NAK or malformed response never qualifies. If the helper
-   reports **Check 2 is inconclusive**, the host must not finalize provisioning.
-   Some phone stacks may expose tag NAKs only as I/O errors; use a reader path
-   that exposes the explicit response for this gate. That alternative reader
-   integration has not been implemented or bench-validated here.
+   A timeout, lost/mismatched PACK, `IOException`, NAK or malformed response
+   never qualifies. The credential remains transiently in memory for the two
+   checks and is cleared after check 2 or on failure/pause. This workflow makes
+   no claim of directly observed factory-password rejection. Unauthenticated
+   write rejection remains a separate required bench check.
 4. Remove both phones. Press Enter at the computer promptly: firmware allows
    120 seconds from the first provisioning command to final confirmation.
    The host allows 100 seconds for the two phone checks. The firmware sets the

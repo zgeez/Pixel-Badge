@@ -1,0 +1,4 @@
+/* SPDX-License-Identifier: MIT */
+/* The radio uses IPC. Never initialize network UART flow-control pins that
+ * overlap the application core's matrix SPI/latch pins on the DK. */
+&uart0 { status = "disabled"; };

@@ -7,7 +7,7 @@ import java.util.Arrays;
 
 /** RF command logic shared with the local JVM regression tests. */
 public final class NfcProof {
-    public static final int VERSION = 2;
+    public static final int VERSION = 3;
     public interface Radio { byte[] exchange(byte[] command) throws IOException; }
 
     private NfcProof() {}
@@ -35,6 +35,16 @@ public final class NfcProof {
         byte[] reply = radio.exchange(new byte[]{0x30, 0x03});
         return reply != null && reply.length == 16 && (reply[0] & 255) == 0xe1
                 && reply[1] == 0x10 && reply[2] == 0x6d && reply[3] == 0;
+    }
+
+    /** Positive authentication bracketed by healthy public CC reads.
+     * Caller establishes a new RF session and checks the tag UID/type.
+     * No transport failure qualifies as authentication or rejection. */
+    public static boolean verifiedSession(Radio radio, byte[] pwd, byte[] pack) throws IOException {
+        if (pwd.length != 4 || pack.length != 2 || Arrays.equals(pwd, new byte[]{-1, -1, -1, -1})) {
+            return false;
+        }
+        return publicRead(radio) && generatedPassword(radio, pwd, pack) && publicRead(radio);
     }
 
     public static boolean factoryPasswordRejected(Radio radio) throws IOException {

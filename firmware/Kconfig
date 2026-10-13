@@ -78,6 +78,16 @@ config APP_NFC_DEBUG_COMMANDS
 	  Explicit development command interface. No irreversible configuration
 	  locks are supported. Credentials remain transient and are never logged.
 
+config APP_BLE
+	bool "Prototype BLE configuration service"
+	depends on APP_PROTOTYPE && APP_NFC && BT && BT_PERIPHERAL
+	depends on BT_SMP && BT_SETTINGS && BT_SMP_SC_ONLY && BT_SMP_ENFORCE_MITM
+	depends on BT_SMP_APP_PAIRING_ACCEPT
+	help
+	  Enabled through the matching sysbuild BLE configuration, which also
+	  builds the network-core radio. One authenticated client; settings are
+	  applied asynchronously and read back before reporting success.
+
 endmenu
 
 source "Kconfig.zephyr"

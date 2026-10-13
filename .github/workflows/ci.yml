@@ -44,6 +44,9 @@ jobs:
       - name: Test local QR configuration
         run: python scripts/qr/test_configure_default_url.py
 
+      - name: Test app contact-link build defines
+        run: python scripts/app/test_configure_links.py
+
       - name: Test NFC provisioning host protocol
         run: python scripts/nfc/test_badge_nfc.py
 
@@ -150,6 +153,13 @@ jobs:
             EXTRA_CONF_FILE="${GITHUB_WORKSPACE}/smart-led-badge/firmware/configs/nfc-provisioning.conf" \
             bash smart-led-badge/scripts/ci/build-firmware.sh
 
+      - name: Build prototype BLE with network-core radio
+        run: |
+          export ZEPHYR_BASE="${GITHUB_WORKSPACE}/ncs/zephyr"
+          BUILD_DIR="${GITHUB_WORKSPACE}/smart-led-badge/build/ble" \
+            SB_EXTRA_CONF_FILE="${GITHUB_WORKSPACE}/smart-led-badge/firmware/configs/ble-sysbuild.conf" \
+            bash smart-led-badge/scripts/ci/build-firmware.sh
+
       - name: Upload prototype bench images
         uses: actions/upload-artifact@v7
         with:
@@ -160,6 +170,10 @@ jobs:
             smart-led-badge/build/watchdog-loop/merged.hex
             smart-led-badge/build/nfc-provisioning/merged.hex
             smart-led-badge/build/nfc-provisioning/firmware/zephyr/zephyr.elf
+            smart-led-badge/build/ble/merged.hex
+            smart-led-badge/build/ble/merged_CPUNET.hex
+            smart-led-badge/build/ble/domains.yaml
+            smart-led-badge/build/ble/firmware/zephyr/zephyr.elf
           if-no-files-found: error
           retention-days: 14
 
@@ -188,6 +202,31 @@ jobs:
           BOARD=smart_led_badge/nrf5340/cpunet \
             BUILD_DIR="${GITHUB_WORKSPACE}/smart-led-badge/build/badge-net" \
             bash smart-led-badge/scripts/ci/build-firmware.sh
+
+  flutter-tests:
+    name: flutter-tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+      - name: Set up pinned Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: '3.38.5'
+          cache: true
+      - name: Restore app dependencies
+        run: flutter pub get --enforce-lockfile
+      - name: Check Dart formatting
+        run: dart format --output=none --set-exit-if-changed lib test
+      - name: Analyze app
+        run: flutter analyze
+      - name: Test protocol, controller and screens
+        run: flutter test
 
   unit-tests:
     name: unit-tests

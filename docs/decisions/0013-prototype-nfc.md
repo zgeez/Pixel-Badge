@@ -1,6 +1,8 @@
 # ADR 0013: guarded NFC updates and explicit RF provisioning
 
 Status: **Accepted** by the owner on 2026-10-12 (proposed 2026-10-11).
+Provisioning proof partly superseded by [ADR 0014](0014-positive-nfc-provisioning-proof.md)
+on 2026-10-12; guarded update behavior remains accepted.
 Software tests do not constitute hardware
 acceptance of the NTAG protection or errata timing.
 

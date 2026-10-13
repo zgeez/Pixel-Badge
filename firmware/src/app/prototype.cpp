@@ -7,6 +7,9 @@
 #include "badge/modes.hpp"
 #include "badge/settings_store.hpp"
 #include "badge/nfc.hpp"
+#if defined(CONFIG_APP_BLE)
+#include "badge/ble.hpp"
+#endif
 
 #include <zephyr/device.h>
 #include <zephyr/drivers/display.h>
@@ -50,6 +53,53 @@ int initialize_display(const device *display, const Frame &frame, uint8_t bright
 	}
 	return rc == 0 ? display_blanking_off(display) : rc;
 }
+#if defined(CONFIG_APP_BLE)
+struct ConfigContext {
+	SettingsService &settings;
+	Modes &modes;
+	const device *display;
+	uint32_t now;
+};
+int apply_config(void *pointer, const ConfigCommand &command)
+{
+	if (nfc_update_busy()) {
+		return -EBUSY;
+	}
+	auto &context = *static_cast<ConfigContext *>(pointer);
+	SettingsService candidate = context.settings;
+	if (!candidate.load(command.field, command.data, command.length)) {
+		return -EINVAL;
+	}
+	const Mode previous_mode = context.modes.active();
+	if (!context.modes.configure(candidate.values())) {
+		return -EINVAL;
+	}
+	if (command.field == Field::kDefaultMode &&
+	    context.modes.active() != candidate.values().default_mode) {
+		context.modes.next(context.now);
+	}
+	Frame frame;
+	context.modes.render(frame, context.now);
+	int rc = display_set_brightness(context.display, candidate.values().brightness);
+	if (rc == 0) {
+		rc = present(context.display, frame);
+	}
+	if (rc == 0) {
+		rc = context.settings.save(command.field, command.data, command.length, store_field,
+					   nullptr);
+	}
+	if (rc != 0) {
+		context.modes.configure(context.settings.values());
+		if (context.modes.active() != previous_mode) {
+			context.modes.next(context.now);
+		}
+		context.modes.render(frame, context.now);
+		(void)display_set_brightness(context.display, context.settings.values().brightness);
+		(void)present(context.display, frame);
+	}
+	return rc;
+}
+#endif
 } // namespace
 
 void run_prototype()
@@ -134,6 +184,10 @@ void run_prototype()
 #if defined(CONFIG_APP_NFC)
 	start_nfc(safe ? kDefaultSettings.url : settings.values().url, !safe && load_rc == 0);
 #endif
+#if defined(CONFIG_APP_BLE)
+	ConfigContext config_context{settings, modes, display, 0};
+	start_ble();
+#endif
 	while (true) {
 		const uint32_t now = static_cast<uint32_t>(k_uptime_get() - started_at);
 		if (IS_ENABLED(CONFIG_APP_WATCHDOG_TEST_LOOP) && !safe) {
@@ -144,6 +198,13 @@ void run_prototype()
 #if defined(CONFIG_APP_NFC)
 		changed = poll_nfc(settings, modes);
 #endif
+#if defined(CONFIG_APP_BLE)
+		config_context.now = now;
+		poll_ble(settings.values(), modes,
+			 !safe && load_rc == 0 && display_ready && !display_health.recovering() &&
+				 !nfc_update_busy(),
+			 apply_config, &config_context);
+#endif
 		for (unsigned i = 0; buttons_ready && i < 2; ++i) {
 			const int level = gpio_pin_get_dt(&buttons[i]);
 			if (level < 0) {
@@ -151,8 +212,18 @@ void run_prototype()
 			}
 			const Press event = classifier[i].sample(level == 1, now);
 			if (event == Press::kLong) {
+#if defined(CONFIG_APP_BLE)
+				if (i == 1 && !safe && display_ready) {
+					open_ble_pairing();
+				}
+#else
 				LOG_INF("button %u long press reserved", i + 1);
-			} else if (event == Press::kShort && !safe) {
+#endif
+			} else if (event == Press::kShort && !safe
+#if defined(CONFIG_APP_BLE)
+				   && !ble_config_busy() && !nfc_update_busy()
+#endif
+			) {
 				if (i == 0) {
 					modes.next(now);
 					LOG_INF("mode %s",
@@ -178,6 +249,10 @@ void run_prototype()
 		    now - last_render >= DisplayHealth::kRetryMs) {
 			Frame frame;
 			modes.render(frame, now);
+			[[maybe_unused]] bool pairing_overlay = false;
+#if defined(CONFIG_APP_BLE)
+			pairing_overlay = ble_pairing_frame(frame);
+#endif
 			const int rc =
 				display_ready
 					? present(display, frame)
@@ -187,7 +262,8 @@ void run_prototype()
 			const uint32_t completed =
 				static_cast<uint32_t>(k_uptime_get() - started_at);
 #if defined(CONFIG_APP_NFC)
-			nfc_display_result(modes.active() == Mode::kQr ? rc : -EAGAIN);
+			nfc_display_result(
+				!pairing_overlay && modes.active() == Mode::kQr ? rc : -EAGAIN);
 #endif
 			const bool recovering = display_health.recovering();
 			display_health.report(rc, completed);

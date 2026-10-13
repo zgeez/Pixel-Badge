@@ -12,11 +12,26 @@ See the [foundation result](validation.md#result-prototype-foundation-on-the-dk)
 Peripheral bring-up checks and QR screening remain separate options. P1 NFC
 updates and explicit RF provisioning are implemented and host-tested. Provisioning
 has historical SWD/RTT confirmation, but helper v0.2 could mistake an RF I/O
-error for password rejection; repeat provisioning with v0.3 is pending.
+error for password rejection. The corrected v0.4 factory-password check was
+inconclusive. Owner accepted ADR0014's two positive RF authentication sessions;
+matching helper v0.5/proof3 completed both checks and firmware finalization.
+The receipt survived restoring normal BLE firmware; [positive-proof evidence](../validation/results/2026-10-12-dk-positive-nfc-proof/README.md).
 On 2026-10-12 the owner reported LinkedIn URL
 reads before power-off, while off and after restoration passed. Protection,
 timing and broader phone/content acceptance remain pending.
-See the [P1 procedure](nfc-prototype.md). BLE and audio modes remain future work.
+See the [P1 procedure](nfc-prototype.md). P2 BLE configuration and the Flutter
+Android app are implemented as an opt-in development build, with software
+verification passed. Owner confirms GitHub/LinkedIn QR/NFC agreement after
+Pixel Badge Apply and LinkedIn off-state NFC plus QR/app retention after restart;
+direct restarted-DK status verified /L with no NFC error before the later reset.
+Identity/display, settings/bond persistence, fragmented names, interrupted
+connection agreement and pairing rejection/expiry checks are recorded in the
+[P2 bench result](../validation/results/2026-10-13-dk-p2-settings/README.md).
+The subsequent controlled reset cleared the NFC receipt. Recovery passed both
+phone checks but failed firmware finalization; normal firmware is restored with
+default settings and NFC unverified. Further bench testing ended at the owner's
+request. Unauthorized ATT writes, complete recovery and RF timing remain pending.
+Audio modes remain future work.
 Rev A remains a board
 compatibility build with no badge matrix backend.
 
@@ -32,6 +47,12 @@ compatibility build with no badge matrix backend.
 - No C++ exceptions.
 - No RTTI unless explicitly justified later.
 - No runtime dynamic allocation unless explicitly justified.
+- P2 exception: the pinned SDK uses its bounded crypto/controller heaps for
+  authenticated BLE (CPUAPP Mbed TLS heap 512 bytes, IPC radio system heap
+  8192 bytes in the verified development configuration). Application-owned
+  commands, staging, queues and frames remain static; CPUAPP system heap is
+  disabled. This SDK allocation supports LESC rather than general application
+  allocation. Runtime exhaustion still needs phone bench testing.
 - Zephyr synchronization and threading primitives (`k_mutex`, `k_sem`,
   `k_msgq`, work queues), not `std::thread`/`std::mutex`.
 - The build currently uses Zephyr's minimal C++ library. Whether to enable a
@@ -113,8 +134,8 @@ reappear. Future bonds/keys outside `badge/` are not erased by this recovery.
   Names of up to four characters use 2× glyphs, five to eight use 1×; longer
   names scroll one pixel per 150 ms with an eight-pixel gap.
 - Brightness: 1–255. Button steps are 16, 64, 128, 255, then 16.
-- Default mode: QR or name. QR is the compiled boot default; a future
-  configuration client may save a different boot mode. Button mode changes
+- Default mode: QR or name. QR is the compiled boot default; the BLE
+  configuration client can save a different boot mode. Button mode changes
   affect the active mode only.
 
 The settings service validates before writing and updates RAM only after a
@@ -464,9 +485,32 @@ unchanged; tag work that started is followed by a guarded rollback attempt.
 Late display/tag completion cannot commit a cancelled request. A failed rollback
 can leave tag data different or incomplete: the command reports failure, exposes
 the last verified tag URL and keeps the tag out of service. Normal
-builds omit this interface. BLE/app destination selection is P2. Build, flash,
+builds omit this SWD interface. P2 BLE uses the same guarded URL path. Build, flash,
 RF proof, passive-read and recovery instructions are in
 [nfc-prototype.md](nfc-prototype.md).
+
+### P2 BLE configuration and Flutter app
+
+The optional BLE sysbuild configuration adds the application-core GATT host
+and network-core IPC radio, with network UART disabled. Hold Action/Button 2
+to open a 60-second pairing window and enter the six-digit passkey shown in
+two rows on the matrix. Authenticated LE Secure Connections is required for
+settings, Apply and status; one bond is retained in NVS. Factory reset also
+removes this bond and the NFC receipt.
+
+The app chooses among the four local `.env` contact links and edits name,
+brightness and mode. Writes stage one field, then Apply queues its operation.
+Bluetooth callbacks perform no display, settings or I2C work. Completion is
+distinct from ATT acceptance: URL success requires display/tag synchronization
+and persistence; the app then checks exact readback. Disconnection or uncertain
+completion requires a fresh read, with no automatic replay.
+
+The normal build keeps P1 behavior. Use the dedicated development target and
+flash both sysbuild domains with `west flash`; app build and phone bench steps
+are in [ble-protocol.md](ble-protocol.md). Source, pinned dependency and Android
+setup are in [app/README.md](../app/README.md). Native protocol and Flutter
+tests do not establish physical pairing or RF/QR acceptance. Audio streaming,
+app-key enrollment, firmware updates and iOS packaging are later work.
 
 ### Rev A board
 

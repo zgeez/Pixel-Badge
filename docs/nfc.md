@@ -13,6 +13,14 @@ that URL or alter its interpretation through metadata/configuration writes.
 
 ## Protection policy
 
+Provisioning now uses proof version 3/helper v0.5 as accepted
+in [ADR 0014](decisions/0014-positive-nfc-provisioning-proof.md). It authenticates
+the generated non-factory PWD/PACK in two fresh RF sessions, with public reads
+and final firmware policy verification. Positive provisioning completed and
+the receipt survived normal BLE restoration; broader physical acceptance is pending. This
+amends ADR 0013's former separate factory-rejection rule. No
+communication error is counted as a successful check under either method.
+
 NXP **NT3H2111/NT3H2211 Rev.3.6 (2023-07-21)**, §8.3.11/Table 10 and §8.7,
 states that default `AUTH0 = FFh` disables password protection. The intended
 provisioning policy is:
@@ -64,8 +72,11 @@ provisioning policy is:
   §2.1.2), so a read-back cannot prove they were programmed. Before the
   credential is discarded and before any `REG_LOCK`, a fresh RF session must
   authenticate successfully with the generated PWD (checking the returned
-  PACK) and a second fresh session must show that the factory-default PWD
-  (`FFFFFFFFh`, Table 10) is rejected. The credential exists only transiently on
+  PACK), bracketed by healthy public CC reads. A second fresh session repeats
+  that generated-password authentication and the public reads (ADR 0014).
+  The generated PWD must differ from the factory default (`FFFFFFFFh`). The
+  one-PWD component model is the basis for inferring replacement, not a claim
+  of directly observed factory rejection. The credential exists only transiently on
   the provisioning host; the MCU does not need it afterwards because it updates
   the tag over I²C. Never store, log, or commit credentials, credential-bearing
   register dumps, or provisioning logs. This password mechanism is not
@@ -119,8 +130,8 @@ memory (datasheet §9.2). Then verify the write by reading it back and comparing
 Before provisioning any badge, review the ordered configuration writes and
 verify them on a development tag: set the I²C address byte, write the CC and
 NDEF region, then the access policy and credentials, enable protection with
-AUTH0, verify the generated password by RF authentication (and rejection of the
-factory default) as described above, and set the CC static lock bits last among
+AUTH0, verify the generated password in two fresh RF sessions as described
+above, and set the CC static lock bits last among
 the reversible steps. Do this in a controlled RF environment. Verify public
 reads, rejected RF writes (including CC and lock-bit attempts) and subsequent
 MCU updates; apply any reviewed irreversible configuration locks only after
@@ -193,11 +204,13 @@ still requires full metadata/data reconciliation and revokes cached credential
 proof at the runtime layer. See [NXP errata §2.3.1 and §4](https://www.nxp.com/docs/en/errata/ES_NT3H2111_2211.pdf).
 
 The receipt at `nfc/verified` contains only a version, UID and RF-proof version.
-Proof version 2 rejects old receipts from the ambiguous v0.2 verifier; those
-tags require fresh explicit provisioning. The corrected v0.3 helper requires
-the exact wrong-password NAK (`00h`, datasheet Table 17) in the fresh factory
-password session. CRC/parity, arbitration, AUTHLIM and transport errors never
-prove password rejection. A healthy public read cannot reinterpret an I/O error.
+Proof version 3 rejects prior receipts/protocols; tags require fresh explicit
+provisioning using helper v0.5 and matching host/firmware. Earlier proof2
+required an explicit wrong-password NAK; it is superseded by ADR 0014's two
+positive generated-PWD/PACK sessions. CRC/parity, arbitration, AUTHLIM and
+transport errors never prove password rejection or successful authentication.
+A healthy public read cannot reinterpret an I/O error. Separate fresh-session
+unauthenticated-write/metadata/bypass rejection remains a bench/release gate.
 It is invalidated before I2C synchronization and restored after a clean check.
 RF activity during frames or an unreliable FD guard revokes credential proof;
 lost proof requires fresh two-session provisioning. Trusted local SWD/MCU

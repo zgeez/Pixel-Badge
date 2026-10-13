@@ -264,9 +264,24 @@ Pro and iPhone 13 are the planned owner phone set. The
 completed with direct SWD/RTT confirmation. On 2026-10-12 the owner reported
 LinkedIn URL reads before power-off, while off and after restoration passed.
 The v0.2 verifier accepted ambiguous RF transport errors as factory-password
-rejection. Its workflow result does not prove rejection; repeat provisioning
-with corrected helper v0.3 and firmware proof version 2 remains pending.
-Broader content/phone comparisons, protection and timing results remain pending.
+rejection. Its workflow result does not prove rejection; corrected v0.4 check2
+was inconclusive. Owner accepted [ADR0014](decisions/0014-positive-nfc-provisioning-proof.md)
+using two positive generated-PWD/PACK sessions plus firmware policy verification.
+Matching v0.5/proof3 positive phone checks and firmware finalization completed;
+ready state survived normal BLE restoration. [Recorded result](../validation/results/2026-10-12-dk-positive-nfc-proof/README.md).
+No factory-rejection
+claim is inferred from an I/O error.
+The later Pixel Badge D2/pending-status correction passed owner-reported
+GitHub/LinkedIn QR/NFC agreement and LinkedIn off-state NFC plus restored QR/app.
+Matching-ELF read-only status after that restart confirmed verified /L and
+ready/no error. Later settings/bond persistence, 32-character names,
+interrupted-connection agreement and pairing rejection/expiry checks are
+recorded in the [P2 result](../validation/results/2026-10-13-dk-p2-settings/README.md).
+The subsequent reset cleared the receipt; recovery passed both phone checks
+but failed firmware finalization. Normal firmware is restored with defaults
+and NFC unverified, and the owner ended further bench tests. Unauthorized ATT
+writes, complete recovery, RF attacks, Rev A coil/enclosure and timing remain
+pending.
 
 Purpose: verify tap reliability and read range across phone models with the
 battery, magnets, and rear carrier installed, with the badge on and off.

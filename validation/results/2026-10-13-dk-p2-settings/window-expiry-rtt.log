@@ -1,0 +1,4 @@
+[00:52:01.575,500] <inf> badge_ble: BLE new pairing policy: allowed
+[00:52:03.477,447] <inf> badge_ble: BLE pairing window expired
+[00:52:03.525,512] <inf> badge_ble: BLE security outcome: level 1 error 9
+[00:52:03.525,512] <inf> badge_ble: BLE pairing failed (9)
