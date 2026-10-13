@@ -94,7 +94,7 @@ experiment.
 Purpose: verify rails, power sequencing, behavior with the power switch off,
 isolation between the logic and LED supply domains, and charger status signals.
 
-Trace USB-C VBUS to both the charger input and module VBUS pin 44. Check the
+Trace USB-C VBUS to both the charger input and module VBUS pin 27. Check the
 module USB supply conditioning/decoupling against [power.md](power.md), then
 measure hot-plug/removal and USB attachment with the switch on/off and battery
 present/absent. Verify no unsupported back-powering; use a diagnostic USB image
@@ -110,8 +110,9 @@ source-current policy, including unconfigured/suspended and switch-off states.
 
 Measure both CC-sense SAADC pins against VDD with a 1.5 A and a 3 A source
 attached in both orientations: switch OFF, battery absent, and across power-up
-and power-down (oscilloscope). The pin voltage must stay within the nRF5340
-absolute maximum (VDD + 0.3 V, i.e. ≤ 0.3 V while VDD is 0 V) at all times, and
+and power-down (oscilloscope). The pin voltage must stay within the MCU's
+absolute maximum at all times (VDD + 0.3 V, i.e. ≤ 0.3 V while VDD is 0 V,
+for the nRF5340; confirm the nRF52840 limit in its Product Specification), and
 the measured effective Rd must stay within tolerance. Repeat for any other
 analog input fitted from a source that is live while the MCU is off.
 
@@ -207,6 +208,10 @@ the peak current, and repeat.
 Acceptance criteria: TBD.
 
 #### Result: scan timing on the nRF5340 DK (bench, no matrix)
+
+This result predates the move to the nRF52840
+([ADR 0015](decisions/0015-nrf52840-e73-module.md)); the scan timing, including
+during BLE activity, is repeated on Rev A.
 
 | Field | Value |
 |---|---|
@@ -361,7 +366,8 @@ waveforms and address (AP_CS high, AP_AD0 strap), reset and WHO_AM_I,
 configuration read-back including the I²C-mode settings, accelerometer and
 gyroscope readings against known orientations and rotation, the INT1
 data-ready interrupt at the configured rate, and wake-on-motion once
-implemented. Record any I²C failure that triggers the SPI fallback.
+implemented. Rev A has no SPI fallback ([ADR 0015](decisions/0015-nrf52840-e73-module.md)):
+record any I²C failure as a hardware defect for rework or a later revision.
 
 Display rotation: in all four 90° orientations the name and animation views
 turn upright without visible flicker or repeated flipping on small movements

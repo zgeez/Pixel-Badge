@@ -206,7 +206,7 @@ until safe mode is reached. Use it only for the bench procedure below.
 ## Logging
 
 - Primary: Zephyr logging with the SEGGER RTT backend (enabled in `prj.conf`).
-- Fallback on the custom board: UART test pads.
+- Rev A has no UART pads (all module GPIO are used); RTT is the only log path.
 
 No project-specific logging abstraction is used.
 
