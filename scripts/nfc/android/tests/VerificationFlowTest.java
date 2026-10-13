@@ -17,13 +17,14 @@ public final class VerificationFlowTest {
         check(full.takeTap() == 0); // Repeated discoveries are not a fresh check.
         check(full.removed()); check(full.startSecond());
         check(full.takeTap() == 2); check(full.takeTap() == 0);
-        check(full.secondPassed()); full.abort();
+        check(full.secondPassed()); check(!full.abort());
         check(full.state() == VerificationFlow.State.COMPLETE);
 
         VerificationFlow paused = first();
         check(paused.firstPassed()); paused.abort();
         check(!paused.removed()); check(!paused.startSecond());
         check(paused.takeTap() == 0); check(paused.state() == VerificationFlow.State.FAILED);
+        check(!paused.abort()); // A later focus loss preserves the first failure.
 
         VerificationFlow lateFirst = first(); lateFirst.abort();
         check(!lateFirst.firstPassed()); check(!lateFirst.removed());

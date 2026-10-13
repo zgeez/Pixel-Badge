@@ -54,6 +54,43 @@ public final class NfcProofTest {
             throw new AssertionError("Link loss must not count as password rejection");
         } catch (IOException expected) {}
         check(!NfcProof.factoryPasswordRejected(command -> new byte[16]));
-        System.out.println("NFC RF verifier logic: 21 cases passed");
+        final int[] sequence = {0};
+        check(NfcProof.verifiedSession(command -> {
+            int index = sequence[0]++;
+            if (index == 1) {
+                check(Arrays.equals(command, new byte[]{0x1b, 1, 2, 3, 4}));
+                return new byte[]{5, 6};
+            }
+            check(Arrays.equals(command, new byte[]{0x30, 0x03}));
+            return cc();
+        }, pwd, pack));
+        check(sequence[0] == 3);
+        for (byte[] malformed : new byte[][]{null, {}, {5}, {5, 7}, {5, 6, 0}}) {
+            check(!NfcProof.verifiedSession(command -> command[0] == 0x30 ? cc() : malformed, pwd, pack));
+        }
+        for (int failAt = 0; failAt < 3; ++failAt) {
+            final int failedExchange = failAt;
+            final int[] count = {0};
+            IOException transport = new IOException();
+            try {
+                NfcProof.verifiedSession(command -> {
+                    if (count[0]++ == failedExchange) { throw transport; }
+                    return command[0] == 0x30 ? cc() : new byte[]{5, 6};
+                }, pwd, pack);
+                throw new AssertionError("Every lost reply must fail positive verification");
+            } catch (IOException expected) { check(expected == transport); }
+            check(count[0] == failAt + 1);
+        }
+        check(!NfcProof.verifiedSession(command -> new byte[16], pwd, pack));
+        final int[] changedCc = {0};
+        check(!NfcProof.verifiedSession(command -> {
+            if (command[0] == 0x1b) { return new byte[]{5, 6}; }
+            return changedCc[0]++ == 0 ? cc() : new byte[16];
+        }, pwd, pack));
+        check(!NfcProof.verifiedSession(command -> { throw new AssertionError("Factory password must not be tried"); },
+                new byte[]{-1, -1, -1, -1}, pack));
+        check(!NfcProof.verifiedSession(command -> { throw new AssertionError("Invalid password must not be tried"); },
+                new byte[3], pack));
+        System.out.println("NFC RF verifier logic: rejection and positive-session checks passed");
     }
 }

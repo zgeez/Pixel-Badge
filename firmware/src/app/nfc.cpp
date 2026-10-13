@@ -8,6 +8,7 @@
 #include <zephyr/logging/log.h>
 #include <zephyr/settings/settings.h>
 #include <zephyr/sys/barrier.h>
+#include <zephyr/sys/atomic.h>
 #include <errno.h>
 #include <string.h>
 
@@ -24,11 +25,20 @@ char verified[kPayloadMax + 1];
 uint8_t expected_uid[7];
 bool writable;
 bool proof;
-/* Version 1 allowed ambiguous RF errors as factory-password rejection.
- * Reject its receipts and SWD protocol so an old helper cannot finalize. */
-constexpr uint8_t kProofVersion = 2;
+/* Version 3 proves the generated PWD/PACK in two fresh RF sessions.
+ * Earlier receipt/protocol versions cannot establish this workflow. */
+constexpr uint8_t kProofVersion = 3;
 int last_result = -EAGAIN;
 UrlUpdate url_update;
+struct UrlRequest {
+	char url[kPayloadMax + 1];
+};
+K_MSGQ_DEFINE(url_requests, sizeof(UrlRequest), 1, 4);
+K_MUTEX_DEFINE(request_mutex);
+K_SEM_DEFINE(request_done, 0, 1);
+atomic_t ready_state;
+atomic_t operation_active;
+int request_result;
 
 struct Receipt {
 	uint8_t bytes[9]{};
@@ -144,6 +154,8 @@ void publish(Ntag &tag, int result, uint32_t sequence)
 	badge_nfc_mailbox.response = sequence;
 }
 
+#endif
+
 int change_url(Ntag &tag, const char *url, size_t length)
 {
 	k_mutex_lock(&state_mutex, K_FOREVER);
@@ -184,18 +196,36 @@ int change_url(Ntag &tag, const char *url, size_t length)
 	}
 }
 
+void service_url_request(Ntag &tag)
+{
+	UrlRequest request;
+	if (k_msgq_get(&url_requests, &request, K_NO_WAIT) == 0) {
+		atomic_set(&operation_active, 1);
+		atomic_clear(&ready_state);
+		request_result =
+			writable ? change_url(tag, request.url, strlen(request.url)) : -EPERM;
+		last_result = request_result;
+		atomic_set(&ready_state, proof && last_result == 0);
+		atomic_clear(&operation_active);
+		k_sem_give(&request_done);
+	}
+}
+
+#if defined(CONFIG_APP_NFC_DEBUG_COMMANDS)
 void commands(Ntag &tag)
 {
 	bool pending = false;
 	uint8_t pending_uid[7]{};
 	int64_t pending_at = 0;
 	while (true) {
+		service_url_request(tag);
 		const uint32_t sequence = badge_nfc_mailbox.request;
 		if (sequence == badge_nfc_mailbox.response) {
 			k_sleep(K_MSEC(20));
 			continue;
 		}
 		const uint32_t command = badge_nfc_mailbox.command;
+		atomic_set(&operation_active, 1);
 		char input[24];
 		uint8_t credentials[8];
 		for (unsigned i = 0; i < sizeof(input); ++i) {
@@ -235,16 +265,32 @@ void commands(Ntag &tag)
 				memcpy(expected_uid, pending_uid, sizeof(expected_uid));
 				pending = true;
 				pending_at = k_uptime_get();
+				LOG_INF("NFC RF proof pending; confirmation deadline 120000 ms");
 			}
 			last_result = -EACCES; /* RF proof still required, not ready */
 		} else if (command == 4) {
-			if (!pending || k_uptime_get() - pending_at > 120000 ||
-			    memcmp(input, pending_uid, sizeof(pending_uid)) != 0) {
+			const int64_t elapsed = k_uptime_get() - pending_at;
+			if (!pending) {
+				LOG_WRN("NFC confirmation rejected: no pending provision");
+				rc = -EACCES;
+			} else if (elapsed > 120000) {
+				LOG_WRN("NFC confirmation rejected: expired after %lld ms",
+					static_cast<long long>(elapsed));
+				rc = -EACCES;
+			} else if (memcmp(input, pending_uid, sizeof(pending_uid)) != 0) {
+				LOG_WRN("NFC confirmation rejected: tag identity mismatch");
 				rc = -EACCES;
 			} else {
+				LOG_INF("NFC confirmation received after %lld ms",
+					static_cast<long long>(elapsed));
 				const uint32_t events = tag.rf_events();
 				rc = tag.finish_provision(pending_uid);
+				if (rc != 0) {
+					LOG_WRN("NFC guarded finalization check failed (%d)", rc);
+				}
 				if (rc == 0 && tag.rf_events() != events) {
+					LOG_WRN("NFC confirmation rejected: RF transition during "
+						"finalization");
 					rc = -EACCES;
 				}
 				proof = rc == 0;
@@ -261,6 +307,8 @@ void commands(Ntag &tag)
 		erase_sensitive(credentials, sizeof(credentials));
 		erase_sensitive(input, sizeof(input));
 		publish(tag, rc, sequence);
+		atomic_set(&ready_state, proof && last_result == 0);
+		atomic_clear(&operation_active);
 		LOG_INF("NFC command %u result %d; verified %s", command, rc,
 			proof && last_result == 0 ? "yes" : "no");
 	}
@@ -281,6 +329,8 @@ void worker(void *, void *, void *)
 		memcpy(expected_uid, receipt.bytes + 1, sizeof(expected_uid));
 	}
 	last_result = writable ? synchronize(tag, desired) : -EPERM;
+	atomic_set(&ready_state, proof && last_result == 0);
+	atomic_clear(&operation_active);
 	LOG_INF("NFC boot result %d; %s", last_result,
 		last_result == 0 ? "QR URL verified"
 				 : "needs verification/provisioning; remove reader field");
@@ -288,7 +338,10 @@ void worker(void *, void *, void *)
 	publish(tag, last_result, 0);
 	commands(tag);
 #else
-	k_sleep(K_FOREVER);
+	while (true) {
+		service_url_request(tag);
+		k_sleep(K_MSEC(20));
+	}
 #endif
 }
 K_THREAD_DEFINE(nfc_tid, 4096, worker, nullptr, nullptr, nullptr, 8, 0, 0);
@@ -296,6 +349,7 @@ K_THREAD_DEFINE(nfc_tid, 4096, worker, nullptr, nullptr, nullptr, 8, 0, 0);
 
 void start_nfc(const char *url, bool allow_writes)
 {
+	atomic_set(&operation_active, 1);
 	memcpy(desired, url, strnlen(url, kPayloadMax) + 1);
 	writable = allow_writes;
 	k_sem_give(&started);
@@ -314,5 +368,34 @@ void nfc_display_result(int result)
 	k_mutex_lock(&state_mutex, K_FOREVER);
 	url_update.display_result(result, k_uptime_get());
 	k_mutex_unlock(&state_mutex);
+}
+
+int change_nfc_url(const char *url, size_t length)
+{
+	if (!valid_url(url, length)) {
+		return -EINVAL;
+	}
+	if (k_mutex_lock(&request_mutex, K_NO_WAIT) != 0) {
+		return -EBUSY;
+	}
+	UrlRequest request{};
+	memcpy(request.url, url, length);
+	k_sem_reset(&request_done);
+	int rc = k_msgq_put(&url_requests, &request, K_NO_WAIT);
+	if (rc == 0) {
+		k_sem_take(&request_done, K_FOREVER);
+		rc = request_result;
+	}
+	k_mutex_unlock(&request_mutex);
+	return rc;
+}
+
+bool nfc_ready()
+{
+	return atomic_get(&ready_state) != 0;
+}
+bool nfc_update_busy()
+{
+	return atomic_get(&operation_active) != 0;
 }
 } // namespace badge

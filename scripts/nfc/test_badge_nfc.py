@@ -16,7 +16,7 @@ from badge_nfc import Mailbox, PhoneProof, NfcOperationError, normalize_url, wai
 class Link:
     def __init__(self):
         self.memory = bytearray(120)
-        struct.pack_into("<4I", self.memory, 0, 0x424E4643, 2, 0, 0)
+        struct.pack_into("<4I", self.memory, 0, 0x424E4643, 3, 0, 0)
         self.reads = []
 
     def memory_read8(self, address, count):
@@ -55,10 +55,11 @@ class Tests(unittest.TestCase):
             Mailbox(link, 0)
 
     def test_legacy_firmware_mailbox_rejected(self):
-        link = Link()
-        struct.pack_into("<I", link.memory, 4, 1)
-        with self.assertRaises(RuntimeError):
-            Mailbox(link, 0)
+        for version in [1, 2]:
+            link = Link()
+            struct.pack_into("<I", link.memory, 4, version)
+            with self.assertRaises(RuntimeError):
+                Mailbox(link, 0)
 
     def test_failed_command_clears_credentials(self):
         link = Link()
@@ -66,6 +67,52 @@ class Tests(unittest.TestCase):
         with self.assertRaisesRegex(NfcOperationError, r"NFC command 3 failed \(-5\)"):
             Mailbox(link, 0).command(3, credentials=b"\1\2\3\4\5\6")
         self.assertEqual(link.memory[112:], bytes(8))
+
+    def test_setup_write_failures_clear_even_partially_written_credentials(self):
+        for fail_at in range(1, 5):
+            with self.subTest(write=fail_at):
+                link = Link()
+                link.memory[112:] = bytes([7] * 8)
+                writes = 0
+
+                def fail_write(original):
+                    def write(address, values):
+                        nonlocal writes
+                        writes += 1
+                        if writes == fail_at:
+                            if address == 112:
+                                link.memory[112:115] = bytes(values[:3])
+                            raise OSError("synthetic setup failure")
+                        return original(address, values)
+                    return write
+
+                link.memory_write8 = fail_write(link.memory_write8)
+                link.memory_write32 = fail_write(link.memory_write32)
+                with self.assertRaisesRegex(OSError, "synthetic setup failure"):
+                    Mailbox(link, 0).command(3, credentials=bytes(range(6)))
+                self.assertEqual(link.memory[112:], bytes(8))
+                self.assertEqual(writes, fail_at + 1)
+
+    def test_cleanup_failure_preserves_original_setup_error(self):
+        link = Link()
+        link.memory_write8 = Mock(side_effect=[
+            OSError("synthetic setup failure"), OSError("synthetic cleanup failure")])
+        with self.assertRaisesRegex(OSError, "synthetic setup failure"):
+            Mailbox(link, 0).command(3)
+        self.assertEqual(link.memory_write8.call_args.args, (112, [0] * 8))
+
+    def test_cleanup_failure_cannot_report_command_success(self):
+        link = Link()
+        original = link.memory_write8
+
+        def write(address, values):
+            if address == 112 and values == [0] * 8:
+                raise OSError("must not expose native payload")
+            original(address, values)
+
+        link.memory_write8 = write
+        with self.assertRaisesRegex(NfcOperationError, "^NFC credential cleanup failed$"):
+            Mailbox(link, 0).command(3, credentials=bytes(range(6)))
 
     def test_rf_timeout_identifies_unstarted_and_incomplete_checks(self):
         proof = SimpleNamespace(complete=threading.Event(), consumed=False, accepted=False)
@@ -113,23 +160,30 @@ class Tests(unittest.TestCase):
         proof = PhoneProof(bytes(7), bytes([1, 2, 3, 4, 5, 6]), 0)
         with contextlib.redirect_stderr(output), contextlib.redirect_stdout(output), proof:
             base = f"http://127.0.0.1:{proof.port}"
-            with self.assertRaises(urllib.error.HTTPError):
+            with self.assertRaises(urllib.error.HTTPError) as denied:
                 urllib.request.urlopen(base + "/challenge")
+            with denied.exception:
+                self.assertEqual(denied.exception.code, 403)
             headers = {"Authorization": "Bearer " + proof.token}
             request = urllib.request.Request(base + "/challenge", headers=headers)
             with urllib.request.urlopen(request) as response:
                 challenge = json.load(response)
             self.assertEqual(challenge["uid"], bytes(7).hex())
-            with self.assertRaises(urllib.error.HTTPError):
+            self.assertEqual(challenge["proof_version"], 3)
+            with self.assertRaises(urllib.error.HTTPError) as denied:
                 urllib.request.urlopen(request)
-            result = {"uid": bytes(7).hex(), "generated_ok": True, "factory_rejected": True,
-                      "fresh_sessions": True, "proof_version": 2}
+            with denied.exception:
+                self.assertEqual(denied.exception.code, 403)
+            result = {"uid": bytes(7).hex(), "generated_ok": True, "repeated_generated_ok": True,
+                      "fresh_sessions": True, "proof_version": 3}
             request = urllib.request.Request(base + "/proof", data=json.dumps(result).encode(), headers=headers)
             with urllib.request.urlopen(request) as response:
                 self.assertTrue(json.load(response)["accepted"])
             self.assertTrue(proof.complete.is_set())
-            with self.assertRaises(urllib.error.HTTPError):
+            with self.assertRaises(urllib.error.HTTPError) as denied:
                 urllib.request.urlopen(request)
+            with denied.exception:
+                self.assertEqual(denied.exception.code, 403)
         self.assertEqual(proof.credentials, bytes(6))
         self.assertEqual(output.getvalue(), "")
 
@@ -140,23 +194,38 @@ class Tests(unittest.TestCase):
                 headers = {"Authorization": "Bearer " + proof.token}
                 with urllib.request.urlopen(urllib.request.Request(base + "/challenge", headers=headers)):
                     pass
-                result = {"uid": uid, "generated_ok": True, "factory_rejected": True,
-                          "fresh_sessions": fresh, "proof_version": 2}
+                result = {"uid": uid, "generated_ok": True, "repeated_generated_ok": True,
+                          "fresh_sessions": fresh, "proof_version": 3}
                 request = urllib.request.Request(base + "/proof", data=json.dumps(result).encode(), headers=headers)
                 with urllib.request.urlopen(request) as response:
                     self.assertFalse(json.load(response)["accepted"])
 
     def test_legacy_or_missing_proof_version_rejected(self):
-        for version in [None, 1, True, 2.0, "2"]:
+        for version in [None, 1, 2, True, 3.0, "3"]:
             with PhoneProof(bytes(7), bytes(6), 0) as proof:
                 base = f"http://127.0.0.1:{proof.port}"
                 headers = {"Authorization": "Bearer " + proof.token}
                 with urllib.request.urlopen(urllib.request.Request(base + "/challenge", headers=headers)):
                     pass
-                result = {"uid": bytes(7).hex(), "generated_ok": True, "factory_rejected": True,
+                result = {"uid": bytes(7).hex(), "generated_ok": True, "repeated_generated_ok": True,
                           "fresh_sessions": True}
                 if version is not None:
                     result["proof_version"] = version
+                request = urllib.request.Request(base + "/proof", data=json.dumps(result).encode(), headers=headers)
+                with urllib.request.urlopen(request) as response:
+                    self.assertFalse(json.load(response)["accepted"])
+
+    def test_both_positive_checks_must_be_true_without_legacy_substitution(self):
+        for first, second in [(False, True), (True, False), (True, None), (1, True), (True, 1)]:
+            with self.subTest(first=first, second=second), PhoneProof(bytes(7), bytes(6), 0) as proof:
+                base = f"http://127.0.0.1:{proof.port}"
+                headers = {"Authorization": "Bearer " + proof.token}
+                with urllib.request.urlopen(urllib.request.Request(base + "/challenge", headers=headers)):
+                    pass
+                result = {"uid": bytes(7).hex(), "generated_ok": first, "factory_rejected": True,
+                          "fresh_sessions": True, "proof_version": 3}
+                if second is not None:
+                    result["repeated_generated_ok"] = second
                 request = urllib.request.Request(base + "/proof", data=json.dumps(result).encode(), headers=headers)
                 with urllib.request.urlopen(request) as response:
                     self.assertFalse(json.load(response)["accepted"])

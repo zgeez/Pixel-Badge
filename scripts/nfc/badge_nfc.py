@@ -13,6 +13,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
 MAGIC = 0x424E4643
+PROOF_VERSION = 3
 PACKAGE = "dev.badge.nfc"
 
 
@@ -29,7 +30,7 @@ class Mailbox:
         self.link, self.address = link, address
         header = bytes(link.memory_read8(address, 16))
         magic, version, request, response = struct.unpack("<4I", header)
-        if magic != MAGIC or version != 2 or request != response:
+        if magic != MAGIC or version != PROOF_VERSION or request != response:
             raise NfcOperationError("NFC mailbox unavailable or busy")
         self.sequence = request
 
@@ -47,26 +48,34 @@ class Mailbox:
         }
 
     def command(self, command, payload=b"", credentials=b"", timeout=12):
-        if len(payload) > 23 or len(credentials) > 6:
-            raise ValueError("NFC command input too long")
-        self.link.memory_write8(self.address + 88, list(payload.ljust(24, b"\0")))
-        self.link.memory_write8(self.address + 112, list(credentials.ljust(8, b"\0")))
-        self.link.memory_write32(self.address + 16, [command])
-        self.sequence = (self.sequence + 1) & 0xFFFFFFFF
-        self.link.memory_write32(self.address + 8, [self.sequence])
-        deadline = time.monotonic() + timeout
+        completed = False
         try:
+            if len(payload) > 23 or len(credentials) > 6:
+                raise ValueError("NFC command input too long")
+            self.link.memory_write8(self.address + 88, list(payload.ljust(24, b"\0")))
+            self.link.memory_write8(self.address + 112, list(credentials.ljust(8, b"\0")))
+            self.link.memory_write32(self.address + 16, [command])
+            self.sequence = (self.sequence + 1) & 0xFFFFFFFF
+            self.link.memory_write32(self.address + 8, [self.sequence])
+            deadline = time.monotonic() + timeout
             while time.monotonic() < deadline:
                 response = self.link.memory_read32(self.address + 12, 1)[0]
                 if response == self.sequence:
                     result = self.snapshot()
                     if result["result"] != 0:
                         raise NfcOperationError(f"NFC command {command} failed ({result['result']})")
+                    completed = True
                     return result
                 time.sleep(0.02)
             raise NfcOperationError(f"NFC command {command} timed out; inspect non-secret RTT status")
         finally:
-            self.link.memory_write8(self.address + 112, [0] * 8)
+            try:
+                self.link.memory_write8(self.address + 112, [0] * 8)
+            except Exception:
+                # A lost SWD link may prevent erasure. Preserve an existing
+                # failure; never report success if cleanup itself failed.
+                if completed:
+                    raise NfcOperationError("NFC credential cleanup failed") from None
 
 
 class PhoneProof:
@@ -111,6 +120,7 @@ class PhoneProof:
                     "uid": owner.uid.hex(),
                     "pwd": owner.credentials[:4].hex(),
                     "pack": owner.credentials[4:6].hex(),
+                    "proof_version": PROOF_VERSION,
                 })
 
             def do_POST(self):
@@ -126,10 +136,10 @@ class PhoneProof:
                         owner.consumed
                         and result.get("uid") == owner.uid.hex()
                         and result.get("generated_ok") is True
-                        and result.get("factory_rejected") is True
+                        and result.get("repeated_generated_ok") is True
                         and result.get("fresh_sessions") is True
                         and type(result.get("proof_version")) is int
-                        and result.get("proof_version") == 2
+                        and result.get("proof_version") == PROOF_VERSION
                     )
                 except (ValueError, TypeError):
                     owner.accepted = False
@@ -196,7 +206,7 @@ def provision(args, mailbox):
                 print("On Android: follow both authentication checks in the NFC helper, lifting the phone fully away between them.", flush=True)
                 print("Waiting up to 100 seconds for helper RF proof. Enter is used only after the next prompt.", flush=True)
                 wait_rf_proof(proof)
-                print("RF proof accepted. Remove both phones from the tag, then press Enter to finish the guarded I2C check.", flush=True)
+                print("RF proof accepted. Remove the phone and any other reader from the tag, then press Enter to finish the guarded I2C check.", flush=True)
                 input()
                 print("Sending final confirmation to the DK...", flush=True)
                 mailbox.command(4, payload=result["uid"])
