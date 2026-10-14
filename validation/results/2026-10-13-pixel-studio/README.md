@@ -94,6 +94,25 @@ refreshed names and explicit Apply name. Flutter41 tests and clean analyzer
 pass; the debug APK builds. No firmware change or new physical acceptance is
 claimed, and the corrected APK has not been installed.
 
+## Frame-zero presence and draft-load precedence (2026-10-14)
+
+Drawing now requires valid artwork with pixels in frame zero, the frame it
+actually renders. Animation may begin with a blank frame if later frames have
+pixels. Regression coverage checks direct selection, button cycling, boot
+fallback, rejection preserving animation phase, and valid first-frame rendering.
+
+Draft pages already block pointer edits while startup storage loads. The loader
+now also checks the draft revision before installing a late result. Callback
+regressions confirm newer layout, canvas and frame edits survive and their
+pending save retains those edits; a separate touch test checks the existing
+loading gate and normal restoration. These are widget tests, not phone input
+measurements.
+
+Flutter44 tests and clean analyzer pass; native mode/content/URL-update suites
+pass3 configurations/19 cases. Normal DK sysbuild passes both cores; debug APK
+and repository checks pass. Corrected firmware/APK have not been flashed or
+installed; previous physical evidence remains historical.
+
 ## Short physical acceptance checklist — pending
 
 Deployment evidence: both normal-image cores were flashed with `--no-erase`;
