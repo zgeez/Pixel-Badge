@@ -23,6 +23,7 @@ public:
 	}
 
 private:
+	bool available(Mode mode) const;
 	Settings settings_ = kDefaultSettings;
 	Frame qr_{};
 	Mode mode_ = Mode::kQr;

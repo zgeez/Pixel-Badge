@@ -75,8 +75,9 @@ int apply_config(void *pointer, const ConfigCommand &command)
 		return -EINVAL;
 	}
 	if (command.field == Field::kDefaultMode &&
-	    context.modes.active() != candidate.values().default_mode) {
-		(void)context.modes.select(candidate.values().default_mode, context.now);
+	    !context.modes.select(candidate.values().default_mode, context.now)) {
+		(void)context.modes.configure(context.settings.values());
+		return -EINVAL;
 	}
 	Frame frame;
 	context.modes.render(frame, context.now);

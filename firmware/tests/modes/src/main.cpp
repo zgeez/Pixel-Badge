@@ -75,4 +75,58 @@ ZTEST(modes, test_configure_preserves_rotation_and_rejects_invalid_url)
 	zassert_false(modes.configure(changed));
 }
 
+ZTEST(modes, test_artwork_selection_requires_content_and_preserves_mode)
+{
+	Modes modes;
+	modes.start(kDefaultSettings, false);
+	zassert_false(modes.select(Mode::kCanvas, 10));
+	zassert_false(modes.select(Mode::kAnimation, 20));
+	zassert_equal(modes.active(), Mode::kQr);
+
+	Settings drawing = kDefaultSettings;
+	drawing.artwork.bytes[kArtworkHeaderBytes] = 0x80;
+	zassert_true(modes.configure(drawing));
+	zassert_true(modes.select(Mode::kCanvas, 30));
+	zassert_false(modes.select(Mode::kAnimation, 40));
+	zassert_equal(modes.active(), Mode::kCanvas);
+
+	drawing.artwork.bytes[1] = 2;
+	drawing.artwork.length += kFrameBytes;
+	drawing.artwork.bytes[kArtworkHeaderBytes + kFrameBytes] = 0x40;
+	zassert_true(modes.configure(drawing));
+	zassert_true(modes.select(Mode::kAnimation, 50));
+	Frame before, after;
+	modes.render(before, 200);
+	zassert_false(modes.select(static_cast<Mode>(4), 200));
+	modes.render(after, 200);
+	zassert_equal(modes.active(), Mode::kAnimation);
+	zassert_mem_equal(before.bytes, after.bytes, sizeof(before.bytes));
+
+	memset(drawing.artwork.bytes + kArtworkHeaderBytes, 0, 2 * kFrameBytes);
+	zassert_true(modes.configure(drawing));
+	zassert_false(modes.select(Mode::kCanvas, 300));
+	zassert_false(modes.select(Mode::kAnimation, 300));
+	modes.next(300);
+	zassert_equal(modes.active(), Mode::kQr);
+}
+
+ZTEST(modes, test_boot_falls_back_when_saved_artwork_mode_is_unavailable)
+{
+	Settings settings = kDefaultSettings;
+	Modes modes;
+	settings.default_mode = Mode::kCanvas;
+	modes.start(settings, false);
+	zassert_equal(modes.active(), Mode::kQr);
+	settings.artwork.bytes[kArtworkHeaderBytes] = 0x80;
+	modes.start(settings, false);
+	zassert_equal(modes.active(), Mode::kCanvas);
+	settings.default_mode = Mode::kAnimation;
+	modes.start(settings, false);
+	zassert_equal(modes.active(), Mode::kQr);
+	settings.artwork.bytes[1] = 2;
+	settings.artwork.length += kFrameBytes;
+	modes.start(settings, false);
+	zassert_equal(modes.active(), Mode::kAnimation);
+}
+
 ZTEST_SUITE(modes, nullptr, nullptr, nullptr, nullptr, nullptr);
