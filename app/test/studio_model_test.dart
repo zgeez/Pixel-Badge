@@ -7,6 +7,24 @@ import 'package:badge_app/studio_model.dart';
 import 'package:badge_app/draft_store.dart';
 
 void main() {
+  test('saved link labels use the editor grapheme limit across snapshots', () {
+    for (final grapheme in [
+      '\u{1f600}',
+      'e\u0301',
+      '\u{1f469}\u200d\u{1f4bb}',
+    ]) {
+      final label = List.filled(32, grapheme).join();
+      final draft = StudioDraft(links: [SavedLink(label, 'HTTPS://A.B/X')]);
+      expect(StudioDraft.decode(draft.encode()).links.single.label, label);
+      expect(
+        () => SavedLink.fromJson({
+          'label': label + grapheme,
+          'url': 'HTTPS://A.B/X',
+        }),
+        throwsFormatException,
+      );
+    }
+  });
   test('app frames match the firmware reference fixtures', () {
     final cases = [
       (const TextDesign(text: 'Hi!'), 0, 0x85cd5ee5),

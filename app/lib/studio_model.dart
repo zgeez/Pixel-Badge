@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 import 'dart:convert';
 import 'dart:typed_data';
+import 'package:characters/characters.dart';
 import 'font5x8.dart';
 import 'protocol.dart';
 
@@ -343,7 +344,7 @@ class SavedLink {
     final label = json['label'], url = json['url'];
     if (label is! String ||
         label.trim().isEmpty ||
-        label.length > 32 ||
+        label.characters.length > 32 ||
         url is! String) {
       throw const FormatException('Invalid saved link.');
     }
