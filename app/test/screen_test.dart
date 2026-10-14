@@ -18,10 +18,13 @@ import 'studio_controller_test.dart' show StudioLink;
 
 class DelayedDraftStore implements DraftStore {
   final result = Completer<StudioDraft>();
+  final saved = <StudioDraft>[];
   @override
   Future<StudioDraft> load() => result.future;
   @override
-  Future<void> save(StudioDraft draft) async {}
+  Future<void> save(StudioDraft draft) async {
+    saved.add(StudioDraft.decode(draft.encode()));
+  }
 }
 
 Future<void> showApp(
@@ -265,6 +268,110 @@ void main() {
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
   });
+  testWidgets('late draft load preserves a newer edit and its pending save', (
+    tester,
+  ) async {
+    final store = DelayedDraftStore();
+    await showApp(tester, store: store);
+    await page(tester, 'Text');
+    final chip = tester.widget<ChoiceChip>(
+      find.ancestor(
+        of: find.text('Word wrap'),
+        matching: find.byType(ChoiceChip),
+      ),
+    );
+    // Exercise a callback edit independently of the pointer-loading gate.
+    chip.onSelected!(true);
+    await tester.pump();
+    store.result.complete(
+      StudioDraft(text: const TextDesign(text: 'Stored', layout: 2)),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
+    expect(store.saved.single.text.layout, 1);
+    expect(store.saved.single.text.text, '');
+    expect(
+      tester
+          .widget<TextFormField>(find.byType(TextFormField).last)
+          .controller!
+          .text,
+      '',
+    );
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('late draft load preserves canvas and frame edits', (
+    tester,
+  ) async {
+    final store = DelayedDraftStore();
+    await showApp(tester, store: store);
+    await page(tester, 'Studio');
+    for (final label in ['Invert', 'Add frame']) {
+      tester
+          .widget<TextButton>(
+            find.ancestor(
+              of: find.text(label),
+              matching: find.byWidgetPredicate(
+                (widget) => widget is TextButton,
+              ),
+            ),
+          )
+          .onPressed!();
+      await tester.pump();
+    }
+    store.result.complete(StudioDraft());
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
+    final saved = store.saved.single.matrix;
+    expect(saved.frames.length, 2);
+    expect(saved.frames.first.every((byte) => byte == 255), isTrue);
+    expect(saved.frames.last.every((byte) => byte == 0), isTrue);
+    expect(
+      tester.widget<MatrixEditor>(find.byType(MatrixEditor)).design.encode(),
+      saved.encode(),
+    );
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('draft loading blocks touches until stored text is restored', (
+    tester,
+  ) async {
+    final store = DelayedDraftStore();
+    await showApp(tester, store: store);
+    await page(tester, 'Text');
+    await visible(tester, find.text('Word wrap'));
+    await tester.tap(find.text('Word wrap'), warnIfMissed: false);
+    await tester.pump(const Duration(milliseconds: 600));
+    expect(store.saved, isEmpty);
+    store.result.complete(
+      StudioDraft(text: const TextDesign(text: 'Stored', layout: 2)),
+    );
+    await tester.pump();
+    await tester.pump();
+    expect(
+      tester
+          .widget<TextFormField>(find.byType(TextFormField).last)
+          .controller!
+          .text,
+      'Stored',
+    );
+    expect(
+      tester
+          .widget<ChoiceChip>(
+            find.ancestor(
+              of: find.text('Scroll'),
+              matching: find.byType(ChoiceChip),
+            ),
+          )
+          .selected,
+      isTrue,
+    );
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+  });
+
   testWidgets('text size follows delayed draft load and badge replacement', (
     tester,
   ) async {

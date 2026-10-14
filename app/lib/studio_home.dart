@@ -87,9 +87,11 @@ class _BadgeHomeState extends State<BadgeHome> with WidgetsBindingObserver {
   }
 
   Future<void> loadDraft() async {
+    final revision = draftRevision;
     try {
       final value = await store.load();
       if (!mounted) return;
+      if (draftRevision != revision) return;
       draft = value;
       textEditor.text = draft.text.text;
     } catch (_) {
