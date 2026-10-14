@@ -49,5 +49,5 @@ inline bool valid_artwork(const uint8_t *bytes, size_t length)
 }
 void render_text(Frame &output, const TextContent &content, const char *fallback, uint32_t elapsed);
 void render_artwork(Frame &output, const Artwork &content, uint32_t elapsed, bool animate);
-bool artwork_present(const Artwork &content);
+bool artwork_present(const Artwork &content, bool first_frame_only = false);
 } // namespace badge

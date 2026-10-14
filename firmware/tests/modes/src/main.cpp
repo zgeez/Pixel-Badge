@@ -129,4 +129,40 @@ ZTEST(modes, test_boot_falls_back_when_saved_artwork_mode_is_unavailable)
 	zassert_equal(modes.active(), Mode::kAnimation);
 }
 
+ZTEST(modes, test_drawing_requires_pixels_in_the_rendered_first_frame)
+{
+	Settings design = kDefaultSettings;
+	design.default_mode = Mode::kCanvas;
+	design.artwork.bytes[1] = 2;
+	design.artwork.length += kFrameBytes;
+	design.artwork.bytes[kArtworkHeaderBytes + kFrameBytes] = 0x40;
+	Modes modes;
+	modes.start(design, false);
+	zassert_equal(modes.active(), Mode::kQr);
+	zassert_false(modes.select(Mode::kCanvas, 10));
+	modes.next(10);
+	zassert_equal(modes.active(), Mode::kName);
+	modes.next(20);
+	zassert_equal(modes.active(), Mode::kAnimation);
+	Frame before, after;
+	modes.render(before, 170);
+	zassert_mem_equal(before.bytes, design.artwork.bytes + kArtworkHeaderBytes + kFrameBytes,
+			  kFrameBytes);
+	zassert_false(modes.select(Mode::kCanvas, 170));
+	modes.render(after, 170);
+	zassert_mem_equal(before.bytes, after.bytes, kFrameBytes);
+	design.default_mode = Mode::kAnimation;
+	modes.start(design, false);
+	zassert_equal(modes.active(), Mode::kAnimation);
+
+	design.artwork.bytes[kArtworkHeaderBytes] = 0x80;
+	zassert_true(modes.configure(design));
+	zassert_true(modes.select(Mode::kCanvas, 200));
+	modes.render(after, 500);
+	zassert_mem_equal(after.bytes, design.artwork.bytes + kArtworkHeaderBytes, kFrameBytes);
+	design.artwork.length = kArtworkHeaderBytes;
+	zassert_true(modes.configure(design));
+	zassert_false(modes.select(Mode::kCanvas, 600));
+}
+
 ZTEST_SUITE(modes, nullptr, nullptr, nullptr, nullptr, nullptr);

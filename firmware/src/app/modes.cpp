@@ -41,7 +41,7 @@ void Modes::next(uint32_t now)
 bool Modes::available(Mode mode) const
 {
 	return mode <= Mode::kAnimation &&
-	       (mode != Mode::kCanvas || artwork_present(settings_.artwork)) &&
+	       (mode != Mode::kCanvas || artwork_present(settings_.artwork, true)) &&
 	       (mode != Mode::kAnimation ||
 		(artwork_present(settings_.artwork) && settings_.artwork.bytes[1] >= 2));
 }

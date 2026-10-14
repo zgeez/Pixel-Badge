@@ -141,12 +141,13 @@ void render_artwork(Frame &output, const Artwork &content, uint32_t elapsed, boo
 	memcpy(output.bytes, content.bytes + kArtworkHeaderBytes + index * kFrameBytes,
 	       kFrameBytes);
 }
-bool artwork_present(const Artwork &content)
+bool artwork_present(const Artwork &content, bool first_frame_only)
 {
 	if (!valid_artwork(content.bytes, content.length)) {
 		return false;
 	}
-	for (size_t i = kArtworkHeaderBytes; i < content.length; ++i) {
+	const size_t end = first_frame_only ? kArtworkHeaderBytes + kFrameBytes : content.length;
+	for (size_t i = kArtworkHeaderBytes; i < end; ++i) {
 		if (content.bytes[i] != 0) {
 			return true;
 		}
