@@ -32,12 +32,14 @@ int last_result = -EAGAIN;
 UrlUpdate url_update;
 struct UrlRequest {
 	char url[kPayloadMax + 1];
+	bool resync;
 };
 K_MSGQ_DEFINE(url_requests, sizeof(UrlRequest), 1, 4);
 K_MUTEX_DEFINE(request_mutex);
 K_SEM_DEFINE(request_done, 0, 1);
 atomic_t ready_state;
 atomic_t operation_active;
+atomic_t public_result;
 int request_result;
 
 struct Receipt {
@@ -202,9 +204,12 @@ void service_url_request(Ntag &tag)
 	if (k_msgq_get(&url_requests, &request, K_NO_WAIT) == 0) {
 		atomic_set(&operation_active, 1);
 		atomic_clear(&ready_state);
-		request_result =
-			writable ? change_url(tag, request.url, strlen(request.url)) : -EPERM;
+		request_result = !writable ? -EPERM
+				 : request.resync
+					 ? synchronize(tag, desired)
+					 : change_url(tag, request.url, strlen(request.url));
 		last_result = request_result;
+		atomic_set(&public_result, last_result);
 		atomic_set(&ready_state, proof && last_result == 0);
 		atomic_clear(&operation_active);
 		k_sem_give(&request_done);
@@ -307,6 +312,7 @@ void commands(Ntag &tag)
 		erase_sensitive(credentials, sizeof(credentials));
 		erase_sensitive(input, sizeof(input));
 		publish(tag, rc, sequence);
+		atomic_set(&public_result, last_result);
 		atomic_set(&ready_state, proof && last_result == 0);
 		atomic_clear(&operation_active);
 		LOG_INF("NFC command %u result %d; verified %s", command, rc,
@@ -329,6 +335,7 @@ void worker(void *, void *, void *)
 		memcpy(expected_uid, receipt.bytes + 1, sizeof(expected_uid));
 	}
 	last_result = writable ? synchronize(tag, desired) : -EPERM;
+	atomic_set(&public_result, last_result);
 	atomic_set(&ready_state, proof && last_result == 0);
 	atomic_clear(&operation_active);
 	LOG_INF("NFC boot result %d; %s", last_result,
@@ -388,6 +395,28 @@ int change_nfc_url(const char *url, size_t length)
 	}
 	k_mutex_unlock(&request_mutex);
 	return rc;
+}
+
+int resync_nfc()
+{
+	if (k_mutex_lock(&request_mutex, K_NO_WAIT) != 0) {
+		return -EBUSY;
+	}
+	UrlRequest request{};
+	request.resync = true;
+	k_sem_reset(&request_done);
+	int rc = k_msgq_put(&url_requests, &request, K_NO_WAIT);
+	if (rc == 0) {
+		k_sem_take(&request_done, K_FOREVER);
+		rc = request_result;
+	}
+	k_mutex_unlock(&request_mutex);
+	return rc;
+}
+
+int nfc_last_result()
+{
+	return atomic_get(&public_result);
 }
 
 bool nfc_ready()

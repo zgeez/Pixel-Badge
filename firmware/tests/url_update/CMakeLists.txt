@@ -6,6 +6,7 @@ set(app_root ${CMAKE_CURRENT_SOURCE_DIR}/../..)
 target_sources(app PRIVATE src/main.cpp
     ${app_root}/src/services/url_update.cpp
     ${app_root}/src/services/text.cpp
+    ${app_root}/src/services/content.cpp
     ${app_root}/src/services/qr.cpp
     ${app_root}/src/services/settings.cpp
     ${app_root}/src/services/test_pattern.cpp

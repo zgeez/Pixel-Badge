@@ -17,6 +17,7 @@ void BleProtocol::reset()
 	valid_ = name_total_ = name_used_ = 0;
 	memset(staged_, 0, sizeof(staged_));
 	memset(lengths_, 0, sizeof(lengths_));
+	memset(expected_, 0, sizeof(expected_));
 }
 
 int BleProtocol::stage(Field field, const uint8_t *data, size_t length, bool authorized)
@@ -27,10 +28,45 @@ int BleProtocol::stage(Field field, const uint8_t *data, size_t length, bool aut
 	if (pending_) {
 		return -EBUSY;
 	}
-	if (field <= Field::kSchema || field >= Field::kCount || data == nullptr || length == 0) {
+	if (field <= Field::kSchema || (field >= Field::kCount && field != kNfcSyncField) ||
+	    data == nullptr || length == 0) {
 		return -EINVAL;
 	}
-	const unsigned index = static_cast<unsigned>(field) - 1;
+	const unsigned index = field == kNfcSyncField ? 6 : static_cast<unsigned>(field) - 1;
+	if (field == Field::kText || field == Field::kArtwork) {
+		const size_t header = field == Field::kArtwork ? 5 : 4;
+		const size_t maximum = field == Field::kArtwork ? kArtworkBytes : kTextBytes;
+		if (length <= header || length > 20 || (field == Field::kArtwork && data[0] != 1)) {
+			return -EINVAL;
+		}
+		const uint8_t *fragment = data + (header == 5 ? 1 : 0);
+		const uint16_t offset = content_interval(fragment),
+			       total = content_interval(fragment + 2);
+		if (total == 0 || total > maximum || offset > total ||
+		    length - header > static_cast<size_t>(total - offset)) {
+			return -EINVAL;
+		}
+		if (offset == 0) {
+			valid_ &= ~(1U << index);
+			lengths_[index] = 0;
+			expected_[index] = total;
+		}
+		if (offset != lengths_[index] || total != expected_[index]) {
+			return -EINVAL;
+		}
+		memcpy(staged_[index] + offset, data + header, length - header);
+		lengths_[index] += length - header;
+		if (lengths_[index] == total) {
+			const bool valid = field == Field::kArtwork
+						   ? valid_artwork(staged_[index], total)
+						   : valid_text(staged_[index], total);
+			if (!valid) {
+				return -EINVAL;
+			}
+			valid_ |= 1U << index;
+		}
+		return 0;
+	}
 	if (field == Field::kName) {
 		/* Two header bytes keep all writes within the default ATT payload. */
 		if (length < 3 || length > 20 || data[1] == 0 || data[1] > kNameMax) {
@@ -61,7 +97,8 @@ int BleProtocol::stage(Field field, const uint8_t *data, size_t length, bool aut
 	if ((field == Field::kUrl && !valid_url(reinterpret_cast<const char *>(data), length)) ||
 	    (field == Field::kBrightness && (length != 1 || (data[0] != 16 && data[0] != 64 &&
 							     data[0] != 128 && data[0] != 255))) ||
-	    (field == Field::kDefaultMode && (length != 1 || data[0] > 1))) {
+	    (field == Field::kDefaultMode && (length != 1 || data[0] > 3)) ||
+	    (field == kNfcSyncField && (length != 1 || data[0] != 1))) {
 		return -EINVAL;
 	}
 	memcpy(staged_[index], data, length);
@@ -79,7 +116,8 @@ int BleProtocol::accept(const uint8_t *data, size_t length, bool authorized, Con
 		return -EBUSY;
 	}
 	if (data == nullptr || length != kBleApplySize || data[0] != kBleVersion || data[5] == 0 ||
-	    data[5] >= static_cast<unsigned>(Field::kCount)) {
+	    (data[5] >= static_cast<unsigned>(Field::kCount) &&
+	     data[5] != static_cast<unsigned>(kNfcSyncField))) {
 		return -EINVAL;
 	}
 	const uint32_t id = uint32_t(data[1]) | (uint32_t(data[2]) << 8) |
@@ -87,7 +125,7 @@ int BleProtocol::accept(const uint8_t *data, size_t length, bool authorized, Con
 	if (id == 0 || id <= id_) {
 		return -EALREADY;
 	}
-	const unsigned index = data[5] - 1;
+	const unsigned index = data[5] == static_cast<unsigned>(kNfcSyncField) ? 6 : data[5] - 1;
 	if ((valid_ & (1U << index)) == 0) {
 		return -EINVAL;
 	}

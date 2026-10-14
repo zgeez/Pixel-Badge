@@ -58,6 +58,7 @@ if(CONFIG_APP_PROTOTYPE)
 		src/services/boot_guard.cpp
 		src/services/display_health.cpp
 		src/services/text.cpp
+		src/services/content.cpp
 		src/platform/settings_store.cpp
 		src/platform/boot_retention.cpp
 		src/app/modes.cpp

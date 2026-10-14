@@ -31,11 +31,26 @@ void Modes::next(uint32_t now)
 	if (safe_) {
 		return;
 	}
-	mode_ = mode_ == Mode::kQr ? Mode::kName : Mode::kQr;
+	Mode next = mode_;
+	do {
+		next = static_cast<Mode>((static_cast<unsigned>(next) + 1) % 4);
+	} while ((next == Mode::kCanvas && !artwork_present(settings_.artwork)) ||
+		 (next == Mode::kAnimation &&
+		  (!artwork_present(settings_.artwork) || settings_.artwork.bytes[1] < 2)));
+	(void)select(next, now);
+}
+
+bool Modes::select(Mode mode, uint32_t now)
+{
+	if (safe_ || mode > Mode::kAnimation) {
+		return false;
+	}
+	mode_ = mode;
 	entered_at_ = now;
 	if (mode_ == Mode::kQr) {
 		qr_rotation_ = current_rotation_;
 	}
+	return true;
 }
 
 bool Modes::configure(const Settings &settings)
@@ -59,8 +74,11 @@ void Modes::render(Frame &output, uint32_t now) const
 	Frame content;
 	if (mode_ == Mode::kQr) {
 		content = qr_;
+	} else if (mode_ == Mode::kName) {
+		render_text(content, settings_.text, settings_.name, now - entered_at_);
 	} else {
-		draw_name(content, settings_.name, now - entered_at_);
+		render_artwork(content, settings_.artwork, now - entered_at_,
+			       mode_ == Mode::kAnimation);
 	}
 	rotate(content, output, mode_ == Mode::kQr ? qr_rotation_ : current_rotation_);
 }

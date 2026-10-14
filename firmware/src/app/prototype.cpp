@@ -76,7 +76,7 @@ int apply_config(void *pointer, const ConfigCommand &command)
 	}
 	if (command.field == Field::kDefaultMode &&
 	    context.modes.active() != candidate.values().default_mode) {
-		context.modes.next(context.now);
+		(void)context.modes.select(candidate.values().default_mode, context.now);
 	}
 	Frame frame;
 	context.modes.render(frame, context.now);
@@ -91,7 +91,7 @@ int apply_config(void *pointer, const ConfigCommand &command)
 	if (rc != 0) {
 		context.modes.configure(context.settings.values());
 		if (context.modes.active() != previous_mode) {
-			context.modes.next(context.now);
+			(void)context.modes.select(previous_mode, context.now);
 		}
 		context.modes.render(frame, context.now);
 		(void)display_set_brightness(context.display, context.settings.values().brightness);
@@ -245,8 +245,15 @@ void run_prototype()
 				}
 			}
 		}
+		/* Sample fast content at the main-loop cadence. Recovery retains its
+		 * bounded retry rate; animation timing is elapsed-time based. */
+		const bool fast_content =
+			modes.active() == Mode::kAnimation ||
+			(modes.active() == Mode::kName && settings.values().text.bytes[1] == 2);
+		const uint32_t render_interval =
+			fast_content && !display_health.recovering() ? 20 : DisplayHealth::kRetryMs;
 		if ((changed && !display_health.recovering()) ||
-		    now - last_render >= DisplayHealth::kRetryMs) {
+		    now - last_render >= render_interval) {
 			Frame frame;
 			modes.render(frame, now);
 			[[maybe_unused]] bool pairing_overlay = false;
