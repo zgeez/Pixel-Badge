@@ -1,7 +1,8 @@
-# Prototype BLE configuration protocol v1
+# Prototype BLE configuration protocol v2
 
-Status: implementation for the nRF5340 DK; owner-reported Android contact-link
-agreement and power-cycle checks passed. Broader phone/security acceptance pending.
+Status: Studio implementation for the nRF5340 DK, pending new phone/hardware
+acceptance. Historical v1 owner-reported Android contact-link agreement and
+power-cycle checks passed; those results do not validate the v2 upgrade.
 Android first. Audio/app-key enrollment is later ADR 0011 work; no recording
 or firmware-update commands are exposed here. The badge is a peripheral/GATT
 server; its network core runs IPC radio, application core runs host/GATT and
@@ -12,13 +13,16 @@ UUIDs use the suffix `-6e9b-4f4c-a8f8-731a9d46e1c0` below.
 | UUID prefix | Purpose | Properties | Encoding |
 |---|---|---|---|
 | f3b00001 | Service | — | Custom 128-bit UUID |
-| f3b00002 | Info | Read | 8 bytes: version=1, URL max=20, name max=32, brightness count=4, modes=2, flags, reserved=0, reserved=0 |
+| f3b00002 | Info | Read | 8 bytes: version=2, URL max=20, name max=32, brightness count=4, modes=4, flags, max frames=16, extension flags=7 |
 | f3b00003 | Name | Read / Write | Read applied ASCII; writes use fragments below |
 | f3b00004 | URL | Read / Write | Exact ASCII HTTP(S), 1–20 bytes, V1-M QR fit required |
 | f3b00005 | Brightness | Read / Write | One byte: 16, 64, 128 or 255 |
-| f3b00006 | Mode | Read / Write | QR=0, name=1; Apply also stores the boot default |
-| f3b00007 | Apply | Write with response | `[1, request_id:u32le, field:u8]`, six bytes |
+| f3b00006 | Mode | Read / Write | QR=0, text=1, drawing=2, animation=3; Apply also stores the boot default |
+| f3b00007 | Apply | Write with response | `[2, request_id:u32le, field:u8]`, six bytes |
 | f3b00008 | Status | Read / Notify | 12 bytes, layout below |
+| f3b00009 | Text | Read / Write | Applied content / staged fragments; 6–102 bytes |
+| f3b0000a | Artwork | Read / Write | Paged applied content / staged fragments; 132–2052 bytes |
+| f3b0000b | NFC sync | Read / Write | Seven-byte NFC state / staged `[1]` action |
 
 Info is public; all other reads, writes and CCC subscriptions require
 authenticated LE Secure Connections, security level 4. Just Works and legacy
@@ -31,6 +35,7 @@ receipt with the settings partition; NFC then requires explicit provisioning.
 The window is an implementation timeout, not a measured acceptance criterion.
 Button 1 keeps mode cycling; short button actions are held during Apply or
 passkey display.
+Button 1 skips empty artwork and animations with fewer than two frames.
 
 ## Stage and apply
 
@@ -42,7 +47,8 @@ names cannot be applied. Other writes contain raw values. Prepared writes,
 nonzero ATT offsets and write-without-response are rejected. Write/status
 packets fit ATT MTU 23; ordinary long reads handle names longer than 20 bytes.
 
-Apply fields: URL=1, name=2, brightness=3, mode=4. Apply changes **one staged
+Apply fields: URL=1, name=2, brightness=3, mode=4, text=5, artwork=6,
+NFC resync=127 (ephemeral action). Apply changes **one staged
 field**, with no multi-field transaction. IDs are nonzero, strictly increasing
 within a connection. Duplicate/older IDs are rejected without replay; read
 Status to choose the next ID. Reconnect at ID exhaustion. Staging is consumed
@@ -59,7 +65,7 @@ the active mode, including Button 1 changes. Stored settings work offline.
 
 | Offset | Size | Meaning |
 |---|---|---|
-| 0 | 1 | Version=1 |
+| 0 | 1 | Version=2 |
 | 1 | 4 | Unsigned request ID, little endian |
 | 5 | 1 | Field; 0 only while idle |
 | 6 | 1 | Phase: idle=0, pending=1, complete=2 |
@@ -85,9 +91,64 @@ refreshes after reconnect, **never automatically replays Apply**. Failed or
 uncertain readback also requires Refresh before another Apply. Separate
 settings/tag storage does not provide physical power-loss atomicity.
 
-Golden Apply URL ID `12345678h`: `01 78 56 34 12 01`.
+Golden Apply URL ID `12345678h`: `02 78 56 34 12 01`.
 Completed URL ID 1, access denied, writes available:
-`01 01 00 00 00 01 02 F3 FF FF FF 01`.
+`02 01 00 00 00 01 02 F3 FF FF FF 01`.
+
+## Studio content and NFC action
+
+Info extension flags are text=1, artwork=2 and NFC resync=4. This version
+requires all three. Text/artwork write chunks fit the default 20-byte ATT
+payload. Offset 0 replaces a staged object; later chunks must be contiguous
+with an unchanged total. Apply rejects incomplete or semantically invalid
+objects. No EEPROM/NVS write occurs during staging.
+
+Text payload: `[1, layout, scale, alignment, interval:u16le, ASCII...]`.
+Maximum 96 printable ASCII bytes or LF, minimum six-byte header. Layouts are
+auto fit=0, word wrap=1 and scrolling=2. Scale is auto=0 or 1/2/3; alignment
+is left=0, center=1, right=2. Interval is 50–500 ms per scroll pixel;
+paginated layouts hold each page for interval × 20 ms. Auto fit with automatic
+scale chooses the largest size whose wrapped text fits one page, falling back
+to small paginated text. Word wrap with automatic scale uses small text.
+Empty text uses the stored name. The case-sensitive 5 × 8 font is shared with
+the app. Text staging is `[offset:u16le, total:u16le, 1–16 payload bytes]`.
+Ordinary GATT long reads return the complete applied text (at most 102 bytes).
+
+Artwork payload: `[1, count, interval:u16le, frames...]`. Count is 1–16,
+interval 50–2000 ms. Each frame is exactly 128 bytes, row-major, MSB first:
+pixel `(x,y)` is bit `7-(x%8)` of byte `y*4+x/8`. Drawing displays frame 0;
+animation selects `(elapsed/interval)%count`. The runtime uses elapsed time
+and may skip frames when busy. Nominal playback interval is not a measured
+frame-rate guarantee. Staging is
+`[1, offset:u16le, total:u16le, 1–15 payload bytes]`.
+
+Artwork is larger than GATT's 512-byte attribute limit, so readback is paged.
+Write `[0, offset:u16le]` to select an applied read cursor, then read
+`[offset:u16le, total:u16le, up to 16 payload bytes]`. The cursor is specific to
+the single connection and resets on connect. The client checks contiguous
+offsets, stable total and exact complete bytes, with Status before/after the
+read. Cursor selection does not stage content or persist anything.
+
+NFC read: `[1, ready, busy, result:i32le]`, where ready/busy are 0 or 1 and
+result is non-secret diagnostic status. Stage `[1]`, then Apply field127 to
+reconcile the current QR URL through the existing guarded NFC worker. This
+does not change URL, credentials or provisioning policy and does not persist
+a field127 setting. Successful completion additionally requires NFC-ready
+readback. Keep phones away during synchronization; a missing verification
+receipt requires the existing explicit provisioning workflow.
+
+Settings schema remains v1 with optional `text` and `artwork` records. Older
+core settings survive the upgrade; missing/invalid extensions default to
+name-backed text and one blank frame. Schema recovery writes all defaults
+before activating the schema. NVS stores a whole bounded artwork record.
+Sending content then selecting its mode is two separate confirmed Applies,
+so interrupted clients must refresh rather than assume both completed.
+
+The updated app reads v1 Info `[1,20,32,4,2,flags,0,0]` for basic controls and
+v2 Info for Studio. Firmware accepts v2 Apply only. Old v1 apps need updating.
+Re-discover services after flashing; OS GATT caches can retain the old table.
+Extensions are appended after the original v1 attributes to preserve their
+order. Service discovery must still find the newly added characteristics.
 
 ## Bench
 

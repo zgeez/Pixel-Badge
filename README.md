@@ -17,6 +17,11 @@ development: secure passkey pairing, confirmed link selection, name, brightness
 and mode. Firmware/app software checks pass; end-to-end phone acceptance is
 pending. See [BLE protocol and bench steps](docs/ble-protocol.md) and
 [app setup](app/README.md).
+Pixel Studio adds custom short links, synchronized NFC status/resync, adaptive
+light/dark screens, richer text layout, a pixel editor and persistent
+16-frame animations. The new app/firmware extension has local software checks;
+its phone/panel acceptance is pending. See the
+[Studio record](validation/results/2026-10-13-pixel-studio/README.md).
 The owner reports the initial P0 bench procedure passed; later display/schema
 recovery corrections need a new bench run. Rev A has a schematic and board
 definition; its hardware-specific firmware comes later. See
