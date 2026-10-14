@@ -1092,9 +1092,7 @@ class _BadgeHomeState extends State<BadgeHome> with WidgetsBindingObserver {
                   ? preview(
                       (t) => draft.text.render(
                         t,
-                        fallback: nameEditor.text.isEmpty
-                            ? 'BADGE'
-                            : nameEditor.text,
+                        fallback: badge.name.isEmpty ? 'BADGE' : badge.name,
                       ),
                       animate: true,
                     )

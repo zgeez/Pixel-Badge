@@ -175,6 +175,76 @@ void main() {
     controller.dispose();
     await link.dispose();
   });
+  testWidgets('empty text preview and send use the confirmed badge name', (
+    tester,
+  ) async {
+    final link = StudioLink();
+    link.values[BadgeField.name.uuid] = Uint8List.fromList(
+      ascii.encode('SAVED'),
+    );
+    final controller = BadgeController();
+    await controller.attach(link, capabilities: BadgeCapabilities.studio);
+    await showApp(tester, controller: controller);
+    await page(tester, 'Text');
+    await tester.enterText(find.byType(TextFormField).first, 'PENDING');
+
+    Future<void> expectFallback(String name) async {
+      await visible(tester, find.byType(MatrixPreview));
+      final clock =
+          tester
+                  .widget<ValueListenableBuilder<int>>(
+                    find.ancestor(
+                      of: find.byType(MatrixPreview),
+                      matching: find.byType(ValueListenableBuilder<int>),
+                    ),
+                  )
+                  .valueListenable
+              as ValueNotifier<int>;
+      clock.value = 1;
+      await tester.pump();
+      clock.value = 0;
+      await tester.pump();
+      expect(
+        tester.widget<MatrixPreview>(find.byType(MatrixPreview)).frame,
+        const TextDesign().render(0, fallback: name),
+      );
+    }
+
+    await expectFallback('SAVED');
+    await visible(tester, find.text('Send text'));
+    await tester.tap(find.text('Send text'));
+    await tester.pump(const Duration(seconds: 1));
+    expect(link.applies, 2);
+    expect(controller.name, 'SAVED');
+    expect(link.values[BadgeField.text.uuid], const TextDesign().encode());
+    expect(link.values[BadgeField.name.uuid], ascii.encode('SAVED'));
+    await expectFallback('SAVED');
+
+    link.values[BadgeField.name.uuid] = Uint8List.fromList(
+      ascii.encode('REFRESHED'),
+    );
+    await controller.refresh();
+    await tester.pump();
+    await expectFallback('REFRESHED');
+    expect(
+      tester
+          .widget<TextFormField>(find.byType(TextFormField).first)
+          .controller!
+          .text,
+      'PENDING',
+    );
+
+    await visible(tester, find.text('Apply name'));
+    await tester.tap(find.text('Apply name'));
+    await tester.pump(const Duration(seconds: 1));
+    expect(controller.name, 'PENDING');
+    await expectFallback('PENDING');
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+    controller.dispose();
+    await link.dispose();
+  });
+
   testWidgets('offline custom links save locally and never appear active', (
     tester,
   ) async {

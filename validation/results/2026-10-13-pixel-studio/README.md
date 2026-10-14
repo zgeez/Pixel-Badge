@@ -85,6 +85,15 @@ no full dotenv file or NFC credentials are included in the APK.
   Corrected artifacts have not
   been installed or flashed; the earlier upload evidence remains historical.
 
+## Confirmed-name preview correction (2026-10-14)
+
+Empty-text preview uses the confirmed badge name, with BADGE as the offline
+default, rather than the unapplied identity editor. Send text still applies
+only text and mode. The widget regression checks unapplied edits, Send text,
+refreshed names and explicit Apply name. Flutter41 tests and clean analyzer
+pass; the debug APK builds. No firmware change or new physical acceptance is
+claimed, and the corrected APK has not been installed.
+
 ## Short physical acceptance checklist — pending
 
 Deployment evidence: both normal-image cores were flashed with `--no-erase`;
