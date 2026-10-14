@@ -7,9 +7,10 @@ import 'badge_controller.dart';
 import 'protocol.dart';
 
 class UniversalBadgeLink implements BadgeLink {
-  UniversalBadgeLink._(this.device, this.result);
+  UniversalBadgeLink._(this.device, this.result, this.capabilities);
   final BleDevice device;
   final BleCharacteristic result;
+  final BadgeCapabilities capabilities;
   static Future<UniversalBadgeLink> connect(BleDevice device) async {
     try {
       await device.connect();
@@ -18,18 +19,7 @@ class UniversalBadgeLink implements BadgeLink {
         infoUuid,
         service: serviceUuid,
       )).read();
-      if (info.length != 8 ||
-          info[0] != 1 ||
-          info[1] != 20 ||
-          info[2] != 32 ||
-          info[3] != 4 ||
-          info[4] != 2 ||
-          info[6] != 0 ||
-          info[7] != 0) {
-        throw const FormatException(
-          'Badge firmware uses an unsupported configuration protocol.',
-        );
-      }
+      final capabilities = BadgeCapabilities.decode(info);
       await device.pair(
         pairingCommand: BleCommand(
           service: serviceUuid,
@@ -44,7 +34,7 @@ class UniversalBadgeLink implements BadgeLink {
       await result
           .read(); // Firmware requires authenticated LESC, beyond OS bond status.
       await result.notifications.subscribe();
-      return UniversalBadgeLink._(device, result);
+      return UniversalBadgeLink._(device, result, capabilities);
     } catch (_) {
       try {
         await device.disconnect();
@@ -57,6 +47,16 @@ class UniversalBadgeLink implements BadgeLink {
 
   @override
   Future<Uint8List> read(String uuid) async {
+    if (uuid == BadgeField.artwork.uuid) {
+      final characteristic = await device.getCharacteristic(
+        uuid,
+        service: serviceUuid,
+      );
+      return readArtworkPages(
+        (cursor) => characteristic.write(cursor, withResponse: true),
+        characteristic.read,
+      );
+    }
     final bytes = await (await device.getCharacteristic(
       uuid,
       service: serviceUuid,

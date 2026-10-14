@@ -13,6 +13,8 @@ bool poll_nfc(SettingsService &settings, Modes &modes);
 void nfc_display_result(int result);
 /* Blocking worker API; never call from a Bluetooth callback or main loop. */
 int change_nfc_url(const char *url, size_t length);
+int resync_nfc();
+int nfc_last_result();
 bool nfc_ready();
 bool nfc_update_busy();
 } // namespace badge

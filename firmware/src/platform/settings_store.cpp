@@ -30,8 +30,13 @@ int read_setting(const char *key, size_t length, settings_read_cb read, void *ar
 		if (strcmp(key, field_name(field)) != 0) {
 			continue;
 		}
-		uint8_t bytes[kNameMax];
-		if (length == 0 || length > sizeof(bytes)) {
+		/* Startup loader has one owner; avoid a large transient stack buffer. */
+		static uint8_t bytes[kArtworkBytes];
+		constexpr size_t maxima[] = {1, kPayloadMax, kNameMax,     1,
+					     1, kTextBytes,  kArtworkBytes};
+		static_assert(sizeof(maxima) / sizeof(maxima[0]) ==
+			      static_cast<unsigned>(Field::kCount));
+		if (length == 0 || length > maxima[i]) {
 			LOG_WRN("invalid setting %s; using default", field_name(field));
 			break;
 		}

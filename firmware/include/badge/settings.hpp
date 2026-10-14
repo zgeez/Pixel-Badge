@@ -2,6 +2,7 @@
 #pragma once
 
 #include "badge/qr.hpp"
+#include "badge/content.hpp"
 
 namespace badge
 {
@@ -10,7 +11,9 @@ constexpr size_t kNameMax = 32;
 constexpr uint8_t kSchemaVersion = 1;
 enum class Mode : uint8_t {
 	kQr,
-	kName
+	kName,
+	kCanvas,
+	kAnimation
 };
 enum class Field : uint8_t {
 	kSchema,
@@ -18,14 +21,20 @@ enum class Field : uint8_t {
 	kName,
 	kBrightness,
 	kDefaultMode,
+	kText,
+	kArtwork,
 	kCount
 };
+/* Nonpersistent command, kept outside the storage field namespace. */
+constexpr Field kNfcSyncField = static_cast<Field>(127);
 
 struct Settings {
 	char url[kPayloadMax + 1];
 	char name[kNameMax + 1];
 	uint8_t brightness;
 	Mode default_mode;
+	TextContent text{};
+	Artwork artwork{};
 };
 
 extern const Settings kDefaultSettings;

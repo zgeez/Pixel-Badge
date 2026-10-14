@@ -57,7 +57,7 @@ bool UrlUpdate::poll(SettingsService &settings, Modes &modes, SaveField write, v
 			return false;
 		}
 		if (modes.active() != Mode::kQr) {
-			modes.next(0);
+			(void)modes.select(Mode::kQr, 0);
 		}
 		previewed_ = true;
 		phase_ = Phase::kDisplay;
@@ -81,7 +81,7 @@ bool UrlUpdate::poll(SettingsService &settings, Modes &modes, SaveField write, v
 		const bool changed = previewed_;
 		const bool restored = !previewed_ || modes.configure(settings.values());
 		if (previewed_ && restored && modes.active() != previous_mode_) {
-			modes.next(0);
+			(void)modes.select(previous_mode_, 0);
 		}
 		previewed_ = false;
 		if (phase_ == Phase::kRestore) {

@@ -27,6 +27,9 @@ bt_uuid_128 brightness_uuid = BT_UUID_INIT_128(BADGE_UUID(5));
 bt_uuid_128 mode_uuid = BT_UUID_INIT_128(BADGE_UUID(6));
 bt_uuid_128 apply_uuid = BT_UUID_INIT_128(BADGE_UUID(7));
 bt_uuid_128 status_uuid = BT_UUID_INIT_128(BADGE_UUID(8));
+bt_uuid_128 text_uuid = BT_UUID_INIT_128(BADGE_UUID(9));
+bt_uuid_128 artwork_uuid = BT_UUID_INIT_128(BADGE_UUID(10));
+bt_uuid_128 nfc_uuid = BT_UUID_INIT_128(BADGE_UUID(11));
 K_MUTEX_DEFINE(ble_mutex);
 K_SEM_DEFINE(ble_started, 0, 1);
 K_SEM_DEFINE(main_requested, 0, 1);
@@ -42,6 +45,7 @@ bool passkey_visible;
 uint32_t displayed_passkey;
 ConfigCommand main_command;
 int main_result;
+uint16_t artwork_read_offset;
 
 uint8_t flags()
 {
@@ -61,7 +65,8 @@ ssize_t att_error(int rc)
 ssize_t read_info(bt_conn *conn, const bt_gatt_attr *attr, void *buf, uint16_t len, uint16_t offset)
 {
 	k_mutex_lock(&ble_mutex, K_FOREVER);
-	const uint8_t info[] = {kBleVersion, kPayloadMax, kNameMax, 4, 2, flags(), 0, 0};
+	const uint8_t info[] = {kBleVersion, kPayloadMax, kNameMax,       4,
+				4,           flags(),     kArtworkFrames, 7};
 	k_mutex_unlock(&ble_mutex);
 	return bt_gatt_attr_read(conn, attr, buf, len, offset, info, sizeof(info));
 }
@@ -71,7 +76,7 @@ ssize_t read_setting(bt_conn *conn, const bt_gatt_attr *attr, void *buf, uint16_
 	if (!secure(conn)) {
 		return att_error(-EACCES);
 	}
-	uint8_t data[kNameMax];
+	uint8_t data[kTextBytes];
 	size_t length = 1;
 	const Field field = static_cast<Field>(reinterpret_cast<uintptr_t>(attr->user_data));
 	k_mutex_lock(&ble_mutex, K_FOREVER);
@@ -81,6 +86,28 @@ ssize_t read_setting(bt_conn *conn, const bt_gatt_attr *attr, void *buf, uint16_
 	} else if (field == Field::kName) {
 		length = strlen(snapshot.name);
 		memcpy(data, snapshot.name, length);
+	} else if (field == Field::kText) {
+		length = snapshot.text.length;
+		memcpy(data, snapshot.text.bytes, length);
+	} else if (field == Field::kArtwork) {
+		const uint16_t total = snapshot.artwork.length;
+		const uint16_t cursor = artwork_read_offset <= total ? artwork_read_offset : total;
+		length = total - cursor < 16 ? total - cursor : 16;
+		data[0] = cursor;
+		data[1] = cursor >> 8;
+		data[2] = total;
+		data[3] = total >> 8;
+		memcpy(data + 4, snapshot.artwork.bytes + cursor, length);
+		length += 4;
+	} else if (field == kNfcSyncField) {
+		const int result = nfc_last_result();
+		data[0] = 1;
+		data[1] = nfc_ready();
+		data[2] = nfc_update_busy();
+		for (unsigned i = 0; i < 4; ++i) {
+			data[3 + i] = static_cast<uint32_t>(result) >> (i * 8);
+		}
+		length = 7;
 	} else {
 		data[0] = field == Field::kBrightness ? snapshot.brightness
 						      : static_cast<uint8_t>(active_mode);
@@ -96,6 +123,16 @@ ssize_t stage_setting(bt_conn *conn, const bt_gatt_attr *attr, const void *buf, 
 	}
 	const Field field = static_cast<Field>(reinterpret_cast<uintptr_t>(attr->user_data));
 	k_mutex_lock(&ble_mutex, K_FOREVER);
+	if (field == Field::kArtwork && len == 3 && static_cast<const uint8_t *>(buf)[0] == 0) {
+		const int rc = secure(conn) && connection == conn ? 0 : -EACCES;
+		const uint16_t cursor = content_interval(static_cast<const uint8_t *>(buf) + 1);
+		const bool within = cursor <= snapshot.artwork.length;
+		if (rc == 0 && within) {
+			artwork_read_offset = cursor;
+		}
+		k_mutex_unlock(&ble_mutex);
+		return rc != 0 ? att_error(rc) : !within ? att_error(-EINVAL) : len;
+	}
 	const int rc = job_active ? -EBUSY
 				  : protocol.stage(field, static_cast<const uint8_t *>(buf), len,
 						   secure(conn) && connection == conn && writable &&
@@ -123,7 +160,8 @@ ssize_t apply_setting(bt_conn *conn, const bt_gatt_attr *, const void *buf, uint
 	if (offset != 0 || write_flags != 0) {
 		return BT_GATT_ERR(BT_ATT_ERR_INVALID_OFFSET);
 	}
-	ConfigCommand command;
+	/* Large bounded asset storage must not live on the Bluetooth RX stack. */
+	static ConfigCommand command;
 	k_mutex_lock(&ble_mutex, K_FOREVER);
 	int rc = job_active ? -EBUSY
 			    : protocol.accept(static_cast<const uint8_t *>(buf), len,
@@ -170,7 +208,11 @@ BT_GATT_SERVICE_DEFINE(badge_service, BT_GATT_PRIMARY_SERVICE(&service_uuid),
 		       BT_GATT_CHARACTERISTIC(&status_uuid.uuid,
 					      BT_GATT_CHRC_READ | BT_GATT_CHRC_NOTIFY,
 					      read_permission, read_status, nullptr, nullptr),
-		       BT_GATT_CCC_MANAGED(&status_ccc, read_permission | write_permission));
+		       BT_GATT_CCC_MANAGED(&status_ccc, read_permission | write_permission),
+		       /* Append extensions to preserve the original v1 attribute order. */
+		       SETTING_CHARACTERISTIC(text_uuid, Field::kText),
+		       SETTING_CHARACTERISTIC(artwork_uuid, Field::kArtwork),
+		       SETTING_CHARACTERISTIC(nfc_uuid, kNfcSyncField));
 #pragma GCC diagnostic pop
 
 void notify_status(k_work *)
@@ -215,6 +257,7 @@ void connected(bt_conn *conn, uint8_t error)
 	k_mutex_lock(&ble_mutex, K_FOREVER);
 	connection = bt_conn_ref(conn);
 	protocol.reset();
+	artwork_read_offset = 0;
 	k_mutex_unlock(&ble_mutex);
 	/* Bonded reconnection does not require the physical pairing window. The
 	 * pairing_accept callback blocks all new pairing outside that window. */
@@ -329,7 +372,9 @@ void worker(void *, void *, void *)
 	LOG_INF("BLE ready: configuration service available");
 	k_work_submit(&advertise_work);
 	while (true) {
-		ConfigCommand command;
+		/* One worker owns the command; keep the 2 KiB asset off its stack,
+		 * including the startup path through bt_enable(). */
+		static ConfigCommand command;
 		k_msgq_get(&config_requests, &command, K_FOREVER);
 		k_mutex_lock(&ble_mutex, K_FOREVER);
 		const bool current = protocol.current(command) && writable;
@@ -338,6 +383,9 @@ void worker(void *, void *, void *)
 		if (result == 0 && command.field == Field::kUrl) {
 			result = change_nfc_url(reinterpret_cast<const char *>(command.data),
 						command.length);
+		}
+		if (result == 0 && command.field == kNfcSyncField) {
+			result = resync_nfc();
 		}
 		/* Main owns all settings/mode/display state and publishes readback
 		 * before status completion. No Bluetooth callback touches flash/I2C. */
@@ -405,7 +453,8 @@ void poll_ble(const Settings &settings, Modes &modes, bool allow_writes, ApplyCo
 		bt_conn_disconnect(cancel, BT_HCI_ERR_AUTH_FAIL);
 		bt_conn_unref(cancel);
 	}
-	if (requested && main_result == 0 && main_command.field != Field::kUrl) {
+	if (requested && main_result == 0 && main_command.field != Field::kUrl &&
+	    main_command.field != kNfcSyncField) {
 		main_result = current && allow_writes ? apply(context, main_command) : -ECANCELED;
 	}
 	k_mutex_lock(&ble_mutex, K_FOREVER);

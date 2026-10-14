@@ -1,5 +1,14 @@
 # Firmware
 
+The Pixel Studio extension adds case-sensitive 96-character text with fitting,
+wrapping/pagination and scrolling; persistent 32 × 32 drawings; and up to
+16 animation frames. BLE protocol v2 adds bounded content staging, paged
+artwork readback and guarded NFC resync. QR and NFC retain one shared URL.
+See [the wire contract](ble-protocol.md) and
+[Studio validation](../validation/results/2026-10-13-pixel-studio/README.md).
+This extension is software-tested on the existing nRF5340 DK target;
+new phone/panel acceptance and the selected Rev A hardware port are pending.
+
 Status: **prototype foundation**. The default nRF5340 DK application implements
 QR/name modes, persistent settings, two-button controls, a watchdog and
 reset-loop safe mode. On 2026-10-11 the owner reported all six foundation

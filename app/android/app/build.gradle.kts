@@ -1,8 +1,17 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+}
+
+// Owner-supplied release credentials are local and excluded from Git.
+val releaseKeys = Properties()
+val releaseKeysFile = rootProject.file("key.properties")
+if (releaseKeysFile.exists()) {
+    releaseKeysFile.inputStream().use { releaseKeys.load(it) }
 }
 
 android {
@@ -21,21 +30,27 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.ziadg.badge_app"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        if (releaseKeysFile.exists()) {
+            create("ownerRelease") {
+                keyAlias = releaseKeys.getProperty("keyAlias") ?: error("Missing keyAlias")
+                keyPassword = releaseKeys.getProperty("keyPassword") ?: error("Missing keyPassword")
+                storeFile = rootProject.file(releaseKeys.getProperty("storeFile") ?: error("Missing storeFile"))
+                storePassword = releaseKeys.getProperty("storePassword") ?: error("Missing storePassword")
+            }
+        }
+    }
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            // Without owner credentials the release artifact remains unsigned.
+            signingConfig = signingConfigs.findByName("ownerRelease")
         }
     }
 }

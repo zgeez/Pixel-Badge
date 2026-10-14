@@ -88,6 +88,39 @@ ZTEST(settings_store, test_factory_reset_reload_invalid_value_and_power_cuts)
 		zassert_equal(strcmp(reloaded.values().url, "https://a.b/X"), 0);
 	}
 	zassert_true(saw_old && saw_new);
+	/* A full animation exceeds a single ATT attribute and spans significant
+	 * NVS space. Interrupted flash writes must retain one complete version. */
+	Artwork old_art, new_art;
+	old_art.length = new_art.length = kArtworkBytes;
+	old_art.bytes[1] = new_art.bytes[1] = 16;
+	memset(old_art.bytes + 4, 0x55, kArtworkBytes - 4);
+	memset(new_art.bytes + 4, 0xaa, kArtworkBytes - 4);
+	zassert_ok(reloaded.save(Field::kArtwork, old_art.bytes, old_art.length, store_field,
+				 nullptr));
+	memcpy(baseline, memory + area->fa_off, sizeof(baseline));
+	saw_old = saw_new = false;
+	const unsigned cuts[] = {0, 1, 15, 128, 512, 1024, 2048, 2052, 2060, 2100, 4096};
+	for (unsigned cut : cuts) {
+		memcpy(memory + area->fa_off, baseline, sizeof(baseline));
+		zassert_ok(nvs_mount(fs));
+		zassert_ok(load_settings(reloaded, false));
+		budget = cut;
+		flash_simulator_set_callbacks(flash, &callbacks);
+		const int rc = reloaded.save(Field::kArtwork, new_art.bytes, new_art.length,
+					     store_field, nullptr);
+		flash_simulator_set_callbacks(flash, nullptr);
+		zassert_true(rc == 0 || rc == -EIO);
+		zassert_ok(nvs_mount(fs));
+		zassert_ok(load_settings(reloaded, false));
+		const auto &art = reloaded.values().artwork;
+		zassert_equal(art.length, kArtworkBytes);
+		const bool old = memcmp(art.bytes, old_art.bytes, kArtworkBytes) == 0;
+		const bool updated = memcmp(art.bytes, new_art.bytes, kArtworkBytes) == 0;
+		zassert_true(old || updated, "partial animation after cut %u", cut);
+		saw_old |= old;
+		saw_new |= updated;
+	}
+	zassert_true(saw_old && saw_new);
 	/* Unknown schema with otherwise valid old records must never reactivate
 	 * those records, even if recovery is interrupted at any flash byte. */
 	const uint8_t future_schema = 2;

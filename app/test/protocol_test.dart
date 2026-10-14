@@ -66,7 +66,7 @@ void main() {
     expect(status.result, -13);
     expect(status.nfcVerified, isFalse);
     expect(
-      () => BadgeStatus.decode([2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+      () => BadgeStatus.decode([99, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
       throwsFormatException,
     );
   });

@@ -13,11 +13,12 @@
 namespace badge
 {
 static_assert(sizeof(BADGE_DEFAULT_URL) <= kPayloadMax + 1);
-const Settings kDefaultSettings = {BADGE_DEFAULT_URL, "BADGE", 128, Mode::kQr};
+const Settings kDefaultSettings = {BADGE_DEFAULT_URL, "BADGE", 128, Mode::kQr, {}, {}};
 
 const char *field_name(Field field)
 {
-	static const char *const names[] = {"schema", "url", "name", "brightness", "mode"};
+	static const char *const names[] = {"schema", "url",  "name",   "brightness",
+					    "mode",   "text", "artwork"};
 	return field < Field::kCount ? names[static_cast<unsigned>(field)] : nullptr;
 }
 
@@ -67,10 +68,26 @@ bool SettingsService::apply(Field field, const void *data, size_t length)
 		values_.brightness = bytes[0];
 		return true;
 	case Field::kDefaultMode:
-		if (length != 1 || bytes[0] > static_cast<uint8_t>(Mode::kName)) {
+		if (length != 1 || bytes[0] > static_cast<uint8_t>(Mode::kAnimation)) {
 			return false;
 		}
 		values_.default_mode = static_cast<Mode>(bytes[0]);
+		return true;
+	case Field::kText:
+		if (!valid_text(bytes, length)) {
+			return false;
+		}
+		memset(values_.text.bytes, 0, sizeof(values_.text.bytes));
+		memcpy(values_.text.bytes, bytes, length);
+		values_.text.length = length;
+		return true;
+	case Field::kArtwork:
+		if (!valid_artwork(bytes, length)) {
+			return false;
+		}
+		memset(values_.artwork.bytes, 0, sizeof(values_.artwork.bytes));
+		memcpy(values_.artwork.bytes, bytes, length);
+		values_.artwork.length = length;
 		return true;
 	default:
 		return false;
@@ -109,11 +126,13 @@ int SettingsService::save(Field field, const void *data, size_t length, SaveFiel
 	 * Until that last write succeeds, a reboot still ignores the entire set. */
 	if (!schema_ok_) {
 		const Settings &defaults = kDefaultSettings;
-		const void *data[] = {defaults.url, defaults.name, &defaults.brightness,
-				      &defaults.default_mode};
-		const size_t lengths[] = {strlen(defaults.url), strlen(defaults.name),
-					  sizeof(defaults.brightness),
-					  sizeof(defaults.default_mode)};
+		const void *data[] = {defaults.url,         defaults.name,
+				      &defaults.brightness, &defaults.default_mode,
+				      defaults.text.bytes,  defaults.artwork.bytes};
+		const size_t lengths[] = {
+			strlen(defaults.url),        strlen(defaults.name),
+			sizeof(defaults.brightness), sizeof(defaults.default_mode),
+			defaults.text.length,        defaults.artwork.length};
 		constexpr unsigned fields = sizeof(data) / sizeof(data[0]);
 		static_assert(fields == static_cast<unsigned>(Field::kCount) - 1);
 		for (unsigned i = 0; i < fields; ++i) {

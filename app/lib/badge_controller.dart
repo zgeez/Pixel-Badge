@@ -22,6 +22,10 @@ class BadgeController extends ChangeNotifier {
   int _generation = 0, _request = 0;
   bool _disposed = false;
   BadgeField? _field;
+  BadgeCapabilities capabilities = BadgeCapabilities.legacy;
+  double uploadProgress = 0;
+  int nfcResult = 0;
+  bool nfcBusy = false;
   bool connected = false,
       busy = false,
       confirmed = false,
@@ -35,10 +39,14 @@ class BadgeController extends ChangeNotifier {
   int get brightness => values[BadgeField.brightness]?.first ?? 128;
   int get mode => values[BadgeField.mode]?.first ?? 0;
 
-  Future<void> attach(BadgeLink link) async {
+  Future<void> attach(
+    BadgeLink link, {
+    BadgeCapabilities capabilities = BadgeCapabilities.legacy,
+  }) async {
     if (busy) throw StateError('Wait for the current operation.');
     await disconnect();
     _link = link;
+    this.capabilities = capabilities;
     connected = true;
     final generation = _generation;
     _connectionSub = link.connections.listen((online) {
@@ -57,7 +65,8 @@ class BadgeController extends ChangeNotifier {
       if (generation != _generation) return;
       try {
         final status = BadgeStatus.decode(bytes);
-        if (status.id == _request &&
+        if (status.version == capabilities.version &&
+            status.id == _request &&
             status.field == _field?.wire &&
             status.phase == 2 &&
             _completion != null &&
@@ -106,12 +115,18 @@ class BadgeController extends ChangeNotifier {
       throw StateError('Badge is still applying a setting.');
     }
     final next = <BadgeField, Uint8List>{};
-    for (final field in BadgeField.values) {
+    for (final field in capabilities.settings) {
       final value = await link.read(field.uuid);
       validateValue(field, value);
       next[field] = value;
     }
     final after = BadgeStatus.decode(await link.read(statusUuid));
+    if (before.version != capabilities.version ||
+        after.version != capabilities.version) {
+      throw const FormatException(
+        'Badge protocol changed. Reconnect to refresh its capabilities.',
+      );
+    }
     if (!connected ||
         generation != _generation ||
         after.phase == 1 ||
@@ -123,6 +138,18 @@ class BadgeController extends ChangeNotifier {
     _request = after.id;
     writable = after.writable;
     nfcVerified = after.nfcVerified;
+    if (capabilities.hasStudio) {
+      final state = await link.read(BadgeField.nfcSync.uuid);
+      if (state.length != 7 || state[0] != 1 || state[1] > 1 || state[2] > 1) {
+        throw const FormatException('Malformed NFC status.');
+      }
+      nfcVerified = state[1] == 1;
+      nfcBusy = state[2] == 1;
+      nfcResult = ByteData.sublistView(state).getInt32(3, Endian.little);
+      if (!connected || generation != _generation) {
+        throw StateError('Connection lost during readback.');
+      }
+    }
     confirmed = true;
     message = nfcVerified
         ? 'Settings read from the badge. NFC link is verified.'
@@ -145,7 +172,8 @@ class BadgeController extends ChangeNotifier {
       ]);
       if (notification != null) return notification;
       final status = BadgeStatus.decode(await link.read(statusUuid));
-      if (status.id == _request &&
+      if (status.version == capabilities.version &&
+          status.id == _request &&
           status.field == _field?.wire &&
           status.phase == 2) {
         return status;
@@ -165,15 +193,30 @@ class BadgeController extends ChangeNotifier {
       notifyListeners();
       throw StateError(nfcRequiredMessage);
     }
+    if (!capabilities.settings.contains(field) &&
+        !(capabilities.hasStudio && field == BadgeField.nfcSync)) {
+      throw StateError('Update badge firmware to use this feature.');
+    }
+    if (field == BadgeField.mode &&
+        value.isNotEmpty &&
+        value[0] >= (capabilities.hasStudio ? 4 : 2)) {
+      throw StateError('Update badge firmware to use Studio modes.');
+    }
     final packets = stagePackets(field, value);
     final link = _link!;
     final generation = _generation;
     busy = true;
+    uploadProgress = 0;
     confirmed = false;
     message = 'Applying… waiting for badge confirmation.';
     notifyListeners();
     try {
       final status = BadgeStatus.decode(await link.read(statusUuid));
+      if (status.version != capabilities.version) {
+        throw const FormatException(
+          'Badge protocol changed. Reconnect before applying.',
+        );
+      }
       if (status.phase == 1) throw StateError('Badge is busy.');
       if (field == BadgeField.url && !status.nfcVerified) {
         nfcVerified = false;
@@ -189,16 +232,25 @@ class BadgeController extends ChangeNotifier {
           onError: (Object error, StackTrace stack) {},
         ),
       );
-      for (final packet in packets) {
+      for (var index = 0; index < packets.length; ++index) {
         if (!connected || generation != _generation) {
           throw StateError('Connection lost.');
         }
-        await link.write(field.uuid, packet);
+        await link.write(field.uuid, packets[index]);
+        uploadProgress = (index + 1) / packets.length;
+        notifyListeners();
       }
-      await link.write(applyUuid, applyPacket(_request, field));
+      if (!connected || generation != _generation) {
+        throw StateError('Connection lost before Apply.');
+      }
+      await link.write(
+        applyUuid,
+        applyPacket(_request, field, version: capabilities.version),
+      );
       final completion = await _wait(link, generation);
       if (completion.result != 0) {
-        if (field == BadgeField.url && completion.result == -13) {
+        if ((field == BadgeField.url || field == BadgeField.nfcSync) &&
+            completion.result == -13) {
           nfcVerified = false;
           throw StateError(nfcRequiredMessage);
         }
@@ -207,7 +259,8 @@ class BadgeController extends ChangeNotifier {
         );
       }
       await _refresh();
-      if (!sameBytes(values[field]!, value) ||
+      if ((field != BadgeField.nfcSync && !sameBytes(values[field]!, value)) ||
+          (field == BadgeField.nfcSync && !nfcVerified) ||
           (field == BadgeField.url && !nfcVerified)) {
         confirmed = false;
         throw StateError('Readback does not confirm the requested setting.');

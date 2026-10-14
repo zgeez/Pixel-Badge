@@ -14,6 +14,7 @@ public:
 	void start(const Settings &settings, bool safe_mode);
 	bool configure(const Settings &settings);
 	void next(uint32_t now);
+	bool select(Mode mode, uint32_t now);
 	void orientation(Rotation rotation);
 	void render(Frame &output, uint32_t now) const;
 	Mode active() const
@@ -22,6 +23,7 @@ public:
 	}
 
 private:
+	bool available(Mode mode) const;
 	Settings settings_ = kDefaultSettings;
 	Frame qr_{};
 	Mode mode_ = Mode::kQr;

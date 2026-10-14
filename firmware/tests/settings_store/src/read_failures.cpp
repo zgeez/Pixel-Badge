@@ -15,6 +15,7 @@ ssize_t read_result;
 size_t record_length;
 unsigned reads;
 uint8_t record = 64;
+const char *record_key = "brightness";
 
 ssize_t exact_read(void *data, void *destination, size_t length)
 {
@@ -53,7 +54,7 @@ extern "C" int __wrap_settings_load_subtree_direct(const char *subtree,
 	zassert_ok(callback("name", sizeof(name) - 1, exact_read, name, context));
 	/* Match the pinned SDK: its direct loader discards the backend's return.
 	 * Also simulate another backend callback after a failed read. */
-	const int rc = callback("brightness", record_length, injected_read, nullptr, context);
+	const int rc = callback(record_key, record_length, injected_read, nullptr, context);
 	if (rc != 0) {
 		zassert_equal(callback("mode", 1, injected_read, nullptr, context), rc);
 	}
@@ -74,11 +75,13 @@ ZTEST(settings_store, test_read_errors_discard_partial_load)
 		zassert_equal(reads, 1);
 	}
 	/* A positive short read is also an I/O failure. */
+	record_key = "name"; /* Two bytes are valid for this field's size bound. */
 	record_length = 2;
 	read_result = 1;
 	SettingsService service;
 	zassert_equal(load_settings(service, false), -EIO);
 	assert_defaults(service);
+	record_key = "brightness";
 	inject_reads = false;
 }
 
