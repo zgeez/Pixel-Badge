@@ -26,7 +26,7 @@ Board: ____  Serial/batch: ____  Firmware commit: ____  Date: ____
       thresholds stop charging below about 0 °C and above 45 °C
 - [ ] CC1/CC2 each have separate 5.1 kΩ Rd; C-to-C VBUS/charging attachment in
       both orientations, including switch-off and battery-absent states
-- [ ] USB-C VBUS reaches charger input and module VBUS pin 44 through the
+- [ ] USB-C VBUS reaches charger input and module VBUS pin 27 through the
       specified conditioning/decoupling; hot-plug and switch-off states checked
 - [ ] USB diagnostic enumeration/data with MCU logic supply enabled
 - [ ] Battery-powered operation
@@ -41,24 +41,29 @@ Board: ____  Serial/batch: ____  Firmware commit: ____  Date: ____
 - [ ] SWD through the nRF5340 DK debug out (P19, 10-pin 1.27 mm flat cable):
       DK SB47 open; DK on USB for the debugger; 3.3 V on DK P21 with SW10
       VEXT->nRF on and SW9 at VDD; meter the DK VDD and the badge 3V3 and
-      confirm they match before connecting the cable (a DK on USB alone is 3 V)
-- [ ] DC/DC regulators (DCC/DECR, DCCD/DECD): output ripple and stable operation
-      at idle and with the radio active
-- [ ] Flash and run bootstrap firmware
-- [ ] RTT log output
-- [ ] UART test pad output
+      confirm they match before connecting the cable (a DK on USB alone is 3 V);
+      the target is the badge's nRF52840
+- [ ] Module supply (VCC = VDDH = 3V3, DCCH open): 3V3 ripple at the module
+      and stable operation at idle and with the radio active. The E73's DC/DC
+      inductors are inside the module, so there are no external regulator
+      nodes to probe
+- [ ] Flash and run bootstrap firmware; P0.18 pin reset and NFC pins as GPIO
+      configured in UICR, then reset through J501 pin 10
+- [ ] RTT log output (the only log path: Rev A has no UART pads)
 
 ## MCU and clocks
 
-- [ ] High-frequency crystal
-- [ ] Low-frequency crystal (if fitted)
+- [ ] High-frequency crystal (inside the module)
+- [ ] 32.768 kHz crystal with the 12 pF C405/C406 loads: starts reliably,
+      frequency error measured (the load value is calculated, not measured)
 
 ## LED matrix
 
 - [ ] All-off state
 - [ ] Single-pixel and row/column test patterns
 - [ ] Brightness control
-- [ ] Refresh timing (see validation.md)
+- [ ] Refresh timing (see validation.md), including during BLE activity: the
+      BLE controller shares the single CPU with the matrix frame restart
 - [ ] QR code display
 
 ## Sensors

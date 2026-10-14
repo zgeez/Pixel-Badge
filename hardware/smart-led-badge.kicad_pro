@@ -298,8 +298,8 @@
   "erc": {
     "erc_exclusions": [
       [
-        "pin_to_pin|1930400|1016000|23ae42d1-8a53-4da7-9680-fffe35ddb7d1|4ad49fa5-5dea-43b3-9ddc-ef661966c69f|/fefc8d4a-8637-4143-b210-9149e35f9884/00b5b2b1-95e1-4b24-8397-e1e574e55fe6|/fefc8d4a-8637-4143-b210-9149e35f9884/00b5b2b1-95e1-4b24-8397-e1e574e55fe6|/fefc8d4a-8637-4143-b210-9149e35f9884/277ab79e-b026-470c-8266-8fd48bcc6b2b",
-        "Reviewed: NFC_PWR is the NTAG supply driven by GPIO P1.10 (high drive, by design; DEC-010). The PWR_FLAG marks it as a supply for the NTAG VCC pin."
+        "pin_to_pin|1930400|1016000|09c5fce9-3baa-4aea-82fd-c10959392586|4ad49fa5-5dea-43b3-9ddc-ef661966c69f|/fefc8d4a-8637-4143-b210-9149e35f9884/00b5b2b1-95e1-4b24-8397-e1e574e55fe6|/fefc8d4a-8637-4143-b210-9149e35f9884/00b5b2b1-95e1-4b24-8397-e1e574e55fe6|/fefc8d4a-8637-4143-b210-9149e35f9884/277ab79e-b026-470c-8266-8fd48bcc6b2b",
+        "Reviewed: NFC_PWR is the NTAG supply driven by GPIO P1.00 (high drive, by design; DEC-010, DEC-017). The PWR_FLAG marks it as a supply for the NTAG VCC pin."
       ],
       [
         "pin_to_pin|533400|1041400|da9d874e-2fe7-4b09-9cf7-86fa4f76624a|bdf4cff2-63cf-4cc1-90df-82457da97ecf|/fefc8d4a-8637-4143-b210-9149e35f9884/81d3bb65-b627-4404-95d7-5959776da8f4|/fefc8d4a-8637-4143-b210-9149e35f9884/81d3bb65-b627-4404-95d7-5959776da8f4|/fefc8d4a-8637-4143-b210-9149e35f9884/39c04143-b8b4-4779-a96f-137c6ab8396e",
@@ -316,10 +316,6 @@
       [
         "pin_to_pin|533400|1193800|dcc806c6-01e5-462a-979f-08a5f2f7c636|bdf4cff2-63cf-4cc1-90df-82457da97ecf|/fefc8d4a-8637-4143-b210-9149e35f9884/81d3bb65-b627-4404-95d7-5959776da8f4|/fefc8d4a-8637-4143-b210-9149e35f9884/81d3bb65-b627-4404-95d7-5959776da8f4|/fefc8d4a-8637-4143-b210-9149e35f9884/39c04143-b8b4-4779-a96f-137c6ab8396e",
         "Reviewed: U701 A8 is an unused translator A input tied to GND as TI requires (SN74LVC8T245 unused inputs); the GND net carries the power-tree PWR_FLAG."
-      ],
-      [
-        "pin_not_driven|1117600|990600|15e18b39-ff58-4bfa-82a4-995166395502|00000000-0000-0000-0000-000000000000|/fefc8d4a-8637-4143-b210-9149e35f9884/00b5b2b1-95e1-4b24-8397-e1e574e55fe6|/fefc8d4a-8637-4143-b210-9149e35f9884/00b5b2b1-95e1-4b24-8397-e1e574e55fe6|",
-        "Reviewed: nRESET has the nRF5340's internal pull-up (pin map, datasheet) and is pulled low by the debugger through J501 pin 10 (open collector); ERC does not count either as a driver. The removed TP501 (OD-39) had masked this."
       ]
     ],
     "meta": {

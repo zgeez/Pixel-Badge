@@ -1,6 +1,6 @@
 # 0002: nRF5340 module and NCS/Zephyr platform
 
-- Status: Accepted
+- Status: Accepted; SoC and module superseded by [0015](0015-nrf52840-e73-module.md)
 - Date: 2026-10-04
 - Deciders: Project owner
 

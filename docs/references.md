@@ -33,7 +33,22 @@ on a specific document, cite the document revision and section.
   [VDD power sources](https://docs.nordicsemi.com/r/bundle/ug_nrf5340_dk/page/ug/dk/vdd_power_sources.html)
   (accessed 2026-10-06)
 
-## Raytac MDBT53-P1M
+- [nRF52840 Product Specification](https://docs.nordicsemi.com/bundle/ps_nrf52840/page/keyfeatures_html5.html)
+  (Rev A SoC, [ADR 0015](decisions/0015-nrf52840-e73-module.md)); [CLOCK](https://docs.nordicsemi.com/bundle/ps_nrf52840/page/clock.html): external LFXO load capacitors
+  (accessed 2026-10-13)
+
+## Ebyte E73-2G4M08S1C
+
+- E73-2G4M08S1C specification (Chinese, ©2012–2019), LCSC copy for C356849:
+  [PDF](https://wmsc.lcsc.com/wmsc/upload/file/pdf/v2/lcsc/2504101957_Chengdu-Ebyte-Elec-Tech-E73-2G4M08S1C_C356849.pdf),
+  SHA-256 `4ffa0c3e959bc193ed013d5e9c3062cceb720c22aac751637a21cc0b9dc149af`
+  (downloaded 2026-10-13). §2: parameters (1.7–5.5 V, 13 × 18 mm, ceramic
+  antenna, 32.768 kHz crystal external); §3: mechanical drawing (3.00 mm thick,
+  bottom-view pad dimensions) and pin table (low-frequency pins marked);
+  §5.1: module reference circuit.
+- [Ebyte product page, pin definitions](https://www.cdebyte.com/products/E73-2G4M08S1C/2)
+
+## Raytac MDBT53-P1M (superseded for Rev A by ADR 0015)
 
 - [MDBT53-1M & MDBT53-P1M Specification, Ver.E](https://www.raytac.com/document/act.php?act=1&index_id=78),
   issued **2024-10-25**. §2.1 (pp.7–8): dimensions/pin orientation;

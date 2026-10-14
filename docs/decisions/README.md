@@ -28,7 +28,7 @@ decision.
 | ADR | Decision | Status |
 |---|---|---|
 | [0001](0001-rev-a-product-scope.md) | Rev A product scope and engineering priorities | Accepted; partly superseded by 0011 |
-| [0002](0002-nrf5340-module-zephyr-platform.md) | nRF5340 / MDBT53-P1M / NCS-Zephyr platform | Accepted |
+| [0002](0002-nrf5340-module-zephyr-platform.md) | nRF5340 / MDBT53-P1M / NCS-Zephyr platform | Accepted; SoC and module superseded by 0015 |
 | [0003](0003-monochrome-display-qr-validation.md) | 32×32 monochrome display and QR-first validation | Accepted |
 | [0004](0004-ble-passive-nfc.md) | BLE configuration and external passive NTAG NFC | Accepted |
 | [0005](0005-usb-c-charge-and-data.md) | USB-C charging and USB 2.0 data architecture | Accepted; partly superseded by 0007 |
@@ -41,3 +41,4 @@ decision.
 | [0012](0012-prototype-foundation.md) | Prototype settings, QR encoder and MCUboot flash layout | Accepted |
 | [0013](0013-prototype-nfc.md) | Guarded NFC updates and explicit two-session RF provisioning | Accepted; provisioning proof amended by 0014 |
 | [0014](0014-positive-nfc-provisioning-proof.md) | Two fresh positive NFC authentication sessions for the provisioning receipt | Accepted 2026-10-12; provisioning passed, broader acceptance pending |
+| [0015](0015-nrf52840-e73-module.md) | Ebyte E73-2G4M08S1C (nRF52840) module for Rev A (amends 0002) | Accepted 2026-10-13 |
