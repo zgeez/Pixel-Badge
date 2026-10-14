@@ -63,6 +63,28 @@ contains the explicit recovery variant and is not the normal application image.
 The four public `.env` presets were imported through the existing whitelist;
 no full dotenv file or NFC credentials are included in the APK.
 
+## Follow-up corrections (2026-10-13)
+
+- Direct mode selection now uses the same content requirements as button
+  cycling: Drawing requires nonblank valid artwork and Animation additionally
+  requires at least two frames. Apply rejects unavailable modes before saving;
+  boot falls back to QR if saved artwork no longer supports its default mode.
+- Text size follows asynchronous draft loading and badge-draft replacement.
+  Invalid local text can be replaced through the normal confirmation dialog;
+  load errors use the existing action handler. All valid text previews run
+  their clock, including short multiline and scaled multi-page messages.
+- Saved link labels use the editor's 32-grapheme limit, including emoji,
+  combining marks and joined emoji. The already-pinned characters1.4.0 package
+  is now a direct dependency; no package version was changed.
+- Follow-up verification: Flutter **40 tests** and clean analyzer; native modes
+  and URL-update suites **2 configurations / 14 cases**; debug APK build;
+  normal DK sysbuild for both cores; repository format, YAML and hygiene
+  checks. Application flash204808B/RAM84900B; network flash148408B/RAM46624B.
+  Follow-up APK SHA256:
+  `a1228acd938a027bad7c41b0dbef95dd97be4738de4e62f76efa42df53252818`.
+  Corrected artifacts have not
+  been installed or flashed; the earlier upload evidence remains historical.
+
 ## Short physical acceptance checklist — pending
 
 Deployment evidence: both normal-image cores were flashed with `--no-erase`;
