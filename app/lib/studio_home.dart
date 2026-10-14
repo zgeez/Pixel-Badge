@@ -894,9 +894,15 @@ class _BadgeHomeState extends State<BadgeHome> with WidgetsBindingObserver {
 
   Future<void> loadBadgeDraft({required bool text}) async {
     final field = text ? BadgeField.text : BadgeField.artwork;
-    final current = text ? draft.text.encode() : draft.matrix.encode();
     final value = badge.values[field];
-    if (value == null || sameBytes(current, value)) return;
+    if (value == null) return;
+    Uint8List? current;
+    try {
+      current = text ? draft.text.encode() : draft.matrix.encode();
+    } on FormatException {
+      // An invalid local draft can still be replaced with valid badge content.
+    }
+    if (current != null && sameBytes(current, value)) return;
     final replacement = Uint8List.fromList(value);
     final confirmed = await showDialog<bool>(
       context: context,
@@ -1009,6 +1015,7 @@ class _BadgeHomeState extends State<BadgeHome> with WidgetsBindingObserver {
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<int>(
+                key: ValueKey('text-scale-${draft.text.scale}'),
                 isExpanded: true,
                 initialValue: draft.text.scale,
                 decoration: const InputDecoration(labelText: 'Text size'),
@@ -1089,8 +1096,7 @@ class _BadgeHomeState extends State<BadgeHome> with WidgetsBindingObserver {
                             ? 'BADGE'
                             : nameEditor.text,
                       ),
-                      animate:
-                          draft.text.layout == 2 || draft.text.text.length > 20,
+                      animate: true,
                     )
                   : preview((_) => Uint8List(frameBytes)),
               const SizedBox(height: 20),
@@ -1119,7 +1125,9 @@ class _BadgeHomeState extends State<BadgeHome> with WidgetsBindingObserver {
                     badge.confirmed &&
                             badge.capabilities.hasStudio &&
                             !badge.busy
-                        ? () => unawaited(loadBadgeDraft(text: true))
+                        ? () => unawaited(
+                            action(() => loadBadgeDraft(text: true)),
+                          )
                         : null,
                     primary: false,
                   ),
@@ -1442,7 +1450,7 @@ class _BadgeHomeState extends State<BadgeHome> with WidgetsBindingObserver {
                 'Load from badge',
                 Icons.download_outlined,
                 badge.confirmed && badge.capabilities.hasStudio && !badge.busy
-                    ? () => unawaited(loadBadgeDraft(text: false))
+                    ? () => unawaited(action(() => loadBadgeDraft(text: false)))
                     : null,
                 primary: false,
               ),

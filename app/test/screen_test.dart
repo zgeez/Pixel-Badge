@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
@@ -13,11 +14,20 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'controller_test.dart' show FakeLink;
+import 'studio_controller_test.dart' show StudioLink;
+
+class DelayedDraftStore implements DraftStore {
+  final result = Completer<StudioDraft>();
+  @override
+  Future<StudioDraft> load() => result.future;
+  @override
+  Future<void> save(StudioDraft draft) async {}
+}
 
 Future<void> showApp(
   WidgetTester tester, {
   BadgeController? controller,
-  MemoryDraftStore? store,
+  DraftStore? store,
   Brightness brightness = Brightness.light,
   double width = 390,
 }) async {
@@ -174,15 +184,135 @@ void main() {
     await visible(tester, find.text('Add custom link'));
     await tester.tap(find.text('Add custom link'));
     await tester.pump(const Duration(milliseconds: 300));
-    await tester.enterText(find.byType(TextFormField).first, 'My site');
+    final label = List.filled(32, '\u{1f469}\u200d\u{1f4bb}').join();
+    await tester.enterText(find.byType(TextFormField).first, label);
     await tester.enterText(find.byType(TextFormField).last, 'https://A.B/x');
     await tester.tap(find.text('Save link'));
     await tester.pump(const Duration(seconds: 1));
     expect((await store.load()).links.single.url, 'HTTPS://A.B/x');
+    expect((await store.load()).links.single.label, label);
     expect(find.text('Active'), findsNothing);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
   });
+  testWidgets('text size follows delayed draft load and badge replacement', (
+    tester,
+  ) async {
+    final store = DelayedDraftStore();
+    final link = StudioLink();
+    link.values[BadgeField.text.uuid] = const TextDesign(
+      text: 'X',
+      scale: 3,
+    ).encode();
+    final controller = BadgeController();
+    await controller.attach(link, capabilities: BadgeCapabilities.studio);
+    await showApp(tester, store: store, controller: controller);
+    await page(tester, 'Text');
+    expect(
+      tester
+          .state<FormFieldState<int>>(find.byType(DropdownButtonFormField<int>))
+          .value,
+      0,
+    );
+    store.result.complete(
+      StudioDraft(text: const TextDesign(text: 'Hi', scale: 2)),
+    );
+    await tester.pump();
+    expect(
+      tester
+          .state<FormFieldState<int>>(find.byType(DropdownButtonFormField<int>))
+          .value,
+      2,
+    );
+    await visible(tester, find.text('Load from badge'));
+    await tester.tap(find.text('Load from badge'));
+    await tester.pump();
+    await tester.tap(find.text('Load draft'));
+    await tester.pump();
+    expect(
+      tester
+          .state<FormFieldState<int>>(find.byType(DropdownButtonFormField<int>))
+          .value,
+      3,
+    );
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+    controller.dispose();
+    await link.dispose();
+  });
+
+  testWidgets(
+    'badge text can replace invalid local text without an async error',
+    (tester) async {
+      final link = StudioLink();
+      final content = const TextDesign(text: 'From badge', scale: 2);
+      link.values[BadgeField.text.uuid] = content.encode();
+      final controller = BadgeController();
+      await controller.attach(link, capabilities: BadgeCapabilities.studio);
+      final store = MemoryDraftStore();
+      await showApp(tester, controller: controller, store: store);
+      await page(tester, 'Text');
+      await tester.enterText(find.byType(TextFormField).last, '\u{1f600}');
+      await tester.pump();
+      await visible(tester, find.text('Load from badge'));
+      await tester.tap(find.text('Load from badge'));
+      await tester.pump();
+      expect(find.text('Replace this draft?'), findsOneWidget);
+      await tester.tap(find.text('Load draft'));
+      await tester.pump(const Duration(seconds: 1));
+      expect((await store.load()).text.encode(), content.encode());
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+      controller.dispose();
+      await link.dispose();
+    },
+  );
+
+  testWidgets(
+    'short multiline and scaled text preview advances through pages',
+    (tester) async {
+      for (final design in [
+        const TextDesign(
+          text: 'A\nb\nc\nD\nE',
+          layout: 1,
+          scale: 1,
+          interval: 100,
+        ),
+        const TextDesign(text: 'ABCDEF', layout: 1, scale: 2, interval: 100),
+        const TextDesign(text: 'AB', layout: 1, scale: 3, interval: 100),
+      ]) {
+        final store = MemoryDraftStore();
+        await store.save(StudioDraft(text: design));
+        await showApp(tester, store: store);
+        await page(tester, 'Text');
+        await visible(tester, find.byType(MatrixPreview));
+        final clock =
+            tester
+                    .widget<ValueListenableBuilder<int>>(
+                      find.ancestor(
+                        of: find.byType(MatrixPreview),
+                        matching: find.byType(ValueListenableBuilder<int>),
+                      ),
+                    )
+                    .valueListenable
+                as ValueNotifier<int>;
+        clock.value = 0;
+        await tester.pump();
+        final before = List<int>.from(
+          tester.widget<MatrixPreview>(find.byType(MatrixPreview)).frame,
+        );
+        clock.value = 2000;
+        await tester.pump();
+        final after = tester
+            .widget<MatrixPreview>(find.byType(MatrixPreview))
+            .frame;
+        expect(after, isNot(orderedEquals(before)));
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox());
+      }
+    },
+  );
+
   for (final brightness in Brightness.values) {
     testWidgets('four pages fit a narrow ${brightness.name} phone', (
       tester,
