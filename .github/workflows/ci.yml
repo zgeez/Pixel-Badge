@@ -245,6 +245,29 @@ jobs:
         run: flutter analyze
       - name: Test protocol, controller and screens
         run: flutter test
+      - name: Set up Java for Android tests
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install pinned Android build tools
+        run: sdkmanager "platforms;android-36" "build-tools;36.1.0" "ndk;27.0.12077973"
+      # Flutter generates the ignored wrapper and local.properties on clean CI.
+      - name: Prepare Android Gradle project
+        run: flutter build apk --debug --config-only
+      - name: Test Android storage, crypto and playback
+        working-directory: app/android
+        run: bash gradlew --no-daemon testDebugUnitTest
+      - name: Upload Android unit-test reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: android-unit-test-reports
+          path: |
+            app/build/app/test-results/testDebugUnitTest/
+            app/build/app/reports/tests/testDebugUnitTest/
+          if-no-files-found: warn
+          retention-days: 14
 
   unit-tests:
     name: unit-tests
