@@ -286,6 +286,28 @@ static int hub75_write(const struct device *dev, const uint16_t x, const uint16_
 	return 0;
 }
 
+int badge_hub75_wait_visible(const struct device *dev, unsigned timeout_ms)
+{
+	struct hub75_data *data = dev->data;
+	int64_t deadline = k_uptime_get() + timeout_ms;
+	while (data->swap_pending) {
+		if (data->blanked || k_uptime_get() >= deadline) {
+			return -ETIMEDOUT;
+		}
+		k_msleep(1);
+	}
+	/* A front-buffer swap precedes the row-zero latch. Require one complete
+	 * scan as well, so all REC rows have actually reached the panel. */
+	uint32_t frame = data->frames;
+	while (data->frames == frame) {
+		if (data->blanked || k_uptime_get() >= deadline) {
+			return -ETIMEDOUT;
+		}
+		k_msleep(1);
+	}
+	return data->blanked || data->brightness == 0 ? -EIO : 0;
+}
+
 static int hub75_set_brightness(const struct device *dev, const uint8_t brightness)
 {
 	const struct hub75_config *cfg = dev->config;

@@ -97,7 +97,8 @@ int BleProtocol::stage(Field field, const uint8_t *data, size_t length, bool aut
 	if ((field == Field::kUrl && !valid_url(reinterpret_cast<const char *>(data), length)) ||
 	    (field == Field::kBrightness && (length != 1 || (data[0] != 16 && data[0] != 64 &&
 							     data[0] != 128 && data[0] != 255))) ||
-	    (field == Field::kDefaultMode && (length != 1 || data[0] > 3)) ||
+	    (field == Field::kDefaultMode &&
+	     (length != 1 || data[0] > static_cast<uint8_t>(Mode::kAudioSpectrum))) ||
 	    (field == kNfcSyncField && (length != 1 || data[0] != 1))) {
 		return -EINVAL;
 	}
