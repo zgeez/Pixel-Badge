@@ -215,7 +215,8 @@ class AudioController extends ChangeNotifier {
   }
 
   Future<void> refreshLibrary() async {
-    if (!android) return;
+    // Directory scans share native capture I/O. Never queue one during capture.
+    if (!android || receiving) return;
     final list = await native.invokeListMethod<Object?>('list') ?? [];
     recordings = list
         .map((value) => Map<Object?, Object?>.from(value as Map))

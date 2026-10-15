@@ -142,7 +142,7 @@ class AudioPage extends StatelessWidget {
               child: Icon(Icons.lock_outline, size: 18),
             ),
             IconButton(
-              onPressed: audio.busy
+              onPressed: audio.busy || audio.recording || audio.stopping
                   ? null
                   : () => unawaited(
                       audio.refreshLibrary().catchError((Object _) {}),

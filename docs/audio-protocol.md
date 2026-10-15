@@ -98,8 +98,9 @@ Files are private and excluded from backups, bounded by available phone storage
 (16MiB reserve) and classic WAV size: at most13,421,772blocks, about37.28hours.
 Private storage uses40.32MB/hour plus64bytes per V2 file; WAV uses115.2MB/hour.
 Library listing excludes malformed/empty/open files individually and never
-clears a connection key or finishes capture on a read-only failure. Stop/detach
-await shared cleanup before a replacement session is installed.
+clears a connection key or finishes capture on a read-only failure. The phone
+does not queue library scans during capture on the shared native I/O executor.
+Stop/detach await shared cleanup before a replacement session is installed.
 Stop invalidates pending capture setup, checks cancellation after every async
 setup step and before a queued Start is sent, and waits for setup before local
 file finalization. Resume waits for stop cleanup and restores the authenticated

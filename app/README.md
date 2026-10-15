@@ -32,7 +32,7 @@ disabled while identity/display configuration still works.
 
 Debug APK: `app/build/app/outputs/flutter-apk/app-debug.apk`, for bench use,
 not store distribution. Android packaging only; iOS needs macOS/Xcode later.
-Current source version: **0.4.3+12**, with system light/dark appearance and five
+Current source version: **0.4.4+13**, with system light/dark appearance and five
 pages: Badge, Links, Text, Studio and Audio. Debug builds keep the display awake while
 foreground and log only non-secret BLE status bytes. Release builds omit
 assert-gated packet logging and debug screen-awake behavior.
@@ -77,13 +77,16 @@ The main pages use concise controls and contextual help buttons. Connection,
 verification errors and upload progress remain visible.
 
 Library refresh skips malformed, empty and currently open recording files without
-changing capture or session keys. Stop and detach share the same cleanup future;
-a replacement audio session waits for the previous one to finish.
+changing capture or session keys. Refresh is disabled during recording so directory
+scans cannot compete with incoming packets on the native capture I/O executor.
+Stop and detach share the same cleanup future; a replacement audio session waits
+for the previous one to finish.
 Returning to the app restores the idle audio subscription after cleanup so
 button recording remains available. Returning never restarts a recording;
 Stop cancels pending setup even across a quick background/foreground cycle.
 
-CI runs Dart checks and Android `testDebugUnitTest`, including native storage,
+CI explicitly sets up Android command-line tools before installing SDK packages.
+It runs Dart checks and Android `testDebugUnitTest`, including native storage,
 crypto, recording-library, connection and playback tests. For a clean checkout,
 `flutter build apk --debug --config-only` generates the ignored Gradle wrapper
 and local SDK configuration before running the Gradle task from `app/android`.

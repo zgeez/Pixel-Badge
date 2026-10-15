@@ -128,6 +128,18 @@ void main() {
       expect(find.text('Enroll this app'), findsNothing);
       expect(find.byType(DropdownButtonFormField<int>), findsNothing);
       expect(find.text('Record'), findsOneWidget);
+      expect(
+        tester
+            .widget<IconButton>(
+              find.byWidgetPredicate(
+                (widget) =>
+                    widget is IconButton &&
+                    widget.tooltip == 'Refresh recordings',
+              ),
+            )
+            .onPressed,
+        isNotNull,
+      );
       controller.receiving = true;
       await tester.pumpWidget(
         MaterialApp(
@@ -142,6 +154,18 @@ void main() {
         ),
       );
       expect(find.text('Stop'), findsOneWidget);
+      expect(
+        tester
+            .widget<IconButton>(
+              find.byWidgetPredicate(
+                (widget) =>
+                    widget is IconButton &&
+                    widget.tooltip == 'Refresh recordings',
+              ),
+            )
+            .onPressed,
+        isNull,
+      );
       controller.receiving = false;
       controller.transport = null;
       controller.state = null;
@@ -364,6 +388,25 @@ void main() {
       await link.messages.close();
     },
   );
+  test('library refresh cannot queue native scans while recording', () async {
+    final link = AudioFake();
+    final controller = AudioController(channel: channel);
+    await controller.attach(link);
+    await controller.start();
+    nativeCalls.clear();
+    await Future.wait(List.generate(8, (_) => controller.refreshLibrary()));
+    expect(nativeCalls, isNot(contains('list')));
+    expect(controller.recording, true);
+    await controller.stop();
+    expect(nativeCalls, contains('list'));
+    nativeCalls.clear();
+    await controller.refreshLibrary();
+    expect(nativeCalls, ['list']);
+    await controller.detach();
+    controller.dispose();
+    await link.messages.close();
+  });
+
   test('file setup completes before capture is requested', () async {
     final link = AudioFake();
     final controller = AudioController(channel: channel);
