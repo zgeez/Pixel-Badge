@@ -1,5 +1,12 @@
 # Firmware
 
+P3 adds normal Level/Spectrum modes and automatic Pixel Badge audio setup, encrypted
+voice streaming and private Android recording/playback/export. Default firmware
+disables recording until hardware/privacy/REC visibility acceptance; an explicit
+bench image enables testing. See [audio prototype and tests](audio-prototype.md)
+and [audio wire contract](audio-protocol.md). Software checks do not validate the
+actual microphone clock, RF throughput or Rev A rail/port integration.
+
 The Pixel Studio extension adds case-sensitive 96-character text with fitting,
 wrapping/pagination and scrolling; persistent 32 × 32 drawings; and up to
 16 animation frames. BLE protocol v2 adds bounded content staging, paged
@@ -228,7 +235,7 @@ and never stored on the badge:
 - It starts only from the paired app or a button long-press, and only when
   the phone is connected with an authenticated bond (LE Secure Connections
   with MITM protection; Just Works bonds are refused for audio), the
-  companion app is subscribed to the audio stream and has proved the app key
+  companion app is subscribed to the audio stream and has proved the automatic session key
   on this connection (a button start also waits for a fresh authenticated
   accept from the app), and the LED rail is on (not shed for low battery)
   with the matrix driver running. Otherwise nothing is captured for sending, and
@@ -246,21 +253,18 @@ and never stored on the badge:
   Bluetooth link to the paired app, which keeps recordings only in its
   private, encrypted storage, excluded from backups; a recording leaves the
   app only by an explicit export or share.
-- The companion app, not only the phone, is authenticated with an app key.
-  The key is enrolled only in a pairing window opened on the badge, after the
-  user confirms on the badge that the code it shows matches the app's (one
-  enrollment per window; a second attempt cancels it). It is kept with the
-  bond keys on the badge and in the phone's secure key store, and erased
-  with its counters when the badge is paired again or reset. Every
-  recording-control command from the app carries an authenticator with that
-  key and a fresh counter, and each recording is encrypted and authenticated
-  with its own freshly derived key, so other apps on the phone can neither
-  control nor read a recording.
+- The normal authenticated Bluetooth bond authorizes audio. Session keys are
+  exchanged automatically on connection, held only in RAM and cleared on
+  disconnect; no separate enrollment or code confirmation. Commands carry
+  replay counters/MACs and each recording has a fresh encryption key. This
+  trusts the phone rather than authenticating one distinct app on it, per
+  [ADR0016](decisions/0016-simple-audio-controls.md).
 - The user stops it with a button press or from the app. It also stops when
   the link drops or the app unsubscribes, when the display is turned off or
   blanked, when the LED rail is shed for low battery or the matrix driver
-  faults, or at the maximum length set in the settings (clamped to a ceiling
-  built into the firmware, with a safe default). Before REC leaves the
+  faults. The phone also stops at low storage (16MiB reserve) or its classic WAV
+  format boundary (~37.28hours); there is no selectable duration or five-minute
+  timeout. Before REC leaves the
   matrix or the LED rail turns off, capture stops and any audio not yet sent
   is discarded; on a matrix driver fault, capture stops at once and queued
   audio is discarded, not sent.
@@ -519,7 +523,7 @@ flash both sysbuild domains with `west flash`; app build and phone bench steps
 are in [ble-protocol.md](ble-protocol.md). Source, pinned dependency and Android
 setup are in [app/README.md](../app/README.md). Native protocol and Flutter
 tests do not establish physical pairing or RF/QR acceptance. Audio streaming,
-app-key enrollment, firmware updates and iOS packaging are later work.
+firmware updates and iOS packaging are later work.
 
 ### Rev A board
 

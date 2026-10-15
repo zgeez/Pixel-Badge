@@ -3,6 +3,11 @@
 Android-first Flutter BLE client using [protocol v2](../docs/ble-protocol.md),
 with basic configuration support for v1 badges. The Studio upgrade is locally
 software-tested; its new features need a phone/DK bench run.
+P3 adds an Audio page: Level/Spectrum controls, automatic audio setup over the existing secure Bluetooth bond, Record/Stop, encrypted private playback, deletion and explicit
+WAV export. Android first; iOS recording is unavailable. Recording is disabled in
+normal firmware until visibility/rail/security acceptance.
+See [P3 bench steps](../docs/audio-prototype.md).
+
 App-focused prompt: [flutter-app-prompt.md](../docs/flutter-app-prompt.md).
 
 From the repository root:
@@ -27,11 +32,13 @@ disabled while identity/display configuration still works.
 
 Debug APK: `app/build/app/outputs/flutter-apk/app-debug.apk`, for bench use,
 not store distribution. Android packaging only; iOS needs macOS/Xcode later.
-Current source version: **0.2.0+3**, with system light/dark appearance and four
-pages: Badge, Links, Text and Studio. Debug builds keep the display awake while
+Current source version: **0.4.1+10**, with system light/dark appearance and five
+pages: Badge, Links, Text, Studio and Audio. Debug builds keep the display awake while
 foreground and log only non-secret BLE status bytes. Release builds omit
 assert-gated packet logging and debug screen-awake behavior.
-No audio, app-key enrollment, cloud service or update transport.
+No cloud service or update transport. Audio has no selectable timeout; phone
+storage (16MiB reserve) or the classic WAV boundary (~37.28hours) bounds a file.
+Private storage is40.32MB/hour plus a64-byte wrapped-key header; exported WAV is115.2MB/hour.
 GitHub/LinkedIn QR/NFC agreement and LinkedIn off-state/restart retention passed
 by owner report on the Nothing phone/DK prototype, corroborated by restarted-DK
 status; [bench record](../validation/results/2026-10-12-dk-positive-nfc-proof/README.md).
@@ -47,6 +54,27 @@ verification workflow; identity and display controls remain available.
 A factory reset clears the verification receipt while leaving tag EEPROM.
 Use the [BLE provisioning instructions](../docs/ble-protocol.md#restore-nfc-verification)
 before testing a different contact link.
+
+## Playback and connection
+
+Tap a recording's play button for play/pause, a seek slider, elapsed/total time,
+and ten-second skips. Seeking reads authenticated encrypted blocks directly;
+legacy recordings remain supported. Playback pauses on leaving the app or
+losing audio focus. Short tails receive silent startup padding; writes/drains
+fail after two seconds without progress. Export and Delete remain in the recording's menu.
+
+Android keeps the bonded BLE connection when you switch apps, lock the phone,
+or close its activity. A connected-device foreground service holds the process,
+and the app-owned Flutter engine retains the GATT client across activity
+recreation. Service leases are scoped to each link so old cleanup cannot stop
+a replacement connection. The old GATT client closes before reconnecting.
+Disconnect in Badge controls to end the connection. Force-stop,
+Android stopping the process, Bluetooth loss or badge power-off still end it;
+this does not promise reconnection after a killed process. Recording always
+stops when the app leaves the foreground, even though BLE stays connected.
+
+The main pages use concise controls and contextual help buttons. Connection,
+verification errors and upload progress remain visible.
 
 ## Studio
 

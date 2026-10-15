@@ -399,12 +399,12 @@ that:
   samples with the frame-swap time, including a start from a visualization
   mode;
 - no audio is captured or sent after REC leaves the matrix: for each stop
-  (button, app, length cap, display off, blanking, LED rail shed, driver
+  (button, app, low phone storage, WAV boundary, display off, blanking, LED rail shed, driver
   fault), compare the timestamp of the last captured and last sent sample
   with the frame-off or rail-off time, and check that queued audio is
   discarded;
 - a recording cannot start, from the app or a long-press, without a
-  connected, subscribed companion app that has proved the app key on this
+  connected, subscribed companion app that has proved the automatic session key on this
   connection; over a link whose bond is unauthenticated (Just Works); while
   the LED rail is shed for low battery or the display is off; or with the
   matrix driver faulted. A long-press then shows that recording is
@@ -413,15 +413,15 @@ that:
   accept; with the app suspended or stalled while still connected and
   subscribed, no capture starts and the badge shows that recording is
   unavailable;
-- app-key enrollment needs the code confirmed on the badge, and a second app
-  trying to enroll in the same pairing window cancels it; after pairing
-  again and after a factory reset, the old app key and counters are erased
-  and commands made with them are refused;
-- recording-control commands with a wrong key, a replayed or reused counter,
-  or sent by a second app on the same phone after the companion app has
-  authenticated are refused;
-- a second app subscribed on the same phone during a recording receives only
-  data it cannot decrypt, and altered audio packets are rejected by the app;
+- reconnect prepares the audio session without an enrollment action or a
+  second matching-code exchange; fresh connection nonces/session keys reject
+  previous-session commands. A second handshake on an established session is
+  refused. Authorization trusts the authenticated bonded phone (ADR0016);
+- recording-control commands with a wrong key or replayed/reused counter
+  are refused; the former separate-app identity guarantee is removed by ADR0016;
+- audio packets use the negotiated session key; altered/cross-session packets
+  are rejected. Distinct-app identity and same-phone active attacker exclusion
+  are no longer acceptance claims (ADR0016);
 - each recording uses a distinct key (review the derivation and compare the
   keys of two recordings), and packets from one recording injected into
   another are rejected;
@@ -433,9 +433,9 @@ that:
 - the user can stop a recording with a button press and from the app;
 - a recording also stops when the link drops or the app unsubscribes, the
   display is turned off or blanked, the LED rail is shed or the matrix driver
-  faults, or the length cap is reached; the firmware ceiling holds with the
-  length setting missing, corrupt or out of range in storage, and an
-  over-limit settings command is clamped or refused;
+  faults; phone low-storage and WAV-boundary stops preserve complete encrypted
+  chunks. Record beyond five minutes to check that legacy settings do not cap
+  recording; the removed duration command is refused;
 - a recording decodes correctly end to end: play a known synthetic waveform
   (for example a tone sweep with timing marks) to the microphone during a
   recording, with REC on the matrix and representative Bluetooth conditions,
