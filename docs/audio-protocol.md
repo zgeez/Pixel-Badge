@@ -100,6 +100,10 @@ Private storage uses40.32MB/hour plus64bytes per V2 file; WAV uses115.2MB/hour.
 Library listing excludes malformed/empty/open files individually and never
 clears a connection key or finishes capture on a read-only failure. Stop/detach
 await shared cleanup before a replacement session is installed.
+Stop invalidates pending capture setup, checks cancellation after every async
+setup step and before a queued Start is sent, and waits for setup before local
+file finalization. Resume waits for stop cleanup and restores the authenticated
+idle subscription without starting capture. A detached link is not restored.
 No five-minute limit. Playback/export authenticate every block. Only explicit
 export creates PCM/WAV outside private storage. Secret/plaintext arrays are
 cleared on setup/storage failure and stop; none cross Flutter's channel.

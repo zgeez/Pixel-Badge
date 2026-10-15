@@ -23,6 +23,8 @@ class AudioFake implements AudioTransport {
   final staging = <int>[];
   bool subscribed = false;
   Completer<Uint8List>? delayNextRead;
+  Completer<void>? subscribeBarrier;
+  bool subscribing = false;
   @override
   String get audioDeviceId => 'fixture';
   @override
@@ -34,7 +36,10 @@ class AudioFake implements AudioTransport {
 
   @override
   Future<void> subscribeAudio() async {
+    subscribing = true;
+    await subscribeBarrier?.future;
     subscribed = true;
+    subscribing = false;
   }
 
   @override
@@ -65,20 +70,27 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   const channel = MethodChannel('audio-test');
   final nativeCalls = <String>[];
-  Completer<void>? prepareBarrier, packetBarrier, finishBarrier;
+  Completer<void>? prepareBarrier,
+      packetBarrier,
+      finishBarrier,
+      pauseBarrier,
+      signBarrier;
   setUp(() {
     nativeCalls.clear();
-    prepareBarrier = packetBarrier = finishBarrier = null;
+    prepareBarrier = packetBarrier = finishBarrier = pauseBarrier =
+        signBarrier = null;
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (call) async {
           nativeCalls.add(call.method);
           if (call.method == 'prepareRecording') await prepareBarrier?.future;
+          if (call.method == 'stopPlayback') await pauseBarrier?.future;
           if (call.method == 'packet') await packetBarrier?.future;
           if (call.method == 'finishRecording') await finishBarrier?.future;
           if (call.method == 'list') return [];
           if (call.method == 'beginSession') return Uint8List(65)..[0] = 4;
           if (call.method == 'control') {
             final args = call.arguments as Map;
+            if ((args['body'] as Uint8List)[0] == 3) await signBarrier?.future;
             expect((args['nonce'] as Uint8List).length, 16);
             // Stub the native crypto boundary; firmware PSA vector tests exercise
             // the actual authenticator. Flutter receives only authenticated wire data.
@@ -424,6 +436,190 @@ void main() {
     controller.dispose();
     await link.messages.close();
   });
+  test('resume restores button recording after background cleanup', () async {
+    final link = AudioFake();
+    final controller = AudioController(channel: channel);
+    await controller.attach(link);
+    controller.background();
+    await controller.stop();
+    expect(link.subscribed, false);
+    final starts = link.commands.where((c) => c[0] == 3 || c[0] == 5).length;
+    await controller.resume();
+    expect(link.subscribed, true);
+    expect(controller.receiving, false);
+    expect(link.commands.where((c) => c[0] == 3 || c[0] == 5).length, starts);
+    link.state[1] |= 16;
+    await controller.poll();
+    expect(link.commands.last[0], 5);
+    expect(controller.receiving, true);
+    await controller.detach();
+    controller.dispose();
+    await link.messages.close();
+  });
+
+  test(
+    'resume waits for cleanup and cannot subscribe a detached link',
+    () async {
+      final link = AudioFake();
+      final controller = AudioController(channel: channel);
+      await controller.attach(link);
+      finishBarrier = Completer<void>();
+      controller.background();
+      await Future<void>.delayed(Duration.zero);
+      final resume = controller.resume();
+      final detach = controller.detach();
+      finishBarrier!.complete();
+      await Future.wait([resume, detach]);
+      expect(controller.transport, null);
+      expect(controller.receiving, false);
+      // Detach owns cleanup even if the app returned while it was in progress.
+      expect(link.subscribed, false);
+      controller.dispose();
+      await link.messages.close();
+    },
+  );
+
+  test('detach drains a pending resume subscription before cleanup', () async {
+    final link = AudioFake();
+    final controller = AudioController(channel: channel);
+    await controller.attach(link);
+    controller.background();
+    await controller.stop();
+    link.subscribeBarrier = Completer<void>();
+    final resume = controller.resume();
+    await Future<void>.delayed(Duration.zero);
+    expect(link.subscribing, true);
+    var detached = false;
+    final detach = controller.detach().then((_) => detached = true);
+    await Future<void>.delayed(Duration.zero);
+    expect(detached, false);
+    link.subscribeBarrier!.complete();
+    await Future.wait([resume, detach]);
+    expect(link.subscribed, false);
+    expect(controller.transport, null);
+    controller.dispose();
+    await link.messages.close();
+  });
+
+  for (final stage in [
+    'playback',
+    'subscription',
+    'file',
+    'control queue',
+    'signing',
+  ]) {
+    test(
+      'background and quick resume cancel start waiting for $stage',
+      () async {
+        final link = AudioFake();
+        final controller = AudioController(channel: channel);
+        await controller.attach(link);
+        nativeCalls.clear();
+        final barrier = Completer<void>();
+        switch (stage) {
+          case 'playback':
+            pauseBarrier = barrier;
+          case 'subscription':
+            link.subscribeBarrier = barrier;
+          case 'file':
+            prepareBarrier = barrier;
+          case 'control queue':
+            controller.controls = barrier.future;
+          case 'signing':
+            signBarrier = barrier;
+        }
+        final start = controller.start();
+        await Future<void>.delayed(Duration.zero);
+        if (stage == 'file') expect(nativeCalls, contains('prepareRecording'));
+        if (stage == 'subscription') expect(link.subscribing, true);
+        controller.background();
+        final stop = controller.stop();
+        final resume = controller.resume();
+        await Future<void>.delayed(Duration.zero);
+        expect(controller.stopping, true);
+        expect(nativeCalls, isNot(contains('finishRecording')));
+        barrier.complete();
+        await Future.wait([start, stop, resume]);
+        expect(link.commands.where((c) => c[0] == 3 || c[0] == 5), isEmpty);
+        expect(nativeCalls, isNot(contains('beginRecording')));
+        expect(controller.receiving, false);
+        expect(link.subscribed, true);
+        expect(controller.stopping, false);
+        expect(controller.busy, false);
+        await controller.start();
+        expect(controller.receiving, true);
+        await controller.detach();
+        controller.dispose();
+        await link.messages.close();
+      },
+    );
+  }
+
+  test(
+    'stop during a submitted start skips native begin and stops the badge',
+    () async {
+      final link = AudioFake();
+      final controller = AudioController(channel: channel);
+      await controller.attach(link);
+      final response = Completer<Uint8List>();
+      link.delayNextRead = response;
+      nativeCalls.clear();
+      final start = controller.start();
+      await Future<void>.delayed(Duration.zero);
+      expect(link.commands.last[0], 3);
+      controller.background();
+      final stop = controller.stop();
+      final resume = controller.resume();
+      response.complete(Uint8List.fromList(link.state));
+      await Future.wait([start, stop, resume]);
+      expect(link.commands.last[0], 4);
+      expect(link.commands.where((c) => c[0] == 3).length, 1);
+      expect(nativeCalls, isNot(contains('beginRecording')));
+      expect(controller.receiving, false);
+      expect(controller.state!.recording, false);
+      await controller.detach();
+      controller.dispose();
+      await link.messages.close();
+    },
+  );
+
+  test(
+    'detach waits for pending file preparation before replacing the session',
+    () async {
+      final link = AudioFake(), replacement = AudioFake();
+      final controller = AudioController(channel: channel);
+      await controller.attach(link);
+      prepareBarrier = Completer<void>();
+      nativeCalls.clear();
+      final start = controller.start();
+      await Future<void>.delayed(Duration.zero);
+      expect(nativeCalls, contains('prepareRecording'));
+      final attach = controller.attach(replacement);
+      await Future<void>.delayed(Duration.zero);
+      expect(controller.transport, same(link));
+      expect(nativeCalls, isNot(contains('finishRecording')));
+      prepareBarrier!.complete();
+      await Future.wait([start, attach]);
+      expect(controller.transport, same(replacement));
+      expect(controller.receiving, false);
+      expect(link.commands.where((c) => c[0] == 3 || c[0] == 5), isEmpty);
+      expect(
+        nativeCalls.indexOf('prepareRecording'),
+        lessThan(nativeCalls.indexOf('finishRecording')),
+      );
+      expect(
+        nativeCalls.indexOf('finishRecording'),
+        lessThan(nativeCalls.indexOf('endSession')),
+      );
+      await controller.start();
+      expect(controller.receiving, true);
+      await controller.detach();
+      controller.dispose();
+      await link.messages.close();
+      await replacement.messages.close();
+    },
+  );
+
   test('concurrent stops share the complete cleanup future', () async {
     final link = AudioFake();
     final controller = AudioController(channel: channel);

@@ -164,7 +164,7 @@ class _BadgeHomeState extends State<BadgeHome> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) audio.foreground = true;
+    if (state == AppLifecycleState.resumed) unawaited(audio.resume());
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.inactive) {
       audio.background();

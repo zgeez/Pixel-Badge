@@ -107,6 +107,10 @@ presets empty; scripts import only four validated public link defines.
    without reconnecting, and check Back/reopen retains the link too. Bluetooth
    off or badge power-off must end the connection/service. Force-stop still
    ends the process. Play the saved recording; no automatic recording restart.
+   After Home/lock cleanup, return and try the Mode long-press without first
+   tapping Record: it must still start normally. Also leave and immediately
+   return while Record is starting; it must cancel, with a fresh Record press
+   still working afterward.
 6. **Sustained transport:** record past five minutes, listen for speed errors,
    gaps/distortion, and check for resets/overruns. Report duration, phone/image
    and non-secret status. Never capture audio/key data in RTT or dumps.

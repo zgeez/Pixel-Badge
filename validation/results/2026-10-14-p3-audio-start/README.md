@@ -291,3 +291,37 @@ and coredumps remain disabled; only the explicit bench enables recording.
 No firmware flash, APK installation or phone/microphone capture in this follow-up.
 The installed app/board still run the previous candidate until explicitly updated.
 Visibility/security/endurance/Rev A acceptance remains open.
+
+
+### PR25 foreground subscription and pending-start corrections (2026-10-15)
+
+Base e1595ac: resume waits for shared stop cleanup, then restores the current
+authenticated idle subscription without starting capture. Detach drains any
+pending idle resubscribe before removing the listener. Stop changes the
+operation epoch; each awaited setup step and queued/signed Start checks that
+epoch, generation and foreground/stop/detach state. Capture Stop is sent
+promptly; file finalization waits for pending native preparation to settle.
+Returning quickly cannot revive a cancelled Start or close a newly prepared
+file after cleanup. Fresh manual and button starts remain available.
+
+Ten new Flutter regressions cover button start after completed background
+cleanup, resume/detach overlap, pending idle resubscribe, delayed playback,
+subscription, file setup, control queue/signing, a submitted Start response,
+and replacement-session ordering. Full Flutter suite72 passes; analysis clean.
+Debug APK0.4.3+12 builds. No firmware source/configuration changed this run.
+
+CI now installs Java17 and the pinned Android SDK/Build Tools/NDK, prepares
+the ignored Gradle wrapper/local.properties with Flutter config-only, runs
+testDebugUnitTest and uploads XML/HTML results. A fresh local snapshot with
+only tracked app files successfully restored the lockfile, generated the
+wrapper/configuration and ran all19 app JVM tests. This was Windows with the
+installed Android Studio JBR, not a GitHub Ubuntu/Temurin17 execution; that CI
+run remains pending publication. Plugin JVM tests also passed. Repository
+formatting/YAML/hygiene and git diff --check pass.
+
+Logs: ignored app/build/pr25-lifecycle-tests.log, pr25-lifecycle-analyze.log,
+pr25-lifecycle-apk.log; build/pr25-clean-check/clean-check.log and its app/build/
+app/test-results/testDebugUnitTest/ XML; build/pr25-lifecycle-repo-check.log.
+APK: app/build/app/outputs/flutter-apk/app-debug.apk. No APK install, firmware
+flash or new phone/REC/microphone bench test. Existing P3 hardware, visibility,
+security, endurance and Rev A gates remain open; recording stays default-disabled.

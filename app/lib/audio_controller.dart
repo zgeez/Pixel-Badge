@@ -270,12 +270,15 @@ class AudioController extends ChangeNotifier {
     }
   }
 
-  Future<void> control(int opcode, {int value = 0}) {
+  Future<void> control(int opcode, {int value = 0, int? expectedEpoch}) {
     final link = transport, snapshot = state, session = generation;
     if (link == null || snapshot == null) {
       return Future.error(StateError('Reconnect the badge.'));
     }
     final task = controls.catchError((Object _) {}).then((_) async {
+      if (expectedEpoch != null) {
+        checkStart(link, session, expectedEpoch);
+      }
       if (session != generation || counter == 0xffffffff) {
         throw StateError('Reconnect the badge.');
       }
@@ -287,6 +290,9 @@ class AudioController extends ChangeNotifier {
       });
       if (signed == null || session != generation) {
         throw StateError('Audio session ended.');
+      }
+      if (expectedEpoch != null) {
+        checkStart(link, session, expectedEpoch);
       }
       await send(signed);
       final result = AudioState.decode(await link.readAudioState());
@@ -340,89 +346,120 @@ class AudioController extends ChangeNotifier {
         !foreground) {
       return;
     }
-    operationEpoch++;
+    final epoch = ++operationEpoch;
     busy = true;
     changed();
     final session = generation;
+    final link = transport!;
+    final setup = _start(link, session, epoch, fromButton: fromButton);
+    _starting = setup;
     try {
-      if (state?.recordingEnabled != true) {
-        throw StateError(
-          'Recording is disabled until REC visibility is accepted.',
-        );
-      }
-      await stopPlayback();
-      await transport!.subscribeAudio();
-      // File/Keystore setup must finish before asking the badge to capture.
-      await native.invokeMethod<void>('prepareRecording');
-      if (session != generation || !foreground) {
-        throw StateError('Recording cancelled.');
-      }
-      // Listen before requesting start. The bounded queue covers phone scheduling;
-      // firmware also discards the first 200 ms of this fresh capture.
-      receiving = true;
-      recordingWatch
-        ..reset()
-        ..start();
-      mediaClock();
-      queued = 0;
-      packets = Future.value();
-      final opened = Completer<void>();
-      subscription = transport!.audioPackets.listen(
-        (packet) {
-          if (!receiving || session != generation) return;
-          if (++queued > 32) {
-            queued--;
-            unawaited(
-              stop(reason: 'Phone could not keep up; recording stopped.'),
-            );
-            return;
-          }
-          packets = packets
-              .then((_) async {
-                await opened.future;
-                if (receiving && session == generation) {
-                  await native.invokeMethod<void>('packet', packet);
-                }
-              })
-              .catchError((Object error) {
-                unawaited(
-                  stop(
-                    reason:
-                        error is PlatformException && error.code == 'capacity'
-                        ? error.message ??
-                              'Phone storage is low; recording stopped.'
-                        : 'Audio stream or storage failed; recording stopped.',
-                  ),
-                );
-              })
-              .whenComplete(() => queued--);
-        },
-        onError: (Object _) =>
-            unawaited(stop(reason: 'Audio stream failed; recording stopped.')),
-      );
-      try {
-        await control(fromButton ? 5 : 3);
-        await native.invokeMethod<void>('beginRecording', {
-          'device': transport!.audioDeviceId,
-          'nonce': state!.recordingNonce,
-        });
-        opened.complete();
-      } catch (_) {
-        opened.complete();
-        rethrow;
-      }
-      message = 'Recording — REC must remain visible on the badge.';
+      await setup;
     } catch (error) {
-      final reason = error is StateError
-          ? error.message
-          : error is PlatformException && error.code == 'capacity'
-          ? error.message
-          : 'Recording could not start. Reconnect.';
-      await stop(reason: reason);
+      // A stop/detach already owns cleanup for a cancelled operation. It waits
+      // for setup to settle before closing the native file and subscription.
+      if (session == generation && epoch == operationEpoch) {
+        final reason = error is StateError
+            ? error.message
+            : error is PlatformException && error.code == 'capacity'
+            ? error.message
+            : 'Recording could not start. Reconnect.';
+        await stop(reason: reason);
+      }
     } finally {
+      if (identical(_starting, setup)) _starting = null;
       busy = false;
       changed();
     }
+  }
+
+  Future<void>? _starting;
+  void checkStart(AudioTransport link, int session, int epoch) {
+    if (disposed ||
+        session != generation ||
+        epoch != operationEpoch ||
+        !identical(link, transport) ||
+        !foreground ||
+        stopping ||
+        _detaching != null) {
+      throw StateError('Recording cancelled.');
+    }
+  }
+
+  Future<void> _start(
+    AudioTransport link,
+    int session,
+    int epoch, {
+    required bool fromButton,
+  }) async {
+    if (state?.recordingEnabled != true) {
+      throw StateError(
+        'Recording is disabled until REC visibility is accepted.',
+      );
+    }
+    await stopPlayback();
+    checkStart(link, session, epoch);
+    await link.subscribeAudio();
+    checkStart(link, session, epoch);
+    // File/Keystore setup must finish before asking the badge to capture.
+    await native.invokeMethod<void>('prepareRecording');
+    checkStart(link, session, epoch);
+    // Listen before requesting start. The bounded queue covers phone scheduling;
+    // firmware also discards the first 200 ms of this fresh capture.
+    receiving = true;
+    recordingWatch
+      ..reset()
+      ..start();
+    mediaClock();
+    queued = 0;
+    packets = Future.value();
+    final opened = Completer<void>();
+    subscription = link.audioPackets.listen(
+      (packet) {
+        if (!receiving || session != generation) return;
+        if (++queued > 32) {
+          queued--;
+          unawaited(
+            stop(reason: 'Phone could not keep up; recording stopped.'),
+          );
+          return;
+        }
+        packets = packets
+            .then((_) async {
+              await opened.future;
+              if (receiving && session == generation) {
+                await native.invokeMethod<void>('packet', packet);
+              }
+            })
+            .catchError((Object error) {
+              unawaited(
+                stop(
+                  reason: error is PlatformException && error.code == 'capacity'
+                      ? error.message ??
+                            'Phone storage is low; recording stopped.'
+                      : 'Audio stream or storage failed; recording stopped.',
+                ),
+              );
+            })
+            .whenComplete(() => queued--);
+      },
+      onError: (Object _) =>
+          unawaited(stop(reason: 'Audio stream failed; recording stopped.')),
+    );
+    try {
+      await control(fromButton ? 5 : 3, expectedEpoch: epoch);
+      checkStart(link, session, epoch);
+      await native.invokeMethod<void>('beginRecording', {
+        'device': link.audioDeviceId,
+        'nonce': state!.recordingNonce,
+      });
+      checkStart(link, session, epoch);
+      opened.complete();
+    } catch (_) {
+      opened.complete();
+      rethrow;
+    }
+    message = 'Recording — REC must remain visible on the badge.';
   }
 
   Future<void> finishLocal({String? reason}) async {
@@ -435,7 +472,11 @@ class AudioController extends ChangeNotifier {
     try {
       await transport?.unsubscribeAudio();
     } catch (_) {}
-    if (foreground && authenticated && transport != null) {
+    if (foreground &&
+        !disposed &&
+        _detaching == null &&
+        authenticated &&
+        transport != null) {
       try {
         await transport!.subscribeAudio();
       } catch (_) {}
@@ -463,6 +504,11 @@ class AudioController extends ChangeNotifier {
           await control(4);
         } catch (_) {}
       }
+      // Native preparation may still be opening a file. Stop capture promptly,
+      // then wait so no file or receiver can appear after finalization.
+      try {
+        await _starting;
+      } catch (_) {}
       await finishLocal(reason: reason);
     } catch (_) {
       message = 'Recording stopped; the phone could not save it.';
@@ -495,6 +541,8 @@ class AudioController extends ChangeNotifier {
   Future<void> _detach() async {
     timer?.cancel();
     timer = null;
+    // Drain an idle resubscribe before stop removes the old link's listener.
+    await _resuming;
     await stop();
     generation++;
     transport = null;
@@ -509,6 +557,34 @@ class AudioController extends ChangeNotifier {
     foreground = false;
     unawaited(playbackAction('pausePlayback'));
     unawaited(stop());
+  }
+
+  Future<void>? _resuming;
+  Future<void> resume() {
+    foreground = true;
+    return _resuming ??= _resume().whenComplete(() => _resuming = null);
+  }
+
+  Future<void> _resume() async {
+    final link = transport, session = generation;
+    await _stopping;
+    if (disposed ||
+        !foreground ||
+        session != generation ||
+        !identical(link, transport) ||
+        link == null ||
+        !authenticated ||
+        _detaching != null) {
+      return;
+    }
+    try {
+      await link.subscribeAudio();
+    } catch (_) {
+      if (session == generation && foreground && !disposed) {
+        message = 'Audio connection failed. Reconnect the badge.';
+        changed();
+      }
+    }
   }
 
   @override
