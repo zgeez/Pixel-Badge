@@ -196,10 +196,11 @@ class StudioPanel extends StatelessWidget {
     required this.title,
     required this.child,
     this.subtitle,
+    this.help,
     this.trailing,
   });
   final String title;
-  final String? subtitle;
+  final String? subtitle, help;
   final Widget child;
   final Widget? trailing;
   @override
@@ -227,6 +228,24 @@ class StudioPanel extends StatelessWidget {
                   ],
                 ),
               ),
+              if (help != null)
+                IconButton(
+                  tooltip: '$title help',
+                  icon: const Icon(Icons.info_outline, size: 20),
+                  onPressed: () => showDialog<void>(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: Text(title),
+                      content: Text(help!),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Done'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ?trailing,
             ],
           ),

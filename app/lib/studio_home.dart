@@ -9,14 +9,24 @@ import 'draft_store.dart';
 import 'matrix_widgets.dart';
 import 'protocol.dart';
 import 'studio_model.dart';
+import 'audio_controller.dart';
+import 'audio_page.dart';
 
-const modeLabels = ['QR link', 'Text', 'Drawing', 'Animation'];
-const pageLabels = ['Badge', 'Links', 'Text', 'Studio'];
+const modeLabels = [
+  'QR link',
+  'Text',
+  'Drawing',
+  'Animation',
+  'Audio level',
+  'Audio spectrum',
+];
+const pageLabels = ['Badge', 'Links', 'Text', 'Studio', 'Audio'];
 const pageIcons = [
   Icons.badge_outlined,
   Icons.link,
   Icons.text_fields,
   Icons.grid_on,
+  Icons.mic_none,
 ];
 
 class BadgeHome extends StatefulWidget {
@@ -34,6 +44,7 @@ class BadgeHome extends StatefulWidget {
 }
 
 class _BadgeHomeState extends State<BadgeHome> with WidgetsBindingObserver {
+  final audio = AudioController();
   late final badge = widget.controller ?? BadgeController();
   late final store =
       widget.draftStore ??
@@ -72,6 +83,8 @@ class _BadgeHomeState extends State<BadgeHome> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     syncName();
     badge.addListener(changed);
+    audio.addListener(changed);
+    unawaited(audio.refreshLibrary().catchError((Object _) {}));
     scanSubscription = (widget.scanResults ?? UniversalBle.scanStream).listen((
       device,
     ) {
@@ -111,6 +124,9 @@ class _BadgeHomeState extends State<BadgeHome> with WidgetsBindingObserver {
 
   void changed() {
     if (mounted) {
+      if (!badge.connected && audio.transport != null) {
+        unawaited(audio.detach());
+      }
       syncName();
       setState(() {});
     }
@@ -148,9 +164,14 @@ class _BadgeHomeState extends State<BadgeHome> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) audio.foreground = true;
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
+      audio.background();
+    }
     if (state == AppLifecycleState.paused) {
       unawaited(stopScan());
-      if (badge.connected) unawaited(badge.disconnect());
+      // Keep the secure BLE link; only audio capture stops on background.
       if (!loadingDraft) unawaited(saveDraft());
     }
   }
@@ -221,12 +242,16 @@ class _BadgeHomeState extends State<BadgeHome> with WidgetsBindingObserver {
     setState(() => connecting = true);
     try {
       await stopScan();
+      // Dispose the old GATT client before reconnecting the same device ID.
+      await audio.detach();
+      await badge.disconnect();
       final link = await UniversalBadgeLink.connect(device);
       if (!mounted) {
         await link.close();
         return;
       }
       await badge.attach(link, capabilities: link.capabilities);
+      await audio.attach(link.capabilities.hasAudio ? link : null);
       nameDirty = false;
       syncName();
     } finally {
@@ -335,14 +360,43 @@ class _BadgeHomeState extends State<BadgeHome> with WidgetsBindingObserver {
         ),
       );
   Widget offlineNote() => Padding(
-    padding: const EdgeInsets.only(bottom: 16),
-    child: Text(
-      !badge.connected
-          ? 'Create and save on your phone. Connect when you’re ready to send it.'
-          : !badge.capabilities.hasStudio
-          ? 'Your badge has basic firmware. Studio drafts work offline; update badge firmware to send them.'
-          : 'Drafts stay on this phone. Send them to save and display on the badge.',
-      style: Theme.of(context).textTheme.bodyMedium,
+    padding: const EdgeInsets.only(bottom: 12),
+    child: Row(
+      children: [
+        Icon(
+          badge.connected ? Icons.phone_android : Icons.cloud_off_outlined,
+          size: 16,
+        ),
+        const SizedBox(width: 6),
+        Text(
+          badge.connected ? 'Local draft' : 'Offline draft',
+          style: Theme.of(context).textTheme.labelMedium,
+        ),
+        const Spacer(),
+        IconButton(
+          tooltip: 'Draft help',
+          icon: const Icon(Icons.help_outline, size: 20),
+          onPressed: () => showDialog<void>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Your drafts'),
+              content: Text(
+                !badge.connected
+                    ? 'Design and save on this phone. Connect to send your design to the badge.'
+                    : !badge.capabilities.hasStudio
+                    ? 'Update badge firmware to send Studio designs.'
+                    : 'Drafts stay on this phone. Send a design to save and display it on the badge.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Done'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     ),
   );
   Widget button(
@@ -359,63 +413,26 @@ class _BadgeHomeState extends State<BadgeHome> with WidgetsBindingObserver {
         );
 
   Widget dashboard() {
-    final mode = badge.mode.clamp(0, 3);
+    final mode = badge.mode.clamp(0, modeLabels.length - 1);
     final colors = Theme.of(context).colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(24),
-          margin: const EdgeInsets.only(bottom: 20),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(24),
-            gradient: LinearGradient(
-              colors: [colors.primaryContainer, colors.secondaryContainer],
+        if (!badge.connected)
+          StudioPanel(
+            title: 'Ready when you are',
+            child: Column(
+              children: [
+                Icon(Icons.badge_outlined, size: 72, color: colors.primary),
+                const SizedBox(height: 16),
+                button(
+                  'Find badge',
+                  Icons.bluetooth_searching,
+                  connecting ? null : () => unawaited(findBadge()),
+                ),
+              ],
             ),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                badge.connected
-                    ? 'Your badge, your way.'
-                    : 'Small pixels. Big personality.',
-                style: Theme.of(context).textTheme.headlineMedium,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                badge.connected
-                    ? 'Choose what’s on display. Your badge keeps playing after you disconnect.'
-                    : 'Design text, drawings and animations before you connect.',
-              ),
-              const SizedBox(height: 20),
-              Wrap(
-                spacing: 10,
-                runSpacing: 10,
-                children: [
-                  button(
-                    badge.connected ? 'Refresh settings' : 'Find badge',
-                    badge.connected ? Icons.refresh : Icons.bluetooth_searching,
-                    badge.busy || connecting
-                        ? null
-                        : () => unawaited(
-                            badge.connected
-                                ? action(badge.refresh)
-                                : findBadge(),
-                          ),
-                  ),
-                  button(
-                    'Open Studio',
-                    Icons.grid_on,
-                    () => setState(() => page = 3),
-                    primary: false,
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
         if (connecting || badge.busy)
           StudioPanel(
             title: connecting ? 'Connecting' : 'Saving to badge',
@@ -475,6 +492,15 @@ class _BadgeHomeState extends State<BadgeHome> with WidgetsBindingObserver {
                     ).render(t, fallback: badge.name),
                     animate: true,
                   )
+                else if (mode >= 4)
+                  Padding(
+                    padding: const EdgeInsets.all(40),
+                    child: Icon(
+                      mode == 4 ? Icons.graphic_eq : Icons.equalizer,
+                      size: 104,
+                      color: colors.primary,
+                    ),
+                  )
                 else if (mode >= 2 && badge.values[BadgeField.artwork] != null)
                   preview((t) {
                     final art = MatrixDesign.decode(
@@ -491,11 +517,7 @@ class _BadgeHomeState extends State<BadgeHome> with WidgetsBindingObserver {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    for (
-                      var i = 0;
-                      i < (badge.capabilities.hasStudio ? 4 : 2);
-                      i++
-                    )
+                    for (var i = 0; i < badge.capabilities.modeCount; i++)
                       ChoiceChip(
                         label: Text(modeLabels[i]),
                         selected: badge.confirmed && badge.mode == i,
@@ -514,7 +536,7 @@ class _BadgeHomeState extends State<BadgeHome> with WidgetsBindingObserver {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    for (var i = 0; i < 4; i++)
+                    for (var i = 0; i < brightnessLevels.length; i++)
                       ChoiceChip(
                         label: Text(['Low', 'Medium', 'High', 'Full'][i]),
                         selected:
@@ -536,33 +558,17 @@ class _BadgeHomeState extends State<BadgeHome> with WidgetsBindingObserver {
             ),
           ),
         StudioPanel(
-          title: 'Create something yours',
-          subtitle:
-              'Saved drafts are separate from what’s currently on the badge.',
-          child: Column(
+          title: 'Create',
+          child: Wrap(
+            spacing: 10,
+            runSpacing: 10,
             children: [
-              for (var i = 1; i < 4; i++)
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: Icon(pageIcons[i], color: colors.primary),
-                  title: Text(
-                    [
-                      '',
-                      'Share a custom link',
-                      'Make text fit beautifully',
-                      'Draw or animate',
-                    ][i],
-                  ),
-                  subtitle: Text(
-                    [
-                      '',
-                      'Keep your QR and NFC destination together.',
-                      'Preview case-sensitive text, wrapping and scrolling.',
-                      'Paint 32 × 32 pixels and build up to 16 frames.',
-                    ][i],
-                  ),
-                  trailing: const Icon(Icons.arrow_forward),
-                  onTap: () => setState(() => page = i),
+              for (var i = 1; i < pageLabels.length; i++)
+                button(
+                  pageLabels[i],
+                  pageIcons[i],
+                  () => setState(() => page = i),
+                  primary: false,
                 ),
             ],
           ),
@@ -765,8 +771,7 @@ class _BadgeHomeState extends State<BadgeHome> with WidgetsBindingObserver {
         offlineNote(),
         StudioPanel(
           title: 'Contact link',
-          subtitle:
-              'Your QR code and NFC tap always share the same destination.',
+          help: 'Your QR code and NFC tap always share the same destination.',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -790,8 +795,7 @@ class _BadgeHomeState extends State<BadgeHome> with WidgetsBindingObserver {
         ),
         StudioPanel(
           title: 'Your links',
-          subtitle:
-              'Save a short link once, then choose it whenever you need it.',
+          help: 'Save a short link once, then choose it whenever you need it.',
           trailing: IconButton(
             tooltip: 'Add a custom link',
             onPressed: loadingDraft ? null : () => unawaited(editLink()),
@@ -825,7 +829,7 @@ class _BadgeHomeState extends State<BadgeHome> with WidgetsBindingObserver {
           ),
         StudioPanel(
           title: 'NFC settings',
-          subtitle:
+          help:
               'Passive taps work from the tag’s saved link, even when the badge is off.',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -850,7 +854,7 @@ class _BadgeHomeState extends State<BadgeHome> with WidgetsBindingObserver {
                   !badge.connected
                       ? 'Read the tag’s status before changing a contact link.'
                       : badge.nfcVerified
-                      ? 'The badge confirmed its stored contact link.'
+                      ? 'QR + NFC synchronized'
                       : 'The shared link is not verified. Keep the phone away and try Sync again. Missing setup requires the initial verification flow.',
                 ),
               ),
@@ -944,7 +948,7 @@ class _BadgeHomeState extends State<BadgeHome> with WidgetsBindingObserver {
         offlineNote(),
         StudioPanel(
           title: 'Identity',
-          subtitle: 'Your badge name is separate from a custom text message.',
+          help: 'Your badge name is separate from a custom text message.',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -977,7 +981,7 @@ class _BadgeHomeState extends State<BadgeHome> with WidgetsBindingObserver {
         ),
         StudioPanel(
           title: 'Text composer',
-          subtitle:
+          help:
               'Uppercase, lowercase, numbers and punctuation. Add line breaks for a deliberate layout.',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1086,8 +1090,7 @@ class _BadgeHomeState extends State<BadgeHome> with WidgetsBindingObserver {
         ),
         StudioPanel(
           title: 'Live preview',
-          subtitle:
-              'This uses the same bitmap font and layout as Studio firmware.',
+          help: 'This uses the same bitmap font and layout as Studio firmware.',
           child: Column(
             children: [
               error == null
@@ -1156,7 +1159,7 @@ class _BadgeHomeState extends State<BadgeHome> with WidgetsBindingObserver {
         offlineNote(),
         StudioPanel(
           title: 'Pixel canvas',
-          subtitle:
+          help:
               '32 × 32 monochrome pixels. Draw directly or switch to Move to zoom.',
           child: Column(
             children: [
@@ -1477,20 +1480,13 @@ class _BadgeHomeState extends State<BadgeHome> with WidgetsBindingObserver {
                   Text(
                     [
                       'Your badge',
-                      'Share something',
-                      'Make words shine',
+                      'Links',
+                      'Text',
                       'Pixel Studio',
+                      'Audio',
                     ][page],
+                    key: const Key('page-heading'),
                     style: Theme.of(context).textTheme.headlineLarge,
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    [
-                      'Control the display, then let it run offline.',
-                      'Custom links, synchronized QR and NFC.',
-                      'Compose once. Preview every pixel.',
-                      'Draw a frame. Build a story.',
-                    ][page],
                   ),
                 ],
               ),
@@ -1535,7 +1531,17 @@ class _BadgeHomeState extends State<BadgeHome> with WidgetsBindingObserver {
         ],
         AbsorbPointer(
           absorbing: loadingDraft && page != 0,
-          child: [dashboard, linksPage, textPage, studioPage][page](),
+          child: [
+            dashboard,
+            linksPage,
+            textPage,
+            studioPage,
+            () => AudioPage(
+              audio: audio,
+              selectVisualization: (mode) =>
+                  action(() => badge.apply(BadgeField.mode, [mode])),
+            ),
+          ][page](),
         ),
         if (page == 0) aboutButton(),
         const SizedBox(height: 12),
@@ -1586,7 +1592,7 @@ class _BadgeHomeState extends State<BadgeHome> with WidgetsBindingObserver {
                 labelType: NavigationRailLabelType.all,
                 onDestinationSelected: (v) => setState(() => page = v),
                 destinations: [
-                  for (var i = 0; i < 4; i++)
+                  for (var i = 0; i < pageLabels.length; i++)
                     NavigationRailDestination(
                       icon: Icon(pageIcons[i]),
                       label: Text(pageLabels[i]),
@@ -1611,7 +1617,7 @@ class _BadgeHomeState extends State<BadgeHome> with WidgetsBindingObserver {
               selectedIndex: page,
               onDestinationSelected: (v) => setState(() => page = v),
               destinations: [
-                for (var i = 0; i < 4; i++)
+                for (var i = 0; i < pageLabels.length; i++)
                   NavigationDestination(
                     icon: Icon(pageIcons[i]),
                     label: pageLabels[i],
@@ -1629,6 +1635,8 @@ class _BadgeHomeState extends State<BadgeHome> with WidgetsBindingObserver {
     saveTimer?.cancel();
     unawaited(scanSubscription?.cancel());
     if (scanning) unawaited(UniversalBle.stopScan());
+    audio.removeListener(changed);
+    audio.dispose();
     badge.removeListener(changed);
     nameEditor.dispose();
     textEditor.dispose();
