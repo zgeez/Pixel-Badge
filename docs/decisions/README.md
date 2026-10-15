@@ -37,8 +37,9 @@ decision.
 | [0008](0008-landscape-front-buttons.md) | Landscape wear; buttons on the front below the LED field when they fit (amends 0006) | Accepted; partly superseded by 0009 and 0010 |
 | [0009](0009-dual-orientation-dual-mounting.md) | Portrait and landscape wear with firmware rotation; magnetic and lanyard mounting (amends 0006 and 0008) | Accepted |
 | [0010](0010-single-sided-assembly.md) | Single-sided assembly: all components on the front; rear holds the battery, its connector and the carrier; regional thickness targets (amends 0006 and 0008) | Accepted |
-| [0011](0011-visible-voice-recording.md) | Visible voice recording streamed to the phone app; no audio stored on the badge (amends 0001) | Accepted |
+| [0011](0011-visible-voice-recording.md) | Visible voice recording streamed to the phone app; no audio stored on the badge (amends 0001) | Accepted; enrollment/duration amended by 0016 |
 | [0012](0012-prototype-foundation.md) | Prototype settings, QR encoder and MCUboot flash layout | Accepted |
 | [0013](0013-prototype-nfc.md) | Guarded NFC updates and explicit two-session RF provisioning | Accepted; provisioning proof amended by 0014 |
 | [0014](0014-positive-nfc-provisioning-proof.md) | Two fresh positive NFC authentication sessions for the provisioning receipt | Accepted 2026-10-12; provisioning passed, broader acceptance pending |
 | [0015](0015-nrf52840-e73-module.md) | Ebyte E73-2G4M08S1C (nRF52840) module for Rev A (amends 0002) | Accepted 2026-10-13 |
+| [0016](0016-simple-audio-controls.md) | Record/Stop using the bonded phone, automatic session setup and storage-based recording limits (amends 0011) | Accepted 2026-10-14 |

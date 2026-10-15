@@ -68,7 +68,7 @@ bool SettingsService::apply(Field field, const void *data, size_t length)
 		values_.brightness = bytes[0];
 		return true;
 	case Field::kDefaultMode:
-		if (length != 1 || bytes[0] > static_cast<uint8_t>(Mode::kAnimation)) {
+		if (length != 1 || bytes[0] > static_cast<uint8_t>(Mode::kAudioSpectrum)) {
 			return false;
 		}
 		values_.default_mode = static_cast<Mode>(bytes[0]);

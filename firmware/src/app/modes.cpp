@@ -33,14 +33,25 @@ void Modes::next(uint32_t now)
 	}
 	Mode next = mode_;
 	do {
-		next = static_cast<Mode>((static_cast<unsigned>(next) + 1) % 4);
+		next = static_cast<Mode>((static_cast<unsigned>(next) + 1) %
+#if defined(CONFIG_APP_AUDIO)
+					 6
+#else
+					 4
+#endif
+		);
 	} while (!available(next));
 	(void)select(next, now);
 }
 
 bool Modes::available(Mode mode) const
 {
-	return mode <= Mode::kAnimation &&
+	return mode <=
+#if defined(CONFIG_APP_AUDIO)
+		       Mode::kAudioSpectrum &&
+#else
+		       Mode::kAnimation &&
+#endif
 	       (mode != Mode::kCanvas || artwork_present(settings_.artwork, true)) &&
 	       (mode != Mode::kAnimation ||
 		(artwork_present(settings_.artwork) && settings_.artwork.bytes[1] >= 2));
@@ -82,9 +93,11 @@ void Modes::render(Frame &output, uint32_t now) const
 		content = qr_;
 	} else if (mode_ == Mode::kName) {
 		render_text(content, settings_.text, settings_.name, now - entered_at_);
-	} else {
+	} else if (mode_ <= Mode::kAnimation) {
 		render_artwork(content, settings_.artwork, now - entered_at_,
 			       mode_ == Mode::kAnimation);
+	} else {
+		content.clear();
 	}
 	rotate(content, output, mode_ == Mode::kQr ? qr_rotation_ : current_rotation_);
 }

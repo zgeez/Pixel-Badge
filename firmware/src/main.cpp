@@ -11,10 +11,12 @@
 #include "badge/display_demo.hpp"
 #include "badge/qr_screening.hpp"
 #include "badge/prototype.hpp"
+#include "badge/audio_screening.hpp"
 
 LOG_MODULE_REGISTER(app, CONFIG_APP_LOG_LEVEL);
 
-#if DT_HAS_CHOSEN(zephyr_display) && defined(CONFIG_DISPLAY) && !defined(CONFIG_APP_PROTOTYPE)
+#if DT_HAS_CHOSEN(zephyr_display) && defined(CONFIG_DISPLAY) && !defined(CONFIG_APP_PROTOTYPE) &&  \
+	!defined(CONFIG_APP_AUDIO_SCREENING)
 /* The display test patterns run in their own thread, so the module checks
  * below run while the display is refreshing. */
 static void display_thread(void *, void *, void *)
@@ -55,6 +57,9 @@ int main(void)
 
 #if defined(CONFIG_APP_PROTOTYPE)
 	badge::run_prototype();
+#endif
+#if defined(CONFIG_APP_AUDIO_SCREENING)
+	badge::run_audio_screening();
 #endif
 
 	while (true) {

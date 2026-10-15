@@ -29,7 +29,7 @@ ZTEST(settings, test_missing_schema_and_invalid_fields)
 	zassert_true(service.load(Field::kSchema, &version, 1));
 	const uint8_t invalid = 0;
 	zassert_false(service.load(Field::kBrightness, &invalid, 1));
-	const uint8_t wrong_mode = 4;
+	const uint8_t wrong_mode = 6;
 	zassert_false(service.load(Field::kDefaultMode, &wrong_mode, 1));
 	zassert_false(service.load(Field::kName, "bad\n", 4));
 	zassert_false(service.load(Field::kName, "", 0));

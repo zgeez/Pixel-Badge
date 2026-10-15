@@ -108,6 +108,29 @@ void main() {
       }
     }
   });
+  testWidgets(
+    'background keeps the badge link while audio capture stays foreground only',
+    (tester) async {
+      final link = FakeLink();
+      final controller = BadgeController();
+      await controller.attach(link);
+      await showApp(tester, controller: controller);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+      await tester.pump();
+      expect(controller.connected, true);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pump();
+      expect(controller.connected, true);
+      await tester.pumpWidget(const SizedBox());
+      controller.dispose();
+      await link.dispose();
+    },
+  );
+
   testWidgets('missing NFC disables links while identity remains available', (
     tester,
   ) async {
@@ -491,7 +514,7 @@ void main() {
   );
 
   for (final brightness in Brightness.values) {
-    testWidgets('four pages fit a narrow ${brightness.name} phone', (
+    testWidgets('five pages fit a narrow ${brightness.name} phone', (
       tester,
     ) async {
       final store = MemoryDraftStore();
@@ -507,7 +530,7 @@ void main() {
       );
       await showApp(tester, store: store, brightness: brightness);
       await capture(tester, 'badge-${brightness.name}');
-      for (final label in ['Links', 'Text', 'Studio']) {
+      for (final label in ['Links', 'Text', 'Studio', 'Audio']) {
         await page(tester, label);
         if (label == 'Studio') {
           expect(
@@ -521,6 +544,13 @@ void main() {
             ),
             isTrue,
           );
+        }
+        if (label == 'Audio') {
+          expect(
+            tester.widget<Text>(find.byKey(const Key('page-heading'))).data,
+            'Audio',
+          );
+          expect(find.text('Level meter'), findsOneWidget);
         }
         await capture(tester, '${label.toLowerCase()}-${brightness.name}');
         expect(tester.takeException(), isNull);
@@ -541,6 +571,19 @@ void main() {
     );
     await tester.pump(const Duration(milliseconds: 200));
     await capture(tester, 'studio-tablet');
+    expect(tester.takeException(), isNull);
+    await tester.tap(
+      find.descendant(
+        of: find.byType(NavigationRail),
+        matching: find.text('Audio'),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(
+      tester.widget<Text>(find.byKey(const Key('page-heading'))).data,
+      'Audio',
+    );
+    expect(find.text('Level meter'), findsOneWidget);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
   });

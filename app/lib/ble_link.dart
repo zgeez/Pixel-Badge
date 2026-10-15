@@ -1,16 +1,80 @@
 // SPDX-License-Identifier: MIT
 import 'dart:async';
-import 'dart:typed_data';
+import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart'
+    show defaultTargetPlatform, TargetPlatform, kIsWeb;
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:universal_ble/universal_ble.dart';
 import 'badge_controller.dart';
 import 'protocol.dart';
+import 'audio_controller.dart';
 
-class UniversalBadgeLink implements BadgeLink {
+class UniversalBadgeLink implements BadgeLink, AudioTransport {
   UniversalBadgeLink._(this.device, this.result, this.capabilities);
   final BleDevice device;
   final BleCharacteristic result;
   final BadgeCapabilities capabilities;
+  BleCharacteristic? _audio;
+  StreamSubscription<bool>? _connection;
+  static int _nextOwner = 0;
+  final int _owner = ++_nextOwner;
+  static const _background = MethodChannel('com.ziadg.badge_app/connection');
+  static bool get _android =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+  Future<void> keepConnected() async {
+    if (!_android) return;
+    _connection = device.connectionStream.listen((connected) {
+      if (!connected) unawaited(_stopBackground());
+    });
+    await _background.invokeMethod<void>('start', {'owner': _owner});
+    if (!await device.isConnected) {
+      await _stopBackground();
+      throw StateError('Badge disconnected.');
+    }
+  }
+
+  Future<void> _stopBackground() async {
+    if (_android) {
+      try {
+        await _background.invokeMethod<void>('stop', {'owner': _owner});
+      } catch (_) {}
+    }
+  }
+
+  @override
+  String get audioDeviceId => device.deviceId;
+  @override
+  Future<Uint8List> readAudioState() async => (await device.getCharacteristic(
+    audioStateUuid,
+    service: audioServiceUuid,
+  )).read();
+  @override
+  Future<void> writeAudioControl(Uint8List data) async =>
+      (await device.getCharacteristic(
+        audioControlUuid,
+        service: audioServiceUuid,
+      )).write(data, withResponse: true);
+  @override
+  Future<void> subscribeAudio() async {
+    final mtu = await device.requestMtu(247);
+    if (mtu < 108) {
+      throw StateError('This connection cannot carry audio. Reconnect.');
+    }
+    _audio = await device.getCharacteristic(
+      audioStreamUuid,
+      service: audioServiceUuid,
+    );
+    await _audio!.notifications.subscribe();
+  }
+
+  @override
+  Stream<Uint8List> get audioPackets => _audio!.onValueReceived;
+  @override
+  Future<void> unsubscribeAudio() async {
+    await _audio?.unsubscribe();
+    _audio = null;
+  }
+
   static Future<UniversalBadgeLink> connect(BleDevice device) async {
     try {
       await device.connect();
@@ -34,7 +98,14 @@ class UniversalBadgeLink implements BadgeLink {
       await result
           .read(); // Firmware requires authenticated LESC, beyond OS bond status.
       await result.notifications.subscribe();
-      return UniversalBadgeLink._(device, result, capabilities);
+      final link = UniversalBadgeLink._(device, result, capabilities);
+      try {
+        await link.keepConnected();
+      } catch (_) {
+        await link.close();
+        rethrow;
+      }
+      return link;
     } catch (_) {
       try {
         await device.disconnect();
@@ -82,7 +153,10 @@ class UniversalBadgeLink implements BadgeLink {
   Stream<bool> get connections => device.connectionStream;
   @override
   Future<void> close() async {
+    await _connection?.cancel();
+    await _stopBackground();
     try {
+      await unsubscribeAudio();
       await result.unsubscribe();
     } catch (_) {
       // The OS may already have removed the disconnected GATT client.

@@ -7,6 +7,10 @@
 #include "badge/modes.hpp"
 #include "badge/settings_store.hpp"
 #include "badge/nfc.hpp"
+#if defined(CONFIG_APP_AUDIO)
+#include "badge/audio_runtime.hpp"
+#include "badge/hub75_sync.h"
+#endif
 #if defined(CONFIG_APP_BLE)
 #include "badge/ble.hpp"
 #endif
@@ -62,7 +66,11 @@ struct ConfigContext {
 };
 int apply_config(void *pointer, const ConfigCommand &command)
 {
-	if (nfc_update_busy()) {
+	if (nfc_update_busy()
+#if defined(CONFIG_APP_AUDIO)
+	    || audio_ui_busy()
+#endif
+	) {
 		return -EBUSY;
 	}
 	auto &context = *static_cast<ConfigContext *>(pointer);
@@ -71,6 +79,12 @@ int apply_config(void *pointer, const ConfigCommand &command)
 		return -EINVAL;
 	}
 	const Mode previous_mode = context.modes.active();
+#if defined(CONFIG_APP_AUDIO)
+	if (command.field == Field::kDefaultMode) {
+		/* Finish DMA cleanup before a configuration update can show a new mode. */
+		audio_halt();
+	}
+#endif
 	if (!context.modes.configure(candidate.values())) {
 		return -EINVAL;
 	}
@@ -203,7 +217,11 @@ void run_prototype()
 		config_context.now = now;
 		poll_ble(settings.values(), modes,
 			 !safe && load_rc == 0 && display_ready && !display_health.recovering() &&
-				 !nfc_update_busy(),
+				 !nfc_update_busy()
+#if defined(CONFIG_APP_AUDIO)
+				 && !audio_ui_busy()
+#endif
+				 ,
 			 apply_config, &config_context);
 #endif
 		for (unsigned i = 0; buttons_ready && i < 2; ++i) {
@@ -212,6 +230,19 @@ void run_prototype()
 				continue;
 			}
 			const Press event = classifier[i].sample(level == 1, now);
+#if defined(CONFIG_APP_AUDIO)
+			if (event != Press::kNone &&
+			    (audio_recording() || (i == 1 && audio_ui_busy()))) {
+				(void)audio_button(event == Press::kLong);
+				continue;
+			}
+			if (i == 0 && event == Press::kLong && audio_button(true)) {
+				continue;
+			}
+			if (audio_ui_busy()) {
+				continue;
+			}
+#endif
 			if (event == Press::kLong) {
 #if defined(CONFIG_APP_BLE)
 				if (i == 1 && !safe && display_ready) {
@@ -246,9 +277,19 @@ void run_prototype()
 				}
 			}
 		}
+#if defined(CONFIG_APP_AUDIO)
+		audio_tick(!safe && load_rc == 0 && display_ready && !display_health.recovering() &&
+				   !nfc_update_busy(),
+			   modes.active() == Mode::kAudioLevel ||
+				   modes.active() == Mode::kAudioSpectrum,
+			   modes.active() == Mode::kAudioSpectrum);
+#endif
 		/* Sample fast content at the main-loop cadence. Recovery retains its
 		 * bounded retry rate; animation timing is elapsed-time based. */
 		const bool fast_content =
+#if defined(CONFIG_APP_AUDIO)
+			audio_capture_active() || audio_ui_busy() ||
+#endif
 			modes.active() == Mode::kAnimation ||
 			(modes.active() == Mode::kName && settings.values().text.bytes[1] == 2);
 		const uint32_t render_interval =
@@ -260,13 +301,34 @@ void run_prototype()
 			[[maybe_unused]] bool pairing_overlay = false;
 #if defined(CONFIG_APP_BLE)
 			pairing_overlay = ble_pairing_frame(frame);
+#if defined(CONFIG_APP_AUDIO)
+			bool recording_indicator = false;
+			if (!pairing_overlay) {
+				if (modes.active() == Mode::kAudioLevel ||
+				    modes.active() == Mode::kAudioSpectrum) {
+					audio_visual_frame(frame,
+							   modes.active() == Mode::kAudioSpectrum);
+				}
+				const AudioOverlay overlay = audio_overlay(frame);
+				recording_indicator = overlay == AudioOverlay::kRecording;
+				pairing_overlay = overlay != AudioOverlay::kNone;
+			}
+			(void)display_set_brightness(
+				display, audio_recording() ? 255 : settings.values().brightness);
 #endif
-			const int rc =
-				display_ready
-					? present(display, frame)
-					: initialize_display(display, frame,
-							     safe ? kDefaultSettings.brightness
-								  : settings.values().brightness);
+#endif
+			int rc = display_ready
+					 ? present(display, frame)
+					 : initialize_display(display, frame,
+							      safe ? kDefaultSettings.brightness
+								   : settings.values().brightness);
+#if defined(CONFIG_APP_AUDIO)
+			if (rc == 0 && audio_ui_busy()) {
+				rc = badge_hub75_wait_visible(display, 50);
+			}
+			audio_display_result(audio_recording() && !recording_indicator ? -EAGAIN
+										       : rc);
+#endif
 			const uint32_t completed =
 				static_cast<uint32_t>(k_uptime_get() - started_at);
 #if defined(CONFIG_APP_NFC)
@@ -290,6 +352,9 @@ void run_prototype()
 		const uint32_t completed = static_cast<uint32_t>(k_uptime_get() - started_at);
 		if (display_health.restart_required(completed)) {
 			LOG_ERR("persistent display failure; restarting");
+#if defined(CONFIG_APP_AUDIO)
+			audio_halt();
+#endif
 			if (device_is_ready(display)) {
 				display_blanking_on(display);
 			}
@@ -306,7 +371,10 @@ void run_prototype()
 			retain_boot_count(0xa0);
 			LOG_INF("healthy boot; reset-loop counter cleared");
 		}
-		k_sleep(K_MSEC(20));
+#if defined(CONFIG_APP_AUDIO)
+		if (!audio_capture_active())
+#endif
+			k_sleep(K_MSEC(20));
 	}
 }
 } // namespace badge

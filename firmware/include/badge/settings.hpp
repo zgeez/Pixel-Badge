@@ -13,7 +13,9 @@ enum class Mode : uint8_t {
 	kQr,
 	kName,
 	kCanvas,
-	kAnimation
+	kAnimation,
+	kAudioLevel,
+	kAudioSpectrum
 };
 enum class Field : uint8_t {
 	kSchema,

@@ -199,7 +199,7 @@ class BadgeController extends ChangeNotifier {
     }
     if (field == BadgeField.mode &&
         value.isNotEmpty &&
-        value[0] >= (capabilities.hasStudio ? 4 : 2)) {
+        value[0] >= capabilities.modeCount) {
       throw StateError('Update badge firmware to use Studio modes.');
     }
     final packets = stagePackets(field, value);

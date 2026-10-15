@@ -3,6 +3,9 @@
 #include "badge/nfc.hpp"
 #include "badge/text.hpp"
 #include "badge/modes.hpp"
+#if defined(CONFIG_APP_AUDIO)
+#include "badge/audio_runtime.hpp"
+#endif
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/conn.h>
 #include <zephyr/bluetooth/gatt.h>
@@ -65,8 +68,14 @@ ssize_t att_error(int rc)
 ssize_t read_info(bt_conn *conn, const bt_gatt_attr *attr, void *buf, uint16_t len, uint16_t offset)
 {
 	k_mutex_lock(&ble_mutex, K_FOREVER);
-	const uint8_t info[] = {kBleVersion, kPayloadMax, kNameMax,       4,
-				4,           flags(),     kArtworkFrames, 7};
+	const uint8_t info[] = {kBleVersion,
+				kPayloadMax,
+				kNameMax,
+				4,
+				IS_ENABLED(CONFIG_APP_AUDIO) ? 6 : 4,
+				flags(),
+				kArtworkFrames,
+				IS_ENABLED(CONFIG_APP_AUDIO) ? 15 : 7};
 	k_mutex_unlock(&ble_mutex);
 	return bt_gatt_attr_read(conn, attr, buf, len, offset, info, sizeof(info));
 }
@@ -254,6 +263,9 @@ void connected(bt_conn *conn, uint8_t error)
 	if (error != 0) {
 		return;
 	}
+#if defined(CONFIG_APP_AUDIO)
+	audio_connected(conn);
+#endif
 	k_mutex_lock(&ble_mutex, K_FOREVER);
 	connection = bt_conn_ref(conn);
 	protocol.reset();
@@ -269,6 +281,9 @@ void connected(bt_conn *conn, uint8_t error)
 }
 void disconnected(bt_conn *conn, uint8_t)
 {
+#if defined(CONFIG_APP_AUDIO)
+	audio_disconnected();
+#endif
 	k_mutex_lock(&ble_mutex, K_FOREVER);
 	if (connection == conn) {
 		bt_conn_unref(connection);
@@ -295,10 +310,15 @@ bt_conn_cb connection_callbacks{};
 bt_security_err pairing_accept(bt_conn *, const bt_conn_pairing_feat *const)
 {
 	k_mutex_lock(&ble_mutex, K_FOREVER);
-	const bool allowed =
+	bool allowed =
 		writable && !job_active && pairing_deadline > static_cast<uint64_t>(k_uptime_get());
 	k_mutex_unlock(&ble_mutex);
 	LOG_INF("BLE new pairing policy: %s", allowed ? "allowed" : "rejected");
+#if defined(CONFIG_APP_AUDIO)
+	if (allowed) {
+		allowed = audio_new_pairing();
+	}
+#endif
 	return allowed ? BT_SECURITY_ERR_SUCCESS : BT_SECURITY_ERR_PAIR_NOT_ALLOWED;
 }
 void passkey_display(bt_conn *conn, unsigned key)
@@ -369,6 +389,9 @@ void worker(void *, void *, void *)
 	k_mutex_lock(&ble_mutex, K_FOREVER);
 	enabled = true;
 	k_mutex_unlock(&ble_mutex);
+#if defined(CONFIG_APP_AUDIO)
+	start_audio_service();
+#endif
 	LOG_INF("BLE ready: configuration service available");
 	k_work_submit(&advertise_work);
 	while (true) {
@@ -406,7 +429,10 @@ void open_ble_pairing()
 {
 	k_mutex_lock(&ble_mutex, K_FOREVER);
 	if (writable && enabled && !job_active) {
-		pairing_deadline = k_uptime_get() + 60000;
+#if defined(CONFIG_APP_AUDIO)
+		if (audio_pairing_window())
+#endif
+			pairing_deadline = k_uptime_get() + 60000;
 	}
 	k_mutex_unlock(&ble_mutex);
 }

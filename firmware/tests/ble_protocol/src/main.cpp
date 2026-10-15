@@ -39,10 +39,24 @@ ZTEST(ble_protocol, test_field_bounds_and_qr_fit)
 	zassert_equal(protocol.stage(Field::kBrightness, &value, 1, true), -EINVAL);
 	value = 100;
 	zassert_equal(protocol.stage(Field::kBrightness, &value, 1, true), -EINVAL);
-	value = 4;
+	value = 6;
 	zassert_equal(protocol.stage(Field::kDefaultMode, &value, 1, true), -EINVAL);
 	zassert_equal(protocol.stage(Field::kSchema, &value, 1, true), -EINVAL);
 	zassert_equal(protocol.stage(Field::kUrl, nullptr, 1000, true), -EINVAL);
+}
+ZTEST(ble_protocol, test_audio_modes_can_be_staged_and_applied)
+{
+	constexpr Mode modes[] = {Mode::kAudioLevel, Mode::kAudioSpectrum};
+	for (const Mode mode : modes) {
+		BleProtocol protocol;
+		const uint8_t value = static_cast<uint8_t>(mode);
+		zassert_ok(protocol.stage(Field::kDefaultMode, &value, 1, true));
+		const auto command = accept(protocol, 1, Field::kDefaultMode);
+		zassert_equal(command.length, 1);
+		zassert_equal(command.data[0], value);
+		protocol.complete(command, 0);
+		zassert_false(protocol.busy());
+	}
 }
 ZTEST(ble_protocol, test_name_fragments_must_be_complete_and_contiguous)
 {

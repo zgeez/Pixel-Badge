@@ -22,7 +22,12 @@ target_link_libraries(app PRIVATE badge_qrcodegen)
 target_sources_ifdef(CONFIG_APP_NFC app PRIVATE src/app/nfc.cpp)
 target_sources_ifdef(CONFIG_APP_NFC app PRIVATE src/services/url_update.cpp)
 target_sources_ifdef(CONFIG_APP_BLE app PRIVATE src/app/ble.cpp src/services/ble_protocol.cpp)
+target_sources_ifdef(CONFIG_APP_AUDIO app PRIVATE src/app/audio_runtime.cpp
+ src/platform/audio_crypto.cpp src/services/audio.cpp src/services/adpcm.cpp
+ src/services/recording.cpp)
 target_sources_ifdef(CONFIG_DISPLAY app PRIVATE src/app/display_demo.cpp)
+target_sources_ifdef(CONFIG_APP_AUDIO_SCREENING app PRIVATE
+	src/app/audio_screening.cpp src/services/audio.cpp src/services/buttons.cpp)
 if(CONFIG_APP_PROTOTYPE)
 	# Read sysbuild overrides too; a link change must not retain an old cache value.
 	zephyr_get(BADGE_QR_LINK)

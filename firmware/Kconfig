@@ -27,6 +27,31 @@ config APP_DISPLAY_BRIGHTNESS
 	default 128
 	range 1 255
 
+config APP_AUDIO_SCREENING
+	bool "Microphone level and spectrum bench"
+	depends on DISPLAY && AUDIO_DMIC && !APP_PROTOTYPE && !APP_QR_SCREENING
+	help
+	  Explicit nRF5340 DK bench image. Captures volatile PCM for the local
+	  meter/FFT only; no recording, storage or audio transmission commands.
+
+config APP_AUDIO_CHANNEL
+	int "Initial microphone PCM channel (left=0, right=1)"
+	depends on APP_AUDIO_SCREENING || APP_AUDIO
+	default 0
+	range 0 1
+
+config APP_AUDIO
+ bool "P3 local visualization and authenticated audio service"
+ default y if APP_BLE
+	depends on APP_BLE && AUDIO_DMIC && HUB75_DISPLAY && !DEBUG_COREDUMP
+
+config APP_AUDIO_RECORDING_BENCH
+ bool "Bench-only recording before REC visibility acceptance"
+ depends on APP_AUDIO && !DEBUG_COREDUMP
+ help
+   Development only. Recording stays disabled in normal/release builds
+   pending indoor, outdoor and direct-sun REC visibility acceptance.
+
 config APP_PROTOTYPE
 	bool "Prototype badge application"
 	default y if BOARD_NRF5340DK_NRF5340_CPUAPP
