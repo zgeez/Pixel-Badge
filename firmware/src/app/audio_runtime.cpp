@@ -480,7 +480,8 @@ bool audio_button(bool long_press)
 		stop_requested = true;
 		atomic_set(&revoked, 1);
 		consumed = true;
-	} else if (long_press && proved && secure(connection) && subscribed() && allow_start) {
+	} else if (long_press && IS_ENABLED(CONFIG_APP_AUDIO_RECORDING_BENCH) && proved &&
+		   secure(connection) && subscribed() && allow_start) {
 		consumed = true;
 		if (random_bytes(button_nonce, 16)) {
 			button_deadline = k_uptime_get() + 3000;

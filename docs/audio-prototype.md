@@ -101,6 +101,8 @@ presets empty; scripts import only four validated public link defines.
 4. **Button start:** keep Audio foreground/authenticated; Mode long about1s
    requests a fresh recording. Either button stops. Disconnected app: NO REC.
    Normal firmware refuses both app and button recording.
+   In normal firmware, Mode long-press shows NO REC even when the bonded app is
+   authenticated and subscribed; it does not create a button challenge.
 5. **Automatic stops:** separate recordings for Home, lock, Bluetooth off,
    and disconnect. Expected capture/REC ends; reopening never resumes.
    Home/lock retain BLE; recording and playback stop/pause. Reopen and Refresh
