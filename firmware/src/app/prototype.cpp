@@ -304,13 +304,14 @@ void run_prototype()
 #if defined(CONFIG_APP_AUDIO)
 			bool recording_indicator = false;
 			if (!pairing_overlay) {
-				recording_indicator = audio_recording();
 				if (modes.active() == Mode::kAudioLevel ||
 				    modes.active() == Mode::kAudioSpectrum) {
 					audio_visual_frame(frame,
 							   modes.active() == Mode::kAudioSpectrum);
 				}
-				pairing_overlay = audio_overlay(frame);
+				const AudioOverlay overlay = audio_overlay(frame);
+				recording_indicator = overlay == AudioOverlay::kRecording;
+				pairing_overlay = overlay != AudioOverlay::kNone;
 			}
 			(void)display_set_brightness(
 				display, audio_recording() ? 255 : settings.values().brightness);

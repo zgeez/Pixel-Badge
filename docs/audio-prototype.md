@@ -25,7 +25,9 @@ from the foreground subscribed app within3s. Otherwise NO REC appears. Either
 badge button or app Stop stops recording. REC is a steady large label with a
 live level bar, at fixed DK brightness255 (candidate, not visibility acceptance).
 Capture starts only after the matrix driver confirms a REC buffer swap and full
-scan. Prior visualization DMA is stopped/erased. A31-tap anti-alias FIR precedes
+scan. Pending, active and draining REC overrides a stale NO REC message; the
+visibility gate uses the kind of overlay actually rendered, not just recording
+state. Prior visualization DMA is stopped/erased. A31-tap anti-alias FIR precedes
 2:1 decimation to nominal16kHz; independent10ms IMA ADPCM blocks are encrypted
 and streamed, never stored on the badge. A gentle30Hz DC/rumble filter,
 automatic gain (up to24dB) and peak limiting run before compression so playback

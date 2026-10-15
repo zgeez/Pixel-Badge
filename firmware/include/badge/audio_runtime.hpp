@@ -12,7 +12,7 @@ void audio_disconnected();
 bool audio_pairing_window();
 bool audio_new_pairing();
 bool audio_button(bool long_press);
-bool audio_overlay(Frame &frame);
+AudioOverlay audio_overlay(Frame &frame);
 bool audio_recording();
 bool audio_ui_busy();
 bool audio_capture_active();

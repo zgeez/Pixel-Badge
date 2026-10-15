@@ -25,6 +25,19 @@ private:
 	int32_t real_[kAudioFftSize]{};
 	int32_t imaginary_[kAudioFftSize]{};
 };
+enum class AudioOverlay {
+	kNone,
+	kUnavailable,
+	kRecording
+};
+/* Pending, active and draining capture always outrank transient status text. */
+constexpr AudioOverlay audio_overlay_kind(bool recording, bool requested, bool closing,
+					  bool unavailable)
+{
+	return recording || requested || closing ? AudioOverlay::kRecording
+	       : unavailable                     ? AudioOverlay::kUnavailable
+						 : AudioOverlay::kNone;
+}
 void clear_audio(void *memory, size_t bytes);
 void render_audio(Frame &output, const AudioAnalysis &analysis, bool spectrum);
 } // namespace badge

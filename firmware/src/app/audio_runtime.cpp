@@ -511,14 +511,12 @@ bool audio_capture_active()
 {
 	return active;
 } // main owner only
-bool audio_overlay(Frame &frame)
+AudioOverlay audio_overlay(Frame &frame)
 {
 	k_mutex_lock(&audio_mutex, K_FOREVER);
-	bool result = recording || requested || closing || unavailable_deadline > k_uptime_get();
-	if (unavailable_deadline > k_uptime_get()) {
-		draw_name(frame, "NO REC", 0);
-
-	} else if (recording || requested || closing) {
+	const AudioOverlay result = audio_overlay_kind(recording, requested, closing,
+						       unavailable_deadline > k_uptime_get());
+	if (result == AudioOverlay::kRecording) {
 		render_audio(frame, analysis, false);
 		// Large fixed 5x7 REC, placed above the level meter, never animated or hidden.
 		constexpr uint8_t letters[3][7] = {{30, 17, 17, 30, 20, 18, 17},
@@ -539,6 +537,8 @@ bool audio_overlay(Frame &frame)
 				}
 			}
 		}
+	} else if (result == AudioOverlay::kUnavailable) {
+		draw_name(frame, "NO REC", 0);
 	}
 	k_mutex_unlock(&audio_mutex);
 	return result;

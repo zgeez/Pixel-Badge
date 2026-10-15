@@ -117,4 +117,16 @@ ZTEST(audio, test_newest_window_no_stale_spectrum_and_explicit_clear)
 		zassert_equal(value, 0);
 	}
 }
+ZTEST(audio, test_recording_overlay_overrides_stale_unavailable_message)
+{
+	// A failed long press left NO REC visible; a request arrives before it expires.
+	zassert_equal(audio_overlay_kind(false, false, false, true), AudioOverlay::kUnavailable);
+	zassert_equal(audio_overlay_kind(false, true, false, true), AudioOverlay::kRecording);
+	zassert_equal(audio_overlay_kind(true, false, false, true), AudioOverlay::kRecording);
+	zassert_equal(audio_overlay_kind(false, false, true, true), AudioOverlay::kRecording);
+	// Expiring the transient message never changes the pending/active REC frame.
+	zassert_equal(audio_overlay_kind(false, true, false, false), AudioOverlay::kRecording);
+	zassert_equal(audio_overlay_kind(true, false, false, false), AudioOverlay::kRecording);
+	zassert_equal(audio_overlay_kind(false, false, false, false), AudioOverlay::kNone);
+}
 ZTEST_SUITE(audio, nullptr, nullptr, nullptr, nullptr, nullptr);
