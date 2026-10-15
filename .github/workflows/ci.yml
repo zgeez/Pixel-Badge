@@ -139,6 +139,13 @@ jobs:
             EXTRA_CONF_FILE="${GITHUB_WORKSPACE}/smart-led-badge/firmware/configs/prototype-debug.conf" \
             bash smart-led-badge/scripts/ci/build-firmware.sh
 
+      - name: Build microphone level and FFT bench
+        run: |
+          export ZEPHYR_BASE="${GITHUB_WORKSPACE}/ncs/zephyr"
+          BUILD_DIR="${GITHUB_WORKSPACE}/smart-led-badge/build/audio-screening" \
+            EXTRA_CONF_FILE="${GITHUB_WORKSPACE}/smart-led-badge/firmware/configs/audio-screening.conf" \
+            bash smart-led-badge/scripts/ci/build-firmware.sh
+
       - name: Build watchdog reset-loop bench configuration
         run: |
           export ZEPHYR_BASE="${GITHUB_WORKSPACE}/ncs/zephyr"
@@ -160,6 +167,14 @@ jobs:
             SB_EXTRA_CONF_FILE="${GITHUB_WORKSPACE}/smart-led-badge/firmware/configs/ble-sysbuild.conf" \
             bash smart-led-badge/scripts/ci/build-firmware.sh
 
+      - name: Build P3 recording bench with network-core radio
+        run: |
+          export ZEPHYR_BASE="${GITHUB_WORKSPACE}/ncs/zephyr"
+          BUILD_DIR="${GITHUB_WORKSPACE}/smart-led-badge/build/audio-recording" \
+            SB_EXTRA_CONF_FILE="${GITHUB_WORKSPACE}/smart-led-badge/firmware/configs/ble-sysbuild.conf" \
+            EXTRA_CONF_FILE="${GITHUB_WORKSPACE}/smart-led-badge/firmware/configs/audio-recording-bench.conf" \
+            bash smart-led-badge/scripts/ci/build-firmware.sh
+
       - name: Upload prototype bench images
         uses: actions/upload-artifact@v7
         with:
@@ -167,6 +182,9 @@ jobs:
           path: |
             smart-led-badge/build/qr/merged.hex
             smart-led-badge/build/prototype-debug/merged.hex
+            smart-led-badge/build/audio-screening/merged.hex
+            smart-led-badge/build/audio-recording/merged.hex
+            smart-led-badge/build/audio-recording/merged_CPUNET.hex
             smart-led-badge/build/watchdog-loop/merged.hex
             smart-led-badge/build/nfc-provisioning/merged.hex
             smart-led-badge/build/nfc-provisioning/firmware/zephyr/zephyr.elf
