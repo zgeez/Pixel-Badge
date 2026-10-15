@@ -31,10 +31,16 @@ const legacyFields = [
 ];
 
 class BadgeCapabilities {
-  const BadgeCapabilities(this.version);
+  const BadgeCapabilities(this.version, {this.hasAudio = false});
   static const legacy = BadgeCapabilities(1);
   static const studio = BadgeCapabilities(2);
   final int version;
+  final bool hasAudio;
+  int get modeCount => hasAudio
+      ? 6
+      : hasStudio
+      ? 4
+      : 2;
   bool get hasStudio => version == 2;
   List<BadgeField> get settings => [
     ...legacyFields,
@@ -49,12 +55,14 @@ class BadgeCapabilities {
         bytes[5] & ~7 != 0 ||
         (bytes[0] == 1
             ? bytes[4] != 2 || bytes[6] != 0 || bytes[7] != 0
-            : bytes[4] != 4 || bytes[6] != 16 || bytes[7] != 7)) {
+            : !((bytes[4] == 4 && bytes[7] == 7) ||
+                      (bytes[4] == 6 && bytes[7] == 15)) ||
+                  bytes[6] != 16)) {
       throw const FormatException(
         'This badge uses an unsupported configuration protocol.',
       );
     }
-    return BadgeCapabilities(bytes[0]);
+    return BadgeCapabilities(bytes[0], hasAudio: bytes[4] == 6);
   }
 }
 
@@ -179,7 +187,7 @@ void validateValue(BadgeField field, List<int> value) {
   } else if (value.length != 1 ||
       (field == BadgeField.brightness
           ? !brightnessLevels.contains(value.single)
-          : value.single > 3)) {
+          : value.single > 5)) {
     throw const FormatException('Unsupported setting value.');
   }
 }
