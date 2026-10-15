@@ -250,6 +250,11 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+      - name: Set up Android SDK command-line tools
+        uses: android-actions/setup-android@v4
+        with:
+          cmdline-tools-version: '15859902'
+          log-accepted-android-sdk-licenses: false
       - name: Install pinned Android build tools
         run: sdkmanager "platforms;android-36" "build-tools;36.1.0" "ndk;27.0.12077973"
       # Flutter generates the ignored wrapper and local.properties on clean CI.

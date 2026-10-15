@@ -325,3 +325,37 @@ app/test-results/testDebugUnitTest/ XML; build/pr25-lifecycle-repo-check.log.
 APK: app/build/app/outputs/flutter-apk/app-debug.apk. No APK install, firmware
 flash or new phone/REC/microphone bench test. Existing P3 hardware, visibility,
 security, endurance and Rev A gates remain open; recording stays default-disabled.
+
+
+### PR25 button gate, capture I/O and Android CI correction (2026-10-15)
+
+Follow-up to d3f65e9: button challenges require the recording build gate as
+well as proof/security/subscription/display permission. Normal firmware falls
+through to the existing one-second NO REC feedback; Stop still has precedence.
+No firmware security or visibility guard was removed.
+
+Pixel Badge0.4.4+13 disables library refresh during capture and stop cleanup.
+The controller also refuses native list requests while receiving, so repeated
+programmatic calls cannot queue directory scans ahead of incoming audio on the
+native I/O executor. Stop finalization still refreshes the saved library.
+The regression issues eight refreshes while recording, checks no native scan
+and verifies refresh works afterward; the widget checks the enabled/disabled
+refresh action. Flutter73 and analysis pass; debug APK builds.
+
+Hosted CI on d3f65e9 failed before Gradle tests because sdkmanager was absent
+from PATH. Add android-actions/setup-android@v4 before installing pinned SDK
+packages, pinning command-line tools build15859902. The action installs tools,
+accepts licenses and exports their PATH; see its
+[action definition](https://github.com/android-actions/setup-android/blob/v4/action.yml).
+The hosted rerun is pending owner signing/push; local YAML validation alone
+does not establish hosted success. Android source/tests are unchanged, so the
+previous19-case clean-snapshot JVM result is retained, not rerun here.
+
+Normal and explicit recording DK sysbuilds both pass. Generated normal config
+keeps CONFIG_APP_AUDIO_RECORDING_BENCH unset; only the explicit bench enables
+it. C/C++ formatting, YAML, repository hygiene and git diff --check pass.
+Logs: ignored build/pr25-gates-normal.log, pr25-gates-recording.log,
+pr25-gates-repo-check.log and app/build/pr25-gates-tests.log,
+pr25-gates-analyze.log, pr25-gates-apk.log. No APK install, firmware flash or
+new physical NO REC, throughput or microphone acceptance in this follow-up.
+Existing P3 hardware/security/visibility/endurance/Rev A gates remain open.
