@@ -255,8 +255,14 @@ jobs:
         with:
           cmdline-tools-version: '15859902'
           log-accepted-android-sdk-licenses: false
-      - name: Install pinned Android build tools
-        run: sdkmanager "platforms;android-36" "build-tools;36.1.0" "ndk;27.0.12077973"
+      # AGP 8.11's library default is NDK 27; Flutter 3.38.5's app uses 28.2.
+      - name: Install pinned Android SDK and NDK packages
+        run: |
+          sdkmanager --sdk_root="$ANDROID_HOME" \
+            "platforms;android-36" "build-tools;36.1.0" \
+            "ndk;27.0.12077973" "ndk;28.2.13676358"
+          cat "$ANDROID_HOME/ndk/27.0.12077973/source.properties"
+          cat "$ANDROID_HOME/ndk/28.2.13676358/source.properties"
       # Flutter generates the ignored wrapper and local.properties on clean CI.
       - name: Prepare Android Gradle project
         run: flutter build apk --debug --config-only

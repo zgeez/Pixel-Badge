@@ -13,7 +13,8 @@ App-focused prompt: [flutter-app-prompt.md](../docs/flutter-app-prompt.md).
 From the repository root:
 
 Use Flutter 3.38.5 and the installed Android SDK (platform 36, Build Tools
-36.1.0 and Flutter's NDK 27.0.12077973). Dependencies are pinned in pubspec.lock;
+36.1.0, Flutter 3.38.5's app NDK 28.2.13676358 and AGP 8.11's library-default
+NDK 27.0.12077973). CI installs both NDKs. Dependencies are pinned in pubspec.lock;
 restore with `flutter pub get` from app/ before the first build.
 
 ```powershell

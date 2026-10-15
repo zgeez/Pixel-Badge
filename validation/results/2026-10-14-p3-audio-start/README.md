@@ -359,3 +359,35 @@ pr25-gates-repo-check.log and app/build/pr25-gates-tests.log,
 pr25-gates-analyze.log, pr25-gates-apk.log. No APK install, firmware flash or
 new physical NO REC, throughput or microphone acceptance in this follow-up.
 Existing P3 hardware/security/visibility/endurance/Rev A gates remain open.
+
+
+### PR25 Flutter NDK dependency correction (2026-10-15)
+
+CI run86 on18727f6 passed Dart formatting/analysis/tests but failed Android
+configuration before JVM tests. Its SDK install log confirms NDK27 was
+downloaded; missing sdkmanager is fixed. The app uses flutter.ndkVersion,
+which is28.2.13676358 in the pinned Flutter3.38.5, while CI only installed27.
+The AGP error's preferred27 version was misleading for the app's explicit
+Flutter NDK selection. Local SDKs already had both and masked this omission.
+Source: [Flutter3.38.5 extension](https://github.com/flutter/flutter/blob/3.38.5/packages/flutter_tools/gradle/src/main/kotlin/FlutterExtension.kt).
+Failure: [hosted Android job](https://github.com/zgeez/smart-led-badge/actions/runs/38687377818/job/116265223506).
+
+CI now installs both AGP's default27.0.12077973 and Flutter's28.2.13676358,
+passes an explicit SDK root to sdkmanager and prints both installed metadata
+files before Gradle. Corrected app setup documentation; no SDK/AGP/Flutter
+version upgrade, app runtime or firmware change.
+
+Controlled local reproduction uses a fresh copy of tracked app files and a
+workspace-only SDK view: existing platforms/build-tools/licenses plus NDK27,
+with no NDK28/29 fallback. Gradle testDebugUnitTest reproduced the exact
+NDK-not-configured error. Added only the28.2 directory to that view and reran
+the same task: all19 app JVM tests (six suites) and plugin JVM tests passed,
+build successful in42s. No global tool or installed SDK directory was changed.
+Windows/Android Studio JBR verification; hosted Ubuntu/Temurin17 rerun remains
+pending owner signing/push. YAML/formatting/hygiene and whitespace checks pass.
+
+Ignored artifacts: build/pr25-ndk-check/missing-ndk.log, with-ndk.log, prepare.log,
+app/build/app/test-results/testDebugUnitTest/ under that snapshot;
+build/pr25-ndk-repo-check.log. Existing Flutter73/firmware/APK results remain
+historical, not rerun for this CI-only correction. No install/flash or hardware
+acceptance; existing P3 gates remain open.
