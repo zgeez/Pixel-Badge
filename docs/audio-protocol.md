@@ -97,6 +97,9 @@ validation. Incomplete final writes are truncated to complete authenticated chun
 Files are private and excluded from backups, bounded by available phone storage
 (16MiB reserve) and classic WAV size: at most13,421,772blocks, about37.28hours.
 Private storage uses40.32MB/hour plus64bytes per V2 file; WAV uses115.2MB/hour.
+Library listing excludes malformed/empty/open files individually and never
+clears a connection key or finishes capture on a read-only failure. Stop/detach
+await shared cleanup before a replacement session is installed.
 No five-minute limit. Playback/export authenticate every block. Only explicit
 export creates PCM/WAV outside private storage. Secret/plaintext arrays are
 cleared on setup/storage failure and stop; none cross Flutter's channel.

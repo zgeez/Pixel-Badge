@@ -58,7 +58,7 @@ class BadgeAudio(private val context: Context, channel: MethodChannel) {
         return keys.getKey("pixel-badge-recordings-v1",null)
     }
     private fun selected(id: String): File {
-        require(Regex("[0-9]+-[a-f0-9]{8}\\.pba").matches(id))
+        require(RecordingLibrary.validId(id))
         return File(dir,id)
     }
     private fun finish(): String? {
@@ -100,6 +100,18 @@ class BadgeAudio(private val context: Context, channel: MethodChannel) {
                     }
                     result.success(player.state())
                 } catch (_: Exception) { result.error("playback", "Could not play this recording.", null) }
+                return@setMethodCallHandler
+            }
+            if (call.method == "list") {
+                // Read-only failures must never finish capture or clear connectionKey.
+                io.execute {
+                    try {
+                        val library = RecordingLibrary.list(dir, file)
+                        main.post { result.success(library) }
+                    } catch (_: Exception) {
+                        main.post { result.error("library", "Could not read recordings.", null) }
+                    }
+                }
                 return@setMethodCallHandler
             }
             io.execute {
@@ -167,7 +179,6 @@ class BadgeAudio(private val context: Context, channel: MethodChannel) {
                             } finally { block.fill(0) }
                         }
                         "finishRecording" -> finish()
-                        "list" -> dir.listFiles()?.filter { it.extension=="pba" }?.sortedByDescending { it.name }?.map { mapOf("id" to it.name,"seconds" to (AudioStorage.blockCount(it.length())/100.0)) } ?: emptyList<Any>()
                         "delete" -> { check(stream==null); player.stop(); selected(call.argument<String>("id")!!).delete(); null }
                         else -> error("Unsupported audio operation")
                     }
