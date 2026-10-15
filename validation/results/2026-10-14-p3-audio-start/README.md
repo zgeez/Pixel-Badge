@@ -262,3 +262,32 @@ full-stream drain, zero-length end seek/cancellation and write/drain stalls.
 Installed/version verified0.4.1/build10 on Nothing A069P, preserving app data.
 No phone recording or live short-tail/drop-reconnect test during this fix;
 firmware unchanged and no flash/commit/push. Existing P3 acceptance gates remain.
+
+
+### PR25 recording visibility, library and session cleanup corrections
+
+Follow-up to8b2e7a5: pending/active/draining REC always outranks an unexpired
+NO REC message. The display gate checks the kind of overlay actually drawn,
+so state alone cannot acknowledge a non-REC frame. A native regression models
+a failed long-press immediately followed by requested, active and draining
+recording while the transient deadline remains live.
+
+Read-only Android library listing isolates entries with invalid layouts/IDs,
+empty files, directories and the open capture file. Damaged entries are skipped
+without modifying/deleting their bytes. Listing is outside capture/session
+failure cleanup, so a malformed entry cannot finish capture or clear the key.
+Valid legacy/current and later recordings remain listed.
+
+Stop callers now await one shared cleanup future. Detach and replacement
+session setup wait for it; new capture is refused while stop/detach is pending.
+Device-ended recording uses the same serialized cleanup path. Regressions hold
+control and native file finalization open across background/detach/reconnect,
+then verify the replacement subscription and recording survive.
+
+Verification: Flutter62/analysis clean; Android JVM19 (two new library cases);
+native_sim audio4/4; normal and recording DK sysbuilds both pass; debugAPK
+0.4.2+11 built. Source formatting/YAML/hygiene/whitespace pass. Default recording
+and coredumps remain disabled; only the explicit bench enables recording.
+No firmware flash, APK installation or phone/microphone capture in this follow-up.
+The installed app/board still run the previous candidate until explicitly updated.
+Visibility/security/endurance/Rev A acceptance remains open.

@@ -39,6 +39,7 @@ class AudioPage extends StatelessWidget {
     final enabled =
         audio.authenticated &&
         !audio.busy &&
+        !audio.stopping &&
         audio.state?.recordingEnabled == true;
     final status = !audio.android
         ? 'Recording requires Android'

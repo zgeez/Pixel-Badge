@@ -311,7 +311,7 @@ class AudioController extends ChangeNotifier {
       updateState(result);
       if (receiving) {
         if (!result.recording) {
-          await finishLocal(reason: deviceStopReason(result.error));
+          await stop(reason: deviceStopReason(result.error));
         } else {
           await control(7);
         }
@@ -332,7 +332,14 @@ class AudioController extends ChangeNotifier {
   }
 
   Future<void> start({bool fromButton = false}) async {
-    if (busy || receiving || !authenticated || !foreground) return;
+    if (busy ||
+        receiving ||
+        stopping ||
+        _detaching != null ||
+        !authenticated ||
+        !foreground) {
+      return;
+    }
     operationEpoch++;
     busy = true;
     changed();
@@ -441,11 +448,15 @@ class AudioController extends ChangeNotifier {
     await refreshLibrary();
   }
 
-  bool stopping = false;
-  Future<void> stop({String? reason}) async {
-    if (stopping) return;
+  Future<void>? _stopping;
+  bool get stopping => _stopping != null;
+  Future<void> stop({String? reason}) =>
+      _stopping ??= _stop(reason: reason).whenComplete(() {
+        _stopping = null;
+        changed();
+      });
+  Future<void> _stop({String? reason}) async {
     operationEpoch++;
-    stopping = true;
     try {
       if (transport != null && authenticated) {
         try {
@@ -455,9 +466,6 @@ class AudioController extends ChangeNotifier {
       await finishLocal(reason: reason);
     } catch (_) {
       message = 'Recording stopped; the phone could not save it.';
-    } finally {
-      stopping = false;
-      changed();
     }
   }
 

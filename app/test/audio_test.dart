@@ -65,15 +65,16 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   const channel = MethodChannel('audio-test');
   final nativeCalls = <String>[];
-  Completer<void>? prepareBarrier, packetBarrier;
+  Completer<void>? prepareBarrier, packetBarrier, finishBarrier;
   setUp(() {
     nativeCalls.clear();
-    prepareBarrier = packetBarrier = null;
+    prepareBarrier = packetBarrier = finishBarrier = null;
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (call) async {
           nativeCalls.add(call.method);
           if (call.method == 'prepareRecording') await prepareBarrier?.future;
           if (call.method == 'packet') await packetBarrier?.future;
+          if (call.method == 'finishRecording') await finishBarrier?.future;
           if (call.method == 'list') return [];
           if (call.method == 'beginSession') return Uint8List(65)..[0] = 4;
           if (call.method == 'control') {
@@ -423,6 +424,109 @@ void main() {
     controller.dispose();
     await link.messages.close();
   });
+  test('concurrent stops share the complete cleanup future', () async {
+    final link = AudioFake();
+    final controller = AudioController(channel: channel);
+    await controller.attach(link);
+    await controller.start();
+    final response = Completer<Uint8List>();
+    link.delayNextRead = response;
+    final first = controller.stop(), second = controller.stop();
+    expect(identical(first, second), true);
+    var completed = false;
+    unawaited(second.then((_) => completed = true));
+    for (var i = 0; i < 10 && link.delayNextRead != null; ++i) {
+      await Future<void>.delayed(Duration.zero);
+    }
+    expect(link.delayNextRead, null);
+    expect(completed, false);
+    expect(controller.stopping, true);
+    response.complete(Uint8List.fromList(link.state));
+    await second;
+    expect(completed, true);
+    expect(controller.stopping, false);
+    expect(controller.receiving, false);
+    await controller.detach();
+    controller.dispose();
+    await link.messages.close();
+  });
+
+  test('detach and reconnect wait for background recording cleanup', () async {
+    final old = AudioFake(), replacement = AudioFake();
+    final controller = AudioController(channel: channel);
+    await controller.attach(old);
+    await controller.start();
+    nativeCalls.clear();
+    finishBarrier = Completer<void>();
+    controller.background();
+    for (var i = 0; i < 20 && !nativeCalls.contains('finishRecording'); ++i) {
+      await Future<void>.delayed(Duration.zero);
+    }
+    expect(nativeCalls, contains('finishRecording'));
+    expect(controller.stopping, true);
+    var detached = false;
+    final detaching = controller.detach().then((_) => detached = true);
+    final attaching = controller.attach(replacement);
+    controller.foreground = true;
+    await Future<void>.delayed(Duration.zero);
+    expect(detached, false);
+    expect(controller.transport, same(old));
+    expect(nativeCalls, isNot(contains('endSession')));
+    expect(nativeCalls, isNot(contains('beginSession')));
+    await controller.start();
+    expect(controller.receiving, false);
+    finishBarrier!.complete();
+    await Future.wait([detaching, attaching]);
+    expect(controller.transport, same(replacement));
+    expect(controller.authenticated, true);
+    expect(replacement.subscribed, true);
+    expect(
+      nativeCalls.indexOf('finishRecording'),
+      lessThan(nativeCalls.indexOf('endSession')),
+    );
+    expect(
+      nativeCalls.indexOf('endSession'),
+      lessThan(nativeCalls.indexOf('beginSession')),
+    );
+    await controller.start();
+    expect(controller.receiving, true);
+    await Future<void>.delayed(Duration.zero);
+    expect(controller.receiving, true);
+    expect(replacement.subscribed, true);
+    await controller.detach();
+    controller.dispose();
+    await old.messages.close();
+    await replacement.messages.close();
+  });
+
+  test(
+    'device completion cleanup also holds detach until it finishes',
+    () async {
+      final link = AudioFake();
+      final controller = AudioController(channel: channel);
+      await controller.attach(link);
+      await controller.start();
+      nativeCalls.clear();
+      finishBarrier = Completer<void>();
+      link.state[1] &= ~8;
+      final poll = controller.poll();
+      for (var i = 0; i < 20 && !nativeCalls.contains('finishRecording'); ++i) {
+        await Future<void>.delayed(Duration.zero);
+      }
+      expect(controller.stopping, true);
+      var detached = false;
+      final detach = controller.detach().then((_) => detached = true);
+      await Future<void>.delayed(Duration.zero);
+      expect(detached, false);
+      expect(nativeCalls, isNot(contains('endSession')));
+      finishBarrier!.complete();
+      await Future.wait([poll, detach]);
+      expect(detached, true);
+      controller.dispose();
+      await link.messages.close();
+    },
+  );
+
   test('a stale idle poll cannot stop a newly started recording', () async {
     final link = AudioFake();
     final controller = AudioController(channel: channel);
