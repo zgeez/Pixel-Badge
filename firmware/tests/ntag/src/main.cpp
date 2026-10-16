@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: MIT */
 #include "badge/ntag.hpp"
+#include "badge/nfc_session.hpp"
 #include <zephyr/ztest.h>
 #include <errno.h>
 #include <string.h>
@@ -706,6 +707,60 @@ ZTEST(ntag, test_fault_at_every_update_frame)
 		}
 		zassert_equal(model.memory[0x3a][6], 0);
 	}
+}
+
+ZTEST(ntag, test_local_sync_without_rf_receipt_survives_session_restart)
+{
+	Tag model;
+	Ntag tag(model.io());
+	uint8_t uid[7];
+	provision(model, tag, uid);
+	uint8_t credentials[6];
+	memcpy(credentials, model.memory[0x39] + 4, sizeof(credentials));
+	char previous[kPayloadMax + 1]{};
+	NfcSession first;
+	zassert_ok(first.synchronize(tag, "HTTPS://A.B/Y", 13, previous));
+	zassert_mem_equal(first.uid(), uid, sizeof(uid));
+	const unsigned writes = model.writes;
+	NfcSession restarted;
+	zassert_ok(restarted.synchronize(tag, "HTTPS://A.B/Y", 13, previous));
+	zassert_equal(model.writes, writes);
+	zassert_equal(strcmp(previous, "HTTPS://A.B/Y"), 0);
+	zassert_mem_equal(credentials, model.memory[0x39] + 4, sizeof(credentials));
+}
+
+ZTEST(ntag, test_local_sync_rejects_bad_policy_and_changed_identity)
+{
+	Tag model;
+	Ntag tag(model.io());
+	uint8_t uid[7];
+	provision(model, tag, uid);
+	char previous[kPayloadMax + 1]{};
+	NfcSession session;
+	zassert_ok(session.synchronize(tag, "HTTPS://A.B/Y", 13, previous));
+	const unsigned writes = model.writes;
+	model.memory[0][1] ^= 1;
+	zassert_equal(session.synchronize(tag, "HTTPS://A.B/Z", 13, previous), -EACCES);
+	zassert_equal(model.writes, writes);
+	model.memory[0][1] ^= 1;
+	model.memory[0x38][15] = 0xff;
+	zassert_equal(session.synchronize(tag, "HTTPS://A.B/Z", 13, previous), -EACCES);
+	zassert_equal(model.writes, writes);
+}
+
+ZTEST(ntag, test_local_sync_can_retry_after_reader_field_without_verifier)
+{
+	Tag model;
+	Ntag tag(model.io());
+	uint8_t uid[7];
+	provision(model, tag, uid);
+	NfcSession session;
+	char previous[kPayloadMax + 1]{};
+	model.rf = true;
+	zassert_equal(session.synchronize(tag, "HTTPS://A.B/Y", 13, previous), -EAGAIN);
+	model.rf = false;
+	zassert_ok(session.synchronize(tag, "HTTPS://A.B/Y", 13, previous));
+	zassert_equal(model.memory[0x3a][6], 0);
 }
 
 ZTEST_SUITE(ntag, nullptr, nullptr, nullptr, nullptr, nullptr);

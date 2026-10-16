@@ -21,6 +21,7 @@ add_subdirectory(lib/qrcodegen)
 target_link_libraries(app PRIVATE badge_qrcodegen)
 target_sources_ifdef(CONFIG_APP_NFC app PRIVATE src/app/nfc.cpp)
 target_sources_ifdef(CONFIG_APP_NFC app PRIVATE src/services/url_update.cpp)
+target_sources_ifdef(CONFIG_APP_NFC app PRIVATE src/services/nfc_session.cpp)
 target_sources_ifdef(CONFIG_APP_BLE app PRIVATE src/app/ble.cpp src/services/ble_protocol.cpp)
 target_sources_ifdef(CONFIG_APP_AUDIO app PRIVATE src/app/audio_runtime.cpp
  src/platform/audio_crypto.cpp src/services/audio.cpp src/services/adpcm.cpp

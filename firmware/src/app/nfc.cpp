@@ -1,12 +1,12 @@
 /* SPDX-License-Identifier: MIT */
 #include "badge/nfc.hpp"
 #include "badge/nfc_platform.hpp"
+#include "badge/nfc_session.hpp"
 #include "badge/settings_store.hpp"
 #include "badge/modes.hpp"
 #include "badge/url_update.hpp"
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
-#include <zephyr/settings/settings.h>
 #include <zephyr/sys/barrier.h>
 #include <zephyr/sys/atomic.h>
 #include <errno.h>
@@ -24,10 +24,7 @@ char desired[kPayloadMax + 1];
 char verified[kPayloadMax + 1];
 uint8_t expected_uid[7];
 bool writable;
-bool proof;
-/* Version 3 proves the generated PWD/PACK in two fresh RF sessions.
- * Earlier receipt/protocol versions cannot establish this workflow. */
-constexpr uint8_t kProofVersion = 3;
+NfcSession session;
 int last_result = -EAGAIN;
 UrlUpdate url_update;
 struct UrlRequest {
@@ -42,81 +39,12 @@ atomic_t operation_active;
 atomic_t public_result;
 int request_result;
 
-struct Receipt {
-	uint8_t bytes[9]{};
-	int error = 0;
-	bool loaded = false;
-};
-
-int read_receipt(const char *key, size_t length, settings_read_cb read, void *argument,
-		 void *context)
-{
-	if (strcmp(key, "verified") != 0) {
-		return 0;
-	}
-	auto &receipt = *static_cast<Receipt *>(context);
-	if (length != sizeof(receipt.bytes)) {
-		return 0;
-	}
-	const ssize_t rc = read(argument, receipt.bytes, sizeof(receipt.bytes));
-	if (rc != static_cast<ssize_t>(sizeof(receipt.bytes))) {
-		receipt.error = rc < 0 ? static_cast<int>(rc) : -EIO;
-		return receipt.error;
-	}
-	receipt.loaded = receipt.bytes[0] == 1 && receipt.bytes[8] == kProofVersion;
-	return 0;
-}
-
-int store_receipt()
-{
-	uint8_t bytes[9] = {1};
-	memcpy(bytes + 1, expected_uid, sizeof(expected_uid));
-	bytes[8] = kProofVersion; /* versioned RF proof, not a secret */
-	return settings_save_one("nfc/verified", bytes, sizeof(bytes));
-}
-
 int synchronize(Ntag &tag, const char *url)
 {
-	if (!proof) {
-		return -EACCES;
-	}
-	/* Make interrupted or RF-contended verification fail closed across reboot.
-	 * A clean run republishes the receipt; hidden credentials cannot be
-	 * re-verified over I2C after an RF transition. */
-	int rc = settings_delete("nfc/verified");
-	const uint32_t events = tag.rf_events();
+	int rc = prepare_nfc_transport();
 	if (rc == 0) {
-		rc = prepare_nfc_transport();
-	}
-	if (rc == 0) {
-		rc = tag.initialize();
-	}
-	uint8_t actual_uid[7];
-	if (rc == 0) {
-		rc = tag.verify_policy(actual_uid);
-	}
-	if (rc == 0 && memcmp(actual_uid, expected_uid, sizeof(actual_uid)) != 0) {
-		rc = -EACCES;
-		proof = false;
-	}
-	if (rc == 0) {
-		char previous[kPayloadMax + 1];
-		const int read = tag.read_url(previous);
-		if (read == 0) {
-			memcpy(verified, previous, sizeof(verified));
-		} else if (read != -EBADMSG) {
-			rc = read;
-		}
-	}
-	if (rc == 0) {
-		rc = tag.synchronize(url, strlen(url));
-	}
-	if (tag.rf_events() != events) {
-		proof = false;
-		rc = -EACCES;
-	}
-	if (rc == 0) {
-		rc = store_receipt();
+		rc = session.synchronize(tag, url, strlen(url), verified);
+		memcpy(expected_uid, session.uid(), sizeof(expected_uid));
 	}
 	if (rc == 0) {
 		memcpy(verified, url, strlen(url) + 1);
@@ -125,6 +53,8 @@ int synchronize(Ntag &tag, const char *url)
 }
 
 #if defined(CONFIG_APP_NFC_DEBUG_COMMANDS)
+/* Optional legacy RF tools retain mailbox v3. Readiness is local sync only. */
+constexpr uint8_t kProofVersion = 3;
 struct Mailbox {
 	uint32_t magic, version, request, response, command;
 	int32_t result;
@@ -142,7 +72,7 @@ __used volatile Mailbox badge_nfc_mailbox = {
 void publish(Ntag &tag, int result, uint32_t sequence)
 {
 	badge_nfc_mailbox.result = result;
-	badge_nfc_mailbox.state = proof && last_result == 0 ? 1 : 0;
+	badge_nfc_mailbox.state = last_result == 0 ? 1 : 0;
 	badge_nfc_mailbox.address = tag.address();
 	for (unsigned i = 0; i < sizeof(expected_uid); ++i) {
 		badge_nfc_mailbox.uid[i] = expected_uid[i];
@@ -210,7 +140,7 @@ void service_url_request(Ntag &tag)
 					 : change_url(tag, request.url, strlen(request.url));
 		last_result = request_result;
 		atomic_set(&public_result, last_result);
-		atomic_set(&ready_state, proof && last_result == 0);
+		atomic_set(&ready_state, last_result == 0);
 		atomic_clear(&operation_active);
 		k_sem_give(&request_done);
 	}
@@ -250,8 +180,8 @@ void commands(Ntag &tag)
 			rc = change_url(tag, input, strnlen(input, sizeof(input)));
 			last_result = rc;
 		} else if (command == 3) {
-			pending = proof = false;
-			rc = settings_delete("nfc/verified");
+			pending = false;
+			rc = 0;
 			const uint32_t events = tag.rf_events();
 			if (rc == 0) {
 				rc = prepare_nfc_transport();
@@ -270,10 +200,10 @@ void commands(Ntag &tag)
 				memcpy(expected_uid, pending_uid, sizeof(expected_uid));
 				pending = true;
 				pending_at = k_uptime_get();
-				LOG_INF("NFC RF proof pending; confirmation deadline 120000 ms");
+				LOG_INF("NFC setup pending finalization; deadline 120000 ms");
 			}
-			last_result = -EACCES; /* RF proof still required, not ready */
-		} else if (command == 4) {
+			last_result = -EAGAIN; /* Local finalization still required. */
+		} else if (command == 4 || command == 6) {
 			const int64_t elapsed = k_uptime_get() - pending_at;
 			if (!pending) {
 				LOG_WRN("NFC confirmation rejected: no pending provision");
@@ -298,13 +228,14 @@ void commands(Ntag &tag)
 						"finalization");
 					rc = -EACCES;
 				}
-				proof = rc == 0;
 				if (rc == 0) {
+					session.bind(pending_uid);
 					rc = synchronize(tag, desired);
 				}
 				last_result = rc;
 			}
 			pending = false;
+			last_result = rc;
 		} else if (command == 5) {
 			rc = synchronize(tag, desired);
 			last_result = rc;
@@ -313,10 +244,10 @@ void commands(Ntag &tag)
 		erase_sensitive(input, sizeof(input));
 		publish(tag, rc, sequence);
 		atomic_set(&public_result, last_result);
-		atomic_set(&ready_state, proof && last_result == 0);
+		atomic_set(&ready_state, last_result == 0);
 		atomic_clear(&operation_active);
 		LOG_INF("NFC command %u result %d; verified %s", command, rc,
-			proof && last_result == 0 ? "yes" : "no");
+			last_result == 0 ? "yes" : "no");
 	}
 }
 #endif
@@ -325,22 +256,13 @@ void worker(void *, void *, void *)
 {
 	k_sem_take(&started, K_FOREVER);
 	Ntag tag(nfc_transport());
-	Receipt receipt;
-	const int loaded = settings_load_subtree_direct("nfc", read_receipt, &receipt);
-	if (loaded != 0 || receipt.error != 0) {
-		writable = false;
-	}
-	proof = loaded == 0 && receipt.error == 0 && receipt.loaded;
-	if (proof) {
-		memcpy(expected_uid, receipt.bytes + 1, sizeof(expected_uid));
-	}
 	last_result = writable ? synchronize(tag, desired) : -EPERM;
 	atomic_set(&public_result, last_result);
-	atomic_set(&ready_state, proof && last_result == 0);
+	atomic_set(&ready_state, last_result == 0);
 	atomic_clear(&operation_active);
 	LOG_INF("NFC boot result %d; %s", last_result,
-		last_result == 0 ? "QR URL verified"
-				 : "needs verification/provisioning; remove reader field");
+		last_result == 0 ? "QR/NFC synchronized"
+				 : "sync failed; remove reader field and retry");
 #if defined(CONFIG_APP_NFC_DEBUG_COMMANDS)
 	publish(tag, last_result, 0);
 	commands(tag);
