@@ -25,6 +25,7 @@ target_sources_ifdef(CONFIG_APP_BLE app PRIVATE src/app/ble.cpp src/services/ble
 target_sources_ifdef(CONFIG_APP_AUDIO app PRIVATE src/app/audio_runtime.cpp
  src/platform/audio_crypto.cpp src/services/audio.cpp src/services/adpcm.cpp
  src/services/recording.cpp)
+target_sources_ifdef(CONFIG_APP_MOTION app PRIVATE src/app/motion_runtime.cpp src/services/motion.cpp)
 target_sources_ifdef(CONFIG_DISPLAY app PRIVATE src/app/display_demo.cpp)
 target_sources_ifdef(CONFIG_APP_AUDIO_SCREENING app PRIVATE
 	src/app/audio_screening.cpp src/services/audio.cpp src/services/buttons.cpp)

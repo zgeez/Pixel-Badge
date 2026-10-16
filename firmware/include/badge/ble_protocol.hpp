@@ -37,7 +37,7 @@ private:
 	int result_ = 0;
 	bool pending_ = false;
 	uint8_t valid_ = 0, name_total_ = 0, name_used_ = 0;
-	uint8_t staged_[7][kArtworkBytes]{};
-	uint16_t lengths_[7]{}, expected_[7]{};
+	uint8_t staged_[8][kArtworkBytes]{};
+	uint16_t lengths_[8]{}, expected_[8]{};
 };
 } // namespace badge

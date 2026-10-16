@@ -7,6 +7,9 @@
 #include "badge/modes.hpp"
 #include "badge/settings_store.hpp"
 #include "badge/nfc.hpp"
+#if defined(CONFIG_APP_MOTION)
+#include "badge/motion_runtime.hpp"
+#endif
 #if defined(CONFIG_APP_AUDIO)
 #include "badge/audio_runtime.hpp"
 #include "badge/hub75_sync.h"
@@ -33,6 +36,8 @@ namespace
 {
 const gpio_dt_spec buttons[] = {GPIO_DT_SPEC_GET(DT_ALIAS(sw0), gpios),
 				GPIO_DT_SPEC_GET(DT_ALIAS(sw1), gpios)};
+// Single main-loop owner. Bounded settings/particles live in BSS, not on its stack.
+Modes modes;
 
 int present(const device *display, const Frame &frame)
 {
@@ -174,8 +179,14 @@ void run_prototype()
 	if (factory_reset) {
 		retain_boot_count(0xa0);
 	}
-	Modes modes;
 	modes.start(settings.values(), safe);
+#if defined(CONFIG_APP_MOTION)
+	if (!safe) {
+		start_motion();
+		poll_motion(modes, 0);
+		(void)modes.select(modes.active(), 0);
+	}
+#endif
 	const device *display = DEVICE_DT_GET(DT_CHOSEN(zephyr_display));
 	Frame initial;
 	modes.render(initial, 0);
@@ -210,6 +221,11 @@ void run_prototype()
 			k_sleep(K_FOREVER);
 		}
 		bool changed = false;
+#if defined(CONFIG_APP_MOTION)
+		if (!safe) {
+			poll_motion(modes, now);
+		}
+#endif
 #if defined(CONFIG_APP_NFC)
 		changed = poll_nfc(settings, modes);
 #endif
@@ -290,7 +306,7 @@ void run_prototype()
 #if defined(CONFIG_APP_AUDIO)
 			audio_capture_active() || audio_ui_busy() ||
 #endif
-			modes.active() == Mode::kAnimation ||
+			modes.active() == Mode::kAnimation || modes.active() == Mode::kFluid ||
 			(modes.active() == Mode::kName && settings.values().text.bytes[1] == 2);
 		const uint32_t render_interval =
 			fast_content && !display_health.recovering() ? 20 : DisplayHealth::kRetryMs;
@@ -301,6 +317,9 @@ void run_prototype()
 			[[maybe_unused]] bool pairing_overlay = false;
 #if defined(CONFIG_APP_BLE)
 			pairing_overlay = ble_pairing_frame(frame);
+#if defined(CONFIG_APP_MOTION)
+			bool rotate_overlay = pairing_overlay;
+#endif
 #if defined(CONFIG_APP_AUDIO)
 			bool recording_indicator = false;
 			if (!pairing_overlay) {
@@ -308,14 +327,25 @@ void run_prototype()
 				    modes.active() == Mode::kAudioSpectrum) {
 					audio_visual_frame(frame,
 							   modes.active() == Mode::kAudioSpectrum);
+#if defined(CONFIG_APP_MOTION)
+					rotate_overlay = true;
+#endif
 				}
 				const AudioOverlay overlay = audio_overlay(frame);
 				recording_indicator = overlay == AudioOverlay::kRecording;
 				pairing_overlay = overlay != AudioOverlay::kNone;
+#if defined(CONFIG_APP_MOTION)
+				rotate_overlay = rotate_overlay || overlay != AudioOverlay::kNone;
+#endif
 			}
 			(void)display_set_brightness(
 				display, audio_recording() ? 255 : settings.values().brightness);
 #endif
+#endif
+#if defined(CONFIG_APP_MOTION)
+			if (rotate_overlay) {
+				rotate(frame, frame, modes.display_rotation());
+			}
 #endif
 			int rc = display_ready
 					 ? present(display, frame)

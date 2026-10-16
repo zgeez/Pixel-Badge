@@ -3,6 +3,7 @@
 
 #include "badge/qr.hpp"
 #include "badge/content.hpp"
+#include "badge/motion.hpp"
 
 namespace badge
 {
@@ -15,7 +16,8 @@ enum class Mode : uint8_t {
 	kCanvas,
 	kAnimation,
 	kAudioLevel,
-	kAudioSpectrum
+	kAudioSpectrum,
+	kFluid
 };
 enum class Field : uint8_t {
 	kSchema,
@@ -25,6 +27,7 @@ enum class Field : uint8_t {
 	kDefaultMode,
 	kText,
 	kArtwork,
+	kMotion,
 	kCount
 };
 /* Nonpersistent command, kept outside the storage field namespace. */
@@ -37,6 +40,7 @@ struct Settings {
 	Mode default_mode;
 	TextContent text{};
 	Artwork artwork{};
+	MotionConfig motion{};
 };
 
 extern const Settings kDefaultSettings;

@@ -24,6 +24,12 @@ void Modes::start(const Settings &settings, bool safe_mode)
 	entered_at_ = 0;
 	current_rotation_ = qr_rotation_ = Rotation::k0;
 	encode_url(settings_.url, strlen(settings_.url), qr_);
+#if defined(CONFIG_APP_MOTION)
+	motion_.configure(settings_.motion);
+	fluid_.reset(settings_.motion.bytes[5]);
+	current_rotation_ = motion_.rotation();
+	qr_rotation_ = current_rotation_;
+#endif
 }
 
 void Modes::next(uint32_t now)
@@ -34,7 +40,9 @@ void Modes::next(uint32_t now)
 	Mode next = mode_;
 	do {
 		next = static_cast<Mode>((static_cast<unsigned>(next) + 1) %
-#if defined(CONFIG_APP_AUDIO)
+#if defined(CONFIG_APP_MOTION)
+					 7
+#elif defined(CONFIG_APP_AUDIO)
 					 6
 #else
 					 4
@@ -47,7 +55,9 @@ void Modes::next(uint32_t now)
 bool Modes::available(Mode mode) const
 {
 	return mode <=
-#if defined(CONFIG_APP_AUDIO)
+#if defined(CONFIG_APP_MOTION)
+		       Mode::kFluid &&
+#elif defined(CONFIG_APP_AUDIO)
 		       Mode::kAudioSpectrum &&
 #else
 		       Mode::kAnimation &&
@@ -67,6 +77,11 @@ bool Modes::select(Mode mode, uint32_t now)
 	if (mode_ == Mode::kQr) {
 		qr_rotation_ = current_rotation_;
 	}
+#if defined(CONFIG_APP_MOTION)
+	if (mode_ == Mode::kFluid) {
+		fluid_.reset(settings_.motion.bytes[5]);
+	}
+#endif
 	return true;
 }
 
@@ -76,6 +91,13 @@ bool Modes::configure(const Settings &settings)
 	if (safe_ || !encode_url(settings.url, strlen(settings.url), qr)) {
 		return false;
 	}
+#if defined(CONFIG_APP_MOTION)
+	if (memcmp(settings_.motion.bytes, settings.motion.bytes, kMotionBytes) != 0) {
+		motion_.configure(settings.motion);
+		fluid_.reset(settings.motion.bytes[5]);
+		current_rotation_ = motion_.rotation();
+	}
+#endif
 	settings_ = settings;
 	qr_ = qr;
 	return true;
@@ -88,6 +110,16 @@ void Modes::orientation(Rotation rotation)
 
 void Modes::render(Frame &output, uint32_t now) const
 {
+#if defined(CONFIG_APP_MOTION)
+	if (mode_ == Mode::kFluid) {
+		if (motion_.fresh(now)) {
+			fluid_.render(output);
+		} else {
+			draw_name(output, "IMU", 0);
+		}
+		return; // Gravity/particles are already in physical panel coordinates.
+	}
+#endif
 	Frame content;
 	if (mode_ == Mode::kQr) {
 		content = qr_;
@@ -101,4 +133,19 @@ void Modes::render(Frame &output, uint32_t now) const
 	}
 	rotate(content, output, mode_ == Mode::kQr ? qr_rotation_ : current_rotation_);
 }
+#if defined(CONFIG_APP_MOTION)
+void Modes::motion_sample(const int32_t acceleration[3], uint32_t now)
+{
+	if (!safe_ && motion_.sample(acceleration, now)) {
+		current_rotation_ = motion_.rotation();
+	}
+}
+void Modes::tick(uint32_t now)
+{
+	if (mode_ == Mode::kFluid) {
+		fluid_.tick(motion_.x(), motion_.y(), settings_.motion.bytes[4], now,
+			    motion_.fresh(now));
+	}
+}
+#endif
 } // namespace badge
