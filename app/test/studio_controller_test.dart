@@ -15,6 +15,7 @@ class StudioLink extends FakeLink {
   int nfcError = 0;
   int? disconnectAt;
   bool malformedNfc = false;
+  bool nfcWorking = false;
   @override
   Uint8List status({int? overrideId, int? overrideField}) {
     final value = super.status(
@@ -31,6 +32,7 @@ class StudioLink extends FakeLink {
       return (ByteData(7)
             ..setUint8(0, malformedNfc ? 99 : 1)
             ..setUint8(1, nfcVerified ? 1 : 0)
+            ..setUint8(2, nfcWorking ? 1 : 0)
             ..setInt32(3, nfcError, Endian.little))
           .buffer
           .asUint8List();
@@ -58,6 +60,44 @@ class StudioLink extends FakeLink {
 }
 
 void main() {
+  for (final error in [-13, -19]) {
+    for (final explicitDisconnect in [false, true]) {
+      test(
+        'NFC diagnostic $error is cleared on badge switch, explicit disconnect=$explicitDisconnect',
+        () async {
+          final studio = StudioLink()
+            ..nfcVerified = false
+            ..nfcWorking = true
+            ..nfcError = error;
+          final legacy = FakeLink()..nfcVerified = false;
+          final badge = BadgeController();
+          try {
+            await badge.attach(studio, capabilities: BadgeCapabilities.studio);
+            expect(badge.nfcResult, error);
+            expect(badge.nfcBusy, isTrue);
+            expect(badge.nfcMessage, BadgeController.nfcFailureMessage(error));
+            if (explicitDisconnect) {
+              await badge.disconnect();
+              expect(badge.nfcResult, 0);
+              expect(badge.nfcBusy, isFalse);
+              expect(badge.nfcVerified, isFalse);
+            }
+            await badge.attach(legacy);
+            expect(badge.capabilities.hasStudio, isFalse);
+            expect(badge.confirmed, isTrue);
+            expect(badge.nfcVerified, isFalse);
+            expect(badge.nfcResult, 0);
+            expect(badge.nfcBusy, isFalse);
+            expect(badge.nfcMessage, BadgeController.nfcRequiredMessage);
+          } finally {
+            badge.dispose();
+            await studio.dispose();
+            await legacy.dispose();
+          }
+        },
+      );
+    }
+  }
   test(
     'maximum animation is staged, confirmed and read back exactly',
     () async {

@@ -289,6 +289,8 @@ class BadgeController extends ChangeNotifier {
   Future<void> disconnect() async {
     ++_generation;
     connected = confirmed = writable = false;
+    nfcVerified = nfcBusy = false;
+    nfcResult = 0;
     motionStatus = null;
     await _statusSub?.cancel();
     await _connectionSub?.cancel();
