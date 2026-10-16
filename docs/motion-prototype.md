@@ -18,8 +18,11 @@ motion-responsive particle fluid effect, not a numerical FLIP/PIC solver.
 
 A dedicated 2048-byte-stack worker registers a static data-ready trigger,
 coalesces wakeups to at most 50 sensor fetches/s, and has a 40 ms polling
-fallback. It uses the existing shared recursive I²C mutex. The interrupt
-callback only signals a semaphore; main consumes timestamped snapshots.
+fallback. It uses the existing shared recursive I²C mutex. The driver's
+system-workqueue DRDY status read also acquires that mutex through
+`reg_read()` / `badge_bus_lock()`, which is the same lock used by NFC's
+`bench_bus_lock()`. The GPIO ISR only schedules work; the motion callback
+only signals a semaphore. Main consumes timestamped snapshots.
 Neither the ISR nor BLE callbacks perform sensor bus transactions. Status
 reports trigger registration, which does not prove actual interrupt delivery.
 Read errors retry; a sensor missing during device initialization can require
