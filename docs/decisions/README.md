@@ -43,3 +43,4 @@ decision.
 | [0014](0014-positive-nfc-provisioning-proof.md) | Two fresh positive NFC authentication sessions for the provisioning receipt | Accepted 2026-10-12; provisioning passed, broader acceptance pending |
 | [0015](0015-nrf52840-e73-module.md) | Ebyte E73-2G4M08S1C (nRF52840) module for Rev A (amends 0002) | Accepted 2026-10-13 |
 | [0016](0016-simple-audio-controls.md) | Record/Stop using the bonded phone, automatic session setup and storage-based recording limits (amends 0011) | Accepted 2026-10-14 |
+| [0017](0017-local-nfc-synchronization.md) | NFC synchronization and wired setup without a phone verifier (amends 0013/0014) | Accepted 2026-10-15 |

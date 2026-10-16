@@ -3,6 +3,9 @@
 #include "badge/nfc.hpp"
 #include "badge/text.hpp"
 #include "badge/modes.hpp"
+#if defined(CONFIG_APP_MOTION)
+#include "badge/motion_runtime.hpp"
+#endif
 #if defined(CONFIG_APP_AUDIO)
 #include "badge/audio_runtime.hpp"
 #endif
@@ -33,6 +36,8 @@ bt_uuid_128 status_uuid = BT_UUID_INIT_128(BADGE_UUID(8));
 bt_uuid_128 text_uuid = BT_UUID_INIT_128(BADGE_UUID(9));
 bt_uuid_128 artwork_uuid = BT_UUID_INIT_128(BADGE_UUID(10));
 bt_uuid_128 nfc_uuid = BT_UUID_INIT_128(BADGE_UUID(11));
+bt_uuid_128 motion_uuid = BT_UUID_INIT_128(BADGE_UUID(12));
+bt_uuid_128 motion_status_uuid = BT_UUID_INIT_128(BADGE_UUID(13));
 K_MUTEX_DEFINE(ble_mutex);
 K_SEM_DEFINE(ble_started, 0, 1);
 K_SEM_DEFINE(main_requested, 0, 1);
@@ -72,10 +77,14 @@ ssize_t read_info(bt_conn *conn, const bt_gatt_attr *attr, void *buf, uint16_t l
 				kPayloadMax,
 				kNameMax,
 				4,
-				IS_ENABLED(CONFIG_APP_AUDIO) ? 6 : 4,
+				IS_ENABLED(CONFIG_APP_MOTION)  ? 7
+				: IS_ENABLED(CONFIG_APP_AUDIO) ? 6
+							       : 4,
 				flags(),
 				kArtworkFrames,
-				IS_ENABLED(CONFIG_APP_AUDIO) ? 15 : 7};
+				IS_ENABLED(CONFIG_APP_MOTION)  ? 31
+				: IS_ENABLED(CONFIG_APP_AUDIO) ? 15
+							       : 7};
 	k_mutex_unlock(&ble_mutex);
 	return bt_gatt_attr_read(conn, attr, buf, len, offset, info, sizeof(info));
 }
@@ -108,6 +117,9 @@ ssize_t read_setting(bt_conn *conn, const bt_gatt_attr *attr, void *buf, uint16_
 		data[3] = total >> 8;
 		memcpy(data + 4, snapshot.artwork.bytes + cursor, length);
 		length += 4;
+	} else if (field == Field::kMotion) {
+		length = kMotionBytes;
+		memcpy(data, snapshot.motion.bytes, length);
 	} else if (field == kNfcSyncField) {
 		const int result = nfc_last_result();
 		data[0] = 1;
@@ -194,6 +206,18 @@ ssize_t apply_setting(bt_conn *conn, const bt_gatt_attr *, const void *buf, uint
 void ccc_changed(const bt_gatt_attr *, uint16_t)
 {
 }
+ssize_t read_motion_status(bt_conn *conn, const bt_gatt_attr *attr, void *buf, uint16_t len,
+			   uint16_t offset)
+{
+	if (!secure(conn)) {
+		return att_error(-EACCES);
+	}
+	uint8_t data[16] = {1};
+#if defined(CONFIG_APP_MOTION)
+	motion_status(data);
+#endif
+	return bt_gatt_attr_read(conn, attr, buf, len, offset, data, sizeof(data));
+}
 bt_gatt_ccc_managed_user_data status_ccc{};
 constexpr uint16_t read_permission = BT_GATT_PERM_READ_AUTHEN | BT_GATT_PERM_READ_LESC;
 constexpr uint16_t write_permission = BT_GATT_PERM_WRITE_AUTHEN | BT_GATT_PERM_WRITE_LESC;
@@ -221,7 +245,11 @@ BT_GATT_SERVICE_DEFINE(badge_service, BT_GATT_PRIMARY_SERVICE(&service_uuid),
 		       /* Append extensions to preserve the original v1 attribute order. */
 		       SETTING_CHARACTERISTIC(text_uuid, Field::kText),
 		       SETTING_CHARACTERISTIC(artwork_uuid, Field::kArtwork),
-		       SETTING_CHARACTERISTIC(nfc_uuid, kNfcSyncField));
+		       SETTING_CHARACTERISTIC(nfc_uuid, kNfcSyncField),
+		       SETTING_CHARACTERISTIC(motion_uuid, Field::kMotion),
+		       BT_GATT_CHARACTERISTIC(&motion_status_uuid.uuid, BT_GATT_CHRC_READ,
+					      read_permission, read_motion_status, nullptr,
+					      nullptr));
 #pragma GCC diagnostic pop
 
 void notify_status(k_work *)

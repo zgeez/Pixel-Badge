@@ -32,8 +32,8 @@ int read_setting(const char *key, size_t length, settings_read_cb read, void *ar
 		}
 		/* Startup loader has one owner; avoid a large transient stack buffer. */
 		static uint8_t bytes[kArtworkBytes];
-		constexpr size_t maxima[] = {1, kPayloadMax, kNameMax,     1,
-					     1, kTextBytes,  kArtworkBytes};
+		constexpr size_t maxima[] = {1, kPayloadMax, kNameMax,      1,
+					     1, kTextBytes,  kArtworkBytes, kMotionBytes};
 		static_assert(sizeof(maxima) / sizeof(maxima[0]) ==
 			      static_cast<unsigned>(Field::kCount));
 		if (length == 0 || length > maxima[i]) {

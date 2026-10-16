@@ -1,5 +1,11 @@
 # P1 NFC prototype bench
 
+Current workflow: [ADR 0017](decisions/0017-local-nfc-synchronization.md) removes
+the phone verifier and RF receipt prerequisite. Use
+[local synchronization/wired setup](ble-protocol.md#nfc-setup-and-synchronization)
+for current firmware. The older RF-helper procedure below is optional historical
+diagnostics, not a prerequisite for Apply or Sync again.
+
 Status: **proof3 provisioning completed and retained after normal BLE restore; powered/off/restore reads owner-reported passed;
 remaining acceptance pending**. The owner has
 an NFC Tag 2 Click connected to the nRF5340 DK, a Nothing 4a Pro and an iPhone

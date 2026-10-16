@@ -9,6 +9,7 @@ enum BadgeField {
   mode(4, 6),
   text(5, 9),
   artwork(6, 10),
+  motion(7, 12),
   nfcSync(127, 11);
 
   const BadgeField(this.wire, this.characteristic);
@@ -22,6 +23,7 @@ final serviceUuid = badgeUuid(1);
 final infoUuid = badgeUuid(2);
 final applyUuid = badgeUuid(7);
 final statusUuid = badgeUuid(8);
+final motionStatusUuid = badgeUuid(13);
 const brightnessLevels = [16, 64, 128, 255];
 const legacyFields = [
   BadgeField.url,
@@ -31,12 +33,19 @@ const legacyFields = [
 ];
 
 class BadgeCapabilities {
-  const BadgeCapabilities(this.version, {this.hasAudio = false});
+  const BadgeCapabilities(
+    this.version, {
+    this.hasAudio = false,
+    this.hasMotion = false,
+  });
   static const legacy = BadgeCapabilities(1);
   static const studio = BadgeCapabilities(2);
   final int version;
   final bool hasAudio;
-  int get modeCount => hasAudio
+  final bool hasMotion;
+  int get modeCount => hasMotion
+      ? 7
+      : hasAudio
       ? 6
       : hasStudio
       ? 4
@@ -45,6 +54,7 @@ class BadgeCapabilities {
   List<BadgeField> get settings => [
     ...legacyFields,
     if (hasStudio) ...[BadgeField.text, BadgeField.artwork],
+    if (hasMotion) BadgeField.motion,
   ];
   factory BadgeCapabilities.decode(List<int> bytes) {
     if (bytes.length != 8 ||
@@ -56,13 +66,18 @@ class BadgeCapabilities {
         (bytes[0] == 1
             ? bytes[4] != 2 || bytes[6] != 0 || bytes[7] != 0
             : !((bytes[4] == 4 && bytes[7] == 7) ||
-                      (bytes[4] == 6 && bytes[7] == 15)) ||
+                      (bytes[4] == 6 && bytes[7] == 15) ||
+                      (bytes[4] == 7 && bytes[7] == 31)) ||
                   bytes[6] != 16)) {
       throw const FormatException(
         'This badge uses an unsupported configuration protocol.',
       );
     }
-    return BadgeCapabilities(bytes[0], hasAudio: bytes[4] == 6);
+    return BadgeCapabilities(
+      bytes[0],
+      hasAudio: bytes[4] >= 6,
+      hasMotion: bytes[4] == 7,
+    );
   }
 }
 
@@ -118,6 +133,24 @@ Future<Uint8List> readArtworkPages(
 }
 
 void validateValue(BadgeField field, List<int> value) {
+  if (field == BadgeField.motion) {
+    if (value.any((byte) => byte < 0 || byte > 255) ||
+        value.length != 8 ||
+        value[0] != 1 ||
+        value[1] > 1 ||
+        value[2] > 5 ||
+        value[3] > 5 ||
+        value[2] ~/ 2 == value[3] ~/ 2 ||
+        value[4] < 1 ||
+        value[4] > 5 ||
+        value[5] < 16 ||
+        value[5] > 192 ||
+        value[6] > 3 ||
+        value[7] != 0) {
+      throw const FormatException('Unsupported motion settings.');
+    }
+    return;
+  }
   if (field == BadgeField.text) {
     if (value.length < 6 ||
         value.length > 102 ||
@@ -187,7 +220,7 @@ void validateValue(BadgeField field, List<int> value) {
   } else if (value.length != 1 ||
       (field == BadgeField.brightness
           ? !brightnessLevels.contains(value.single)
-          : value.single > 5)) {
+          : value.single > 6)) {
     throw const FormatException('Unsupported setting value.');
   }
 }
@@ -261,7 +294,7 @@ class BadgeStatus {
             ? status.id != 0 || status.field != 0 || status.result != 0
             : status.id == 0 ||
                   status.field < 1 ||
-                  (status.field > (status.version == 1 ? 4 : 6) &&
+                  (status.field > (status.version == 1 ? 4 : 7) &&
                       !(status.version == 2 && status.field == 127)) ||
                   (status.phase == 1
                       ? status.result != -115

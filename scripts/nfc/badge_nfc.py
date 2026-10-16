@@ -189,6 +189,20 @@ def wait_rf_proof(proof, timeout=100):
         raise NfcOperationError("RF proof rejected; final confirmation was not sent")
 
 
+def configure(mailbox):
+    """Explicit wired setup; no phone verifier and no RF-authentication claim."""
+    credentials = bytearray(secrets.token_bytes(6))
+    try:
+        while credentials[:4] == b"\xff" * 4:
+            wipe(credentials)
+            credentials[:] = secrets.token_bytes(6)
+        result = mailbox.command(3, credentials=credentials)
+        mailbox.command(6, payload=result["uid"])
+        print("NFC configured; local policy and URL checks passed. No RF authentication test performed.", flush=True)
+    finally:
+        wipe(credentials)
+
+
 def provision(args, mailbox):
     credentials = bytearray(secrets.token_bytes(6))
     while credentials[:4] == b"\xff" * 4:
@@ -232,7 +246,7 @@ def normalize_url(url):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=["status", "sync", "set-url", "provision"])
+    parser.add_argument("action", choices=["status", "sync", "set-url", "configure", "provision"])
     parser.add_argument("--elf", default="build/p1-provisioning/firmware/zephyr/zephyr.elf")
     parser.add_argument("--jlink-serial", type=int)
     parser.add_argument("--url")
@@ -251,7 +265,9 @@ def main():
             link.set_tif(pylink.enums.JLinkInterfaces.SWD)
             link.connect("NRF5340_XXAA_APP", speed=1000)
             mailbox = Mailbox(link, elf_mailbox(args.elf))
-            if args.action == "provision":
+            if args.action == "configure":
+                configure(mailbox)
+            elif args.action == "provision":
                 provision(args, mailbox)
             elif args.action == "status":
                 state = mailbox.snapshot()

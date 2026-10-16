@@ -32,7 +32,7 @@ int BleProtocol::stage(Field field, const uint8_t *data, size_t length, bool aut
 	    data == nullptr || length == 0) {
 		return -EINVAL;
 	}
-	const unsigned index = field == kNfcSyncField ? 6 : static_cast<unsigned>(field) - 1;
+	const unsigned index = field == kNfcSyncField ? 7 : static_cast<unsigned>(field) - 1;
 	if (field == Field::kText || field == Field::kArtwork) {
 		const size_t header = field == Field::kArtwork ? 5 : 4;
 		const size_t maximum = field == Field::kArtwork ? kArtworkBytes : kTextBytes;
@@ -98,7 +98,8 @@ int BleProtocol::stage(Field field, const uint8_t *data, size_t length, bool aut
 	    (field == Field::kBrightness && (length != 1 || (data[0] != 16 && data[0] != 64 &&
 							     data[0] != 128 && data[0] != 255))) ||
 	    (field == Field::kDefaultMode &&
-	     (length != 1 || data[0] > static_cast<uint8_t>(Mode::kAudioSpectrum))) ||
+	     (length != 1 || data[0] > static_cast<uint8_t>(Mode::kFluid))) ||
+	    (field == Field::kMotion && !valid_motion(data, length)) ||
 	    (field == kNfcSyncField && (length != 1 || data[0] != 1))) {
 		return -EINVAL;
 	}
@@ -126,7 +127,7 @@ int BleProtocol::accept(const uint8_t *data, size_t length, bool authorized, Con
 	if (id == 0 || id <= id_) {
 		return -EALREADY;
 	}
-	const unsigned index = data[5] == static_cast<unsigned>(kNfcSyncField) ? 6 : data[5] - 1;
+	const unsigned index = data[5] == static_cast<unsigned>(kNfcSyncField) ? 7 : data[5] - 1;
 	if ((valid_ & (1U << index)) == 0) {
 		return -EINVAL;
 	}

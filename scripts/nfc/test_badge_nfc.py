@@ -10,7 +10,7 @@ from unittest.mock import Mock, patch
 import unittest
 import urllib.error
 import urllib.request
-from badge_nfc import Mailbox, PhoneProof, NfcOperationError, normalize_url, wait_rf_proof, provision
+from badge_nfc import Mailbox, PhoneProof, NfcOperationError, normalize_url, wait_rf_proof, provision, configure
 
 
 class Link:
@@ -36,6 +36,34 @@ class Link:
 
 
 class Tests(unittest.TestCase):
+    def test_wired_configuration_needs_no_phone_and_wipes_credentials(self):
+        for fail_at in (0, 1, 2):
+            with self.subTest(fail_at=fail_at):
+                seen = []
+                calls = []
+                def command(number, **kwargs):
+                    calls.append((number, kwargs.get("payload")))
+                    if "credentials" in kwargs:
+                        seen.append(kwargs["credentials"])
+                    if len(calls) == fail_at:
+                        raise NfcOperationError("test failure")
+                    return {"uid": bytes(range(7))}
+                mailbox = Mock()
+                mailbox.command.side_effect = command
+                with patch("badge_nfc.PhoneProof") as phone, \
+                        patch("badge_nfc.secrets.token_bytes", return_value=bytes(range(6))), \
+                        contextlib.redirect_stdout(io.StringIO()):
+                    if fail_at:
+                        with self.assertRaises(NfcOperationError):
+                            configure(mailbox)
+                    else:
+                        configure(mailbox)
+                    phone.assert_not_called()
+                self.assertEqual(seen[0], bytes(6))
+                self.assertEqual(calls[0][0], 3)
+                if fail_at != 1:
+                    self.assertEqual(calls[1], (6, bytes(range(7))))
+
     def test_only_scheme_is_normalized(self):
         self.assertEqual(normalize_url("hTtPs://ZIADG.COM/L"), "HTTPS://ZIADG.COM/L")
         self.assertEqual(normalize_url("http://A/%2f?x=Y"), "HTTP://A/%2f?x=Y")

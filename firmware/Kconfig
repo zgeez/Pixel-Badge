@@ -52,6 +52,14 @@ config APP_AUDIO_RECORDING_BENCH
    Development only. Recording stays disabled in normal/release builds
    pending indoor, outdoor and direct-sun REC visibility acceptance.
 
+config APP_MOTION
+	bool "P4 IMU fluid and automatic orientation"
+	default y if APP_AUDIO
+	depends on APP_AUDIO && SENSOR
+	help
+	  Bounded particle fluid and gravity orientation on the existing DK IMU.
+	  Sensor-to-panel axis mapping remains a bench calibration dependency.
+
 config APP_PROTOTYPE
 	bool "Prototype badge application"
 	default y if BOARD_NRF5340DK_NRF5340_CPUAPP

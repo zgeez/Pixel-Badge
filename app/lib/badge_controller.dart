@@ -3,6 +3,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'protocol.dart';
+import 'motion_model.dart';
 
 abstract interface class BadgeLink {
   Future<Uint8List> read(String uuid);
@@ -14,7 +15,15 @@ abstract interface class BadgeLink {
 
 class BadgeController extends ChangeNotifier {
   static const nfcRequiredMessage =
-      'Contact links need NFC verification. Run the NFC verifier on your computer, complete both phone checks, then refresh settings.';
+      'NFC could not synchronize. Move the phone away from the tag and try Sync again.';
+  static const nfcSetupMessage =
+      'NFC tag setup needs repair. Connect the badge to the computer.';
+  static String nfcFailureMessage(int result) => result == -13
+      ? nfcSetupMessage
+      : result == -19
+      ? 'NFC tag not detected. Check its power and wiring.'
+      : nfcRequiredMessage;
+  String get nfcMessage => nfcFailureMessage(nfcResult);
   BadgeLink? _link;
   StreamSubscription<Uint8List>? _statusSub;
   StreamSubscription<bool>? _connectionSub;
@@ -26,6 +35,7 @@ class BadgeController extends ChangeNotifier {
   double uploadProgress = 0;
   int nfcResult = 0;
   bool nfcBusy = false;
+  MotionStatus? motionStatus;
   bool connected = false,
       busy = false,
       confirmed = false,
@@ -150,10 +160,17 @@ class BadgeController extends ChangeNotifier {
         throw StateError('Connection lost during readback.');
       }
     }
+    if (capabilities.hasMotion) {
+      final motion = MotionStatus.decode(await link.read(motionStatusUuid));
+      if (!connected || generation != _generation) {
+        throw StateError('Connection lost during motion readback.');
+      }
+      motionStatus = motion;
+    }
     confirmed = true;
     message = nfcVerified
-        ? 'Settings read from the badge. NFC link is verified.'
-        : 'Settings read from the badge. NFC needs verification/provisioning.';
+        ? 'Settings read from the badge. QR and NFC are synchronized.'
+        : 'Settings read from the badge. NFC is not synchronized.';
     notifyListeners();
   }
 
@@ -188,11 +205,6 @@ class BadgeController extends ChangeNotifier {
     if (busy || !connected || !confirmed || !writable || _link == null) {
       throw StateError('Badge is not ready to apply settings.');
     }
-    if (field == BadgeField.url && !nfcVerified) {
-      message = nfcRequiredMessage;
-      notifyListeners();
-      throw StateError(nfcRequiredMessage);
-    }
     if (!capabilities.settings.contains(field) &&
         !(capabilities.hasStudio && field == BadgeField.nfcSync)) {
       throw StateError('Update badge firmware to use this feature.');
@@ -218,10 +230,6 @@ class BadgeController extends ChangeNotifier {
         );
       }
       if (status.phase == 1) throw StateError('Badge is busy.');
-      if (field == BadgeField.url && !status.nfcVerified) {
-        nfcVerified = false;
-        throw StateError(nfcRequiredMessage);
-      }
       _request = status.id + 1;
       _field = field;
       _completion = Completer<BadgeStatus>();
@@ -249,10 +257,10 @@ class BadgeController extends ChangeNotifier {
       );
       final completion = await _wait(link, generation);
       if (completion.result != 0) {
-        if ((field == BadgeField.url || field == BadgeField.nfcSync) &&
-            completion.result == -13) {
+        if (field == BadgeField.url || field == BadgeField.nfcSync) {
           nfcVerified = false;
-          throw StateError(nfcRequiredMessage);
+          nfcResult = completion.result;
+          throw StateError(nfcMessage);
         }
         throw StateError(
           'Badge rejected the change (${completion.result}). Refresh its current settings.',
@@ -281,6 +289,9 @@ class BadgeController extends ChangeNotifier {
   Future<void> disconnect() async {
     ++_generation;
     connected = confirmed = writable = false;
+    nfcVerified = nfcBusy = false;
+    nfcResult = 0;
+    motionStatus = null;
     await _statusSub?.cancel();
     await _connectionSub?.cancel();
     final previous = _link;

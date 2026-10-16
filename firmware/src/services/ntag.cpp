@@ -368,7 +368,8 @@ int Ntag::read_url(char output[kPayloadMax + 1])
 	if (rc == 0 && !decode_ndef_uri(data, output)) {
 		rc = -EBADMSG;
 	}
-	return rc;
+	const int unlocked = busy_ ? 0 : release();
+	return rc != 0 ? rc : unlocked;
 }
 
 int Ntag::synchronize(const char *url, size_t length)

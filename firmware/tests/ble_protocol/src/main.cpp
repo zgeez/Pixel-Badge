@@ -39,7 +39,7 @@ ZTEST(ble_protocol, test_field_bounds_and_qr_fit)
 	zassert_equal(protocol.stage(Field::kBrightness, &value, 1, true), -EINVAL);
 	value = 100;
 	zassert_equal(protocol.stage(Field::kBrightness, &value, 1, true), -EINVAL);
-	value = 6;
+	value = 7;
 	zassert_equal(protocol.stage(Field::kDefaultMode, &value, 1, true), -EINVAL);
 	zassert_equal(protocol.stage(Field::kSchema, &value, 1, true), -EINVAL);
 	zassert_equal(protocol.stage(Field::kUrl, nullptr, 1000, true), -EINVAL);
@@ -206,5 +206,26 @@ ZTEST(ble_protocol, test_text_validation_and_ephemeral_nfc_action)
 	const uint8_t request[] = {kBleVersion, 3, 0, 0, 0, 127};
 	ConfigCommand empty;
 	zassert_equal(protocol.accept(request, sizeof(request), true, empty), -EINVAL);
+}
+ZTEST(ble_protocol, test_motion_and_nfc_staging_do_not_alias)
+{
+	BleProtocol protocol;
+	MotionConfig config;
+	const uint8_t sync = 1;
+	zassert_equal(protocol.stage(Field::kMotion, config.bytes, kMotionBytes, false), -EACCES);
+	zassert_ok(protocol.stage(Field::kMotion, config.bytes, kMotionBytes, true));
+	zassert_ok(protocol.stage(kNfcSyncField, &sync, 1, true));
+	const auto motion = accept(protocol, 1, Field::kMotion);
+	zassert_mem_equal(motion.data, config.bytes, kMotionBytes);
+	protocol.complete(motion, 0);
+	const auto nfc = accept(protocol, 2, kNfcSyncField);
+	zassert_equal(nfc.length, 1);
+	zassert_equal(nfc.data[0], 1);
+	protocol.complete(nfc, 0);
+	config.bytes[7] = 1;
+	zassert_equal(protocol.stage(Field::kMotion, config.bytes, kMotionBytes, true), -EINVAL);
+	const uint8_t fluid = 6;
+	zassert_ok(protocol.stage(Field::kDefaultMode, &fluid, 1, true));
+	zassert_equal(accept(protocol, 3, Field::kDefaultMode).data[0], 6);
 }
 ZTEST_SUITE(ble_protocol, nullptr, nullptr, nullptr, nullptr, nullptr);
