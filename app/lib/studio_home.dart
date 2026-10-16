@@ -11,6 +11,7 @@ import 'protocol.dart';
 import 'studio_model.dart';
 import 'audio_controller.dart';
 import 'audio_page.dart';
+import 'motion_panel.dart';
 
 const modeLabels = [
   'QR link',
@@ -19,6 +20,7 @@ const modeLabels = [
   'Animation',
   'Audio level',
   'Audio spectrum',
+  'Fluid',
 ];
 const pageLabels = ['Badge', 'Links', 'Text', 'Studio', 'Audio'];
 const pageIcons = [
@@ -50,8 +52,7 @@ class _BadgeHomeState extends State<BadgeHome> with WidgetsBindingObserver {
       widget.draftStore ??
       (widget.controller == null ? DeviceDraftStore() : MemoryDraftStore());
   StudioDraft draft = StudioDraft();
-  final nameEditor = TextEditingController(),
-      textEditor = TextEditingController();
+  final textEditor = TextEditingController();
   final devices = <String, BleDevice>{};
   final scanState = ValueNotifier<int>(0), clock = ValueNotifier<int>(0);
   final watch = Stopwatch()..start();
@@ -63,12 +64,10 @@ class _BadgeHomeState extends State<BadgeHome> with WidgetsBindingObserver {
   bool scanning = false,
       connecting = false,
       loadingDraft = true,
-      nameDirty = false,
       playing = false,
       navigateCanvas = false;
   PixelTool tool = PixelTool.pen;
   String? draftMessage, scanError;
-  String lastName = '';
   bool get ready =>
       badge.connected &&
       badge.confirmed &&
@@ -81,7 +80,6 @@ class _BadgeHomeState extends State<BadgeHome> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    syncName();
     badge.addListener(changed);
     audio.addListener(changed);
     unawaited(audio.refreshLibrary().catchError((Object _) {}));
@@ -115,19 +113,11 @@ class _BadgeHomeState extends State<BadgeHome> with WidgetsBindingObserver {
     }
   }
 
-  void syncName() {
-    if (!nameDirty && lastName != badge.name) {
-      lastName = badge.name;
-      nameEditor.text = badge.name;
-    }
-  }
-
   void changed() {
     if (mounted) {
       if (!badge.connected && audio.transport != null) {
         unawaited(audio.detach());
       }
-      syncName();
       setState(() {});
     }
   }
@@ -252,8 +242,6 @@ class _BadgeHomeState extends State<BadgeHome> with WidgetsBindingObserver {
       }
       await badge.attach(link, capabilities: link.capabilities);
       await audio.attach(link.capabilities.hasAudio ? link : null);
-      nameDirty = false;
-      syncName();
     } finally {
       if (mounted) setState(() => connecting = false);
     }
@@ -496,7 +484,11 @@ class _BadgeHomeState extends State<BadgeHome> with WidgetsBindingObserver {
                   Padding(
                     padding: const EdgeInsets.all(40),
                     child: Icon(
-                      mode == 4 ? Icons.graphic_eq : Icons.equalizer,
+                      mode == 6
+                          ? Icons.water
+                          : mode == 4
+                          ? Icons.graphic_eq
+                          : Icons.equalizer,
                       size: 104,
                       color: colors.primary,
                     ),
@@ -557,6 +549,17 @@ class _BadgeHomeState extends State<BadgeHome> with WidgetsBindingObserver {
               ],
             ),
           ),
+        if (badge.connected &&
+            badge.capabilities.hasMotion &&
+            badge.values[BadgeField.motion] != null)
+          MotionPanel(
+            value: badge.values[BadgeField.motion]!,
+            status: badge.motionStatus,
+            enabled: ready && !audio.recording && !audio.stopping,
+            apply: (value) =>
+                action(() => badge.apply(BadgeField.motion, value)),
+            refresh: () => action(badge.refresh),
+          ),
         StudioPanel(
           title: 'Create',
           child: Wrap(
@@ -583,7 +586,7 @@ class _BadgeHomeState extends State<BadgeHome> with WidgetsBindingObserver {
     onPressed: () => showAboutDialog(
       context: context,
       applicationName: 'Pixel Badge',
-      applicationVersion: '0.2.0 · Studio',
+      applicationVersion: '0.5.4 · Motion',
       applicationIcon: const Icon(Icons.grid_view_rounded, size: 40),
       children: const [
         Text(
@@ -752,7 +755,7 @@ class _BadgeHomeState extends State<BadgeHome> with WidgetsBindingObserver {
           button(
             'Apply link',
             Icons.send_outlined,
-            ready && badge.nfcVerified
+            ready
                 ? () => unawaited(
                     action(
                       () => badge.apply(BadgeField.url, encodeAscii(link.url)),
@@ -788,7 +791,7 @@ class _BadgeHomeState extends State<BadgeHome> with WidgetsBindingObserver {
               ],
               if (badge.connected && !badge.nfcVerified) ...[
                 const SizedBox(height: 12),
-                const Text(BadgeController.nfcRequiredMessage),
+                Text(badge.nfcMessage),
               ],
             ],
           ),
@@ -847,15 +850,17 @@ class _BadgeHomeState extends State<BadgeHome> with WidgetsBindingObserver {
                       : badge.nfcBusy
                       ? 'Synchronizing'
                       : badge.nfcVerified && badge.confirmed
-                      ? 'Link verified'
-                      : 'Verification needed',
+                      ? 'Link synchronized'
+                      : badge.nfcResult == -13
+                      ? 'Setup needs repair'
+                      : 'Sync needed',
                 ),
                 subtitle: Text(
                   !badge.connected
                       ? 'Read the tag’s status before changing a contact link.'
                       : badge.nfcVerified
                       ? 'QR + NFC synchronized'
-                      : 'The shared link is not verified. Keep the phone away and try Sync again. Missing setup requires the initial verification flow.',
+                      : badge.nfcMessage,
                 ),
               ),
               const SizedBox(height: 12),
@@ -946,39 +951,6 @@ class _BadgeHomeState extends State<BadgeHome> with WidgetsBindingObserver {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         offlineNote(),
-        StudioPanel(
-          title: 'Identity',
-          help: 'Your badge name is separate from a custom text message.',
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              TextFormField(
-                controller: nameEditor,
-                maxLength: 32,
-                enabled: ready,
-                decoration: const InputDecoration(labelText: 'Display name'),
-                onChanged: (_) => nameDirty = true,
-              ),
-              const SizedBox(height: 8),
-              button(
-                'Apply name',
-                Icons.person_outline,
-                ready
-                    ? () => unawaited(
-                        action(() async {
-                          await badge.apply(
-                            BadgeField.name,
-                            encodeAscii(nameEditor.text),
-                          );
-                          nameDirty = false;
-                          syncName();
-                        }),
-                      )
-                    : null,
-              ),
-            ],
-          ),
-        ),
         StudioPanel(
           title: 'Text composer',
           help:
@@ -1638,7 +1610,6 @@ class _BadgeHomeState extends State<BadgeHome> with WidgetsBindingObserver {
     audio.removeListener(changed);
     audio.dispose();
     badge.removeListener(changed);
-    nameEditor.dispose();
     textEditor.dispose();
     scanState.dispose();
     clock.dispose();

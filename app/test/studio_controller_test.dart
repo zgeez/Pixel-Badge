@@ -12,6 +12,7 @@ class StudioLink extends FakeLink {
     values[BadgeField.artwork.uuid] = MatrixDesign().encode();
   }
   int fragments = 0;
+  int nfcError = 0;
   int? disconnectAt;
   bool malformedNfc = false;
   @override
@@ -27,15 +28,12 @@ class StudioLink extends FakeLink {
   @override
   Future<Uint8List> read(String uuid) async {
     if (uuid == BadgeField.nfcSync.uuid) {
-      return Uint8List.fromList([
-        malformedNfc ? 99 : 1,
-        nfcVerified ? 1 : 0,
-        0,
-        0,
-        0,
-        0,
-        0,
-      ]);
+      return (ByteData(7)
+            ..setUint8(0, malformedNfc ? 99 : 1)
+            ..setUint8(1, nfcVerified ? 1 : 0)
+            ..setInt32(3, nfcError, Endian.little))
+          .buffer
+          .asUint8List();
     }
     return super.read(uuid);
   }
@@ -115,14 +113,15 @@ void main() {
     await link.dispose();
   });
   test(
-    'NFC failure retains setup gate; malformed state is unconfirmed',
+    'NFC policy failure requests repair; malformed state is unconfirmed',
     () async {
       final link = StudioLink()..rejection = -13;
       final badge = BadgeController();
       await badge.attach(link, capabilities: BadgeCapabilities.studio);
       await expectLater(badge.apply(BadgeField.nfcSync, [1]), throwsStateError);
       expect(badge.nfcVerified, isFalse);
-      expect(badge.message, contains('NFC verifier'));
+      expect(badge.message, contains('NFC tag setup needs repair'));
+      expect(badge.nfcResult, -13);
       link.malformedNfc = true;
       await expectLater(badge.refresh(), throwsFormatException);
       expect(badge.confirmed || badge.writable, isFalse);

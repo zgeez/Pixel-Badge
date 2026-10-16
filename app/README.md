@@ -8,6 +8,16 @@ WAV export. Android first; iOS recording is unavailable. Recording is disabled i
 normal firmware until visibility/rail/security acceptance.
 See [P3 bench steps](../docs/audio-prototype.md).
 
+P4 adds Fluid and a Motion card on Badge: automatic/manual rotation, response,
+particle amount, mounting axes and sensor status on Refresh. The loose sensor's
+mounting axes must be checked against the panel; defaults are unverified.
+Motion settings persist on the badge and work offline. These controls appear
+only with the matching capability; older badges retain their existing controls.
+See [P4 build and bench steps](../docs/motion-prototype.md). App 0.5.4/build 18
+and matching recording-enabled DK firmware are deployed; physical P4 acceptance
+is pending. Text opens directly into the composer; the separate Identity block
+has been removed. The stored legacy name remains the empty-message fallback.
+
 App-focused prompt: [flutter-app-prompt.md](../docs/flutter-app-prompt.md).
 
 From the repository root:
@@ -29,11 +39,11 @@ Build/run imports only four validated `BADGE_URL_*` entries from local root
 `.env` through ignored `build/p2-app-links.json`. These are public contact links,
 not secrets. No dotenv file is bundled. A missing `.env` generates four empty
 defines; invalid or incomplete existing input still fails. Without defines, link presets are
-disabled while identity/display configuration still works.
+disabled while display configuration still works.
 
 Debug APK: `app/build/app/outputs/flutter-apk/app-debug.apk`, for bench use,
 not store distribution. Android packaging only; iOS needs macOS/Xcode later.
-Current source version: **0.4.4+13**, with system light/dark appearance and five
+Current source version: **0.5.4+18**, with system light/dark appearance and five
 pages: Badge, Links, Text, Studio and Audio. Debug builds keep the display awake while
 foreground and log only non-secret BLE status bytes. Release builds omit
 assert-gated packet logging and debug screen-awake behavior.
@@ -45,16 +55,16 @@ by owner report on the Nothing phone/DK prototype, corroborated by restarted-DK
 status; [bench record](../validation/results/2026-10-12-dk-positive-nfc-proof/README.md).
 Later settings and pairing checks are in the
 [P2 result](../validation/results/2026-10-13-dk-p2-settings/README.md).
-After its controlled reset, recovery passed both phone checks but failed
-firmware finalization. The current normal image has defaults and NFC unverified;
-full recovery, unauthorized ATT writes and Rev A acceptance remain pending.
-
-Contact-link Apply requires the badge's NFC-verified status. If verification is
-missing, Pixel Badge disables Apply link and explains the computer/phone
-verification workflow; identity and display controls remain available.
-A factory reset clears the verification receipt while leaving tag EEPROM.
-Use the [BLE provisioning instructions](../docs/ble-protocol.md#restore-nfc-verification)
-before testing a different contact link.
+The earlier controlled-reset recovery failed firmware finalization; that remains
+historical evidence, not an acceptance pass. Current firmware no longer requires
+an RF-proof receipt or phone verifier. Apply link and Sync again request guarded
+on-device policy/URL checks and only confirm after QR/NFC agreement and readback.
+Keep the phone away from the tag during MCU updates. A reset preserves external
+tag configuration, which firmware checks again automatically. New/unconfigured
+tags use explicit wired setup, without phone taps; see
+[ADR 0017](../docs/decisions/0017-local-nfc-synchronization.md).
+Local synchronization does not establish RF password authentication or replace
+physical unauthorized-write/Rev A acceptance tests.
 
 ## Playback and connection
 
@@ -98,9 +108,9 @@ and local SDK configuration before running the Gradle task from `app/android`.
   destination only after exact badge confirmation. Built-in presets remain
   optional. The QR limit is 20 alphanumeric characters or 14 byte-mode bytes;
   path case is preserved. Long URLs need a short redirect you control.
-- Check NFC verification and request **Sync again** with the phone away from
+- Check NFC synchronization and request **Sync again** with the phone away from
   the tag. This rechecks the existing protected tag against the current QR link;
-  it does not provision a tag or replace the computer/phone verification flow.
+  it does not change credentials. No phone verifier is required.
 - Compose 96 printable ASCII characters plus line breaks with case-sensitive
   text, auto fit, word wrap/pagination or scrolling, three scales, alignment
   and pace. Empty messages use the separately stored 32-character badge name.

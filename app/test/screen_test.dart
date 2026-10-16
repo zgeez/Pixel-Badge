@@ -131,71 +131,93 @@ void main() {
     },
   );
 
-  testWidgets('missing NFC disables links while identity remains available', (
+  testWidgets(
+    'unsynchronized NFC allows link retry while text remains available',
+    (tester) async {
+      final link = StudioLink()..nfcVerified = false;
+      final controller = BadgeController();
+      await controller.attach(link, capabilities: BadgeCapabilities.studio);
+      final store = MemoryDraftStore();
+      await store.save(
+        StudioDraft(links: [SavedLink('My site', 'HTTPS://A.B/X')]),
+      );
+      await showApp(tester, controller: controller, store: store);
+      await page(tester, 'Links');
+      await visible(tester, find.text('Apply link'));
+      expect(
+        tester
+            .widget<FilledButton>(
+              find.ancestor(
+                of: find.text('Apply link'),
+                matching: find.byWidgetPredicate((w) => w is FilledButton),
+              ),
+            )
+            .onPressed,
+        isNotNull,
+      );
+      await page(tester, 'Text');
+      await visible(tester, find.text('Send text'));
+      expect(
+        tester
+            .widget<FilledButton>(
+              find.ancestor(
+                of: find.text('Send text'),
+                matching: find.byWidgetPredicate((w) => w is FilledButton),
+              ),
+            )
+            .onPressed,
+        isNotNull,
+      );
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+      controller.dispose();
+      await link.dispose();
+    },
+  );
+  testWidgets(
+    'NFC policy error explains setup repair instead of reader distance',
+    (tester) async {
+      final link = StudioLink()
+        ..nfcVerified = false
+        ..nfcError = -13;
+      final controller = BadgeController();
+      await controller.attach(link, capabilities: BadgeCapabilities.studio);
+      await showApp(tester, controller: controller);
+      await page(tester, 'Links');
+      await visible(tester, find.text('Setup needs repair'));
+      expect(find.text('Setup needs repair'), findsOneWidget);
+      expect(find.text(BadgeController.nfcSetupMessage), findsWidgets);
+      expect(find.text(BadgeController.nfcRequiredMessage), findsNothing);
+      await tester.pumpWidget(const SizedBox());
+      controller.dispose();
+      await link.dispose();
+    },
+  );
+
+  testWidgets('Text composer sends content without an Identity block', (
     tester,
   ) async {
-    final link = FakeLink()..nfcVerified = false;
+    final link = StudioLink();
     final controller = BadgeController();
-    await controller.attach(link);
-    final store = MemoryDraftStore();
-    await store.save(
-      StudioDraft(links: [SavedLink('My site', 'HTTPS://A.B/X')]),
-    );
-    await showApp(tester, controller: controller, store: store);
-    await page(tester, 'Links');
-    await visible(tester, find.text('Apply link'));
-    expect(
-      tester
-          .widget<FilledButton>(
-            find.ancestor(
-              of: find.text('Apply link'),
-              matching: find.byWidgetPredicate((w) => w is FilledButton),
-            ),
-          )
-          .onPressed,
-      isNull,
-    );
-    await page(tester, 'Text');
-    await visible(tester, find.text('Apply name'));
-    expect(
-      tester
-          .widget<FilledButton>(
-            find.ancestor(
-              of: find.text('Apply name'),
-              matching: find.byWidgetPredicate((w) => w is FilledButton),
-            ),
-          )
-          .onPressed,
-      isNotNull,
-    );
-    expect(tester.takeException(), isNull);
-    await tester.pumpWidget(const SizedBox());
-    controller.dispose();
-    await link.dispose();
-  });
-  testWidgets('refreshed identity is what Apply sends', (tester) async {
-    final link = FakeLink();
-    final controller = BadgeController();
-    await controller.attach(link);
+    await controller.attach(link, capabilities: BadgeCapabilities.studio);
     await showApp(tester, controller: controller);
-    link.values[BadgeField.name.uuid] = Uint8List.fromList(
-      ascii.encode('UPDATED'),
-    );
-    await controller.refresh();
-    await tester.pump();
     await page(tester, 'Text');
-    await visible(tester, find.text('Apply name'));
-    expect(
-      tester
-          .widget<TextFormField>(find.byType(TextFormField).first)
-          .controller!
-          .text,
-      'UPDATED',
-    );
-    await tester.tap(find.text('Apply name'));
+    expect(find.text('Identity'), findsNothing);
+    expect(find.text('Apply name'), findsNothing);
+    expect(find.widgetWithText(TextFormField, 'Display name'), findsNothing);
+    await tester.enterText(find.byType(TextFormField).first, 'Hello badge');
+    FocusManager.instance.primaryFocus?.unfocus();
+    await tester.pump(const Duration(milliseconds: 500));
+    await visible(tester, find.text('Send text'));
+    await tester.tap(find.text('Send text'));
     await tester.pump(const Duration(seconds: 1));
-    expect(controller.name, 'UPDATED');
-    expect(link.applies, 1);
+    expect(
+      TextDesign.decode(link.values[BadgeField.text.uuid]!).text,
+      'Hello badge',
+    );
+    expect(controller.mode, 1);
+    expect(controller.name, 'BADGE');
+    expect(link.applies, 2);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
     controller.dispose();
@@ -212,7 +234,6 @@ void main() {
     await controller.attach(link, capabilities: BadgeCapabilities.studio);
     await showApp(tester, controller: controller);
     await page(tester, 'Text');
-    await tester.enterText(find.byType(TextFormField).first, 'PENDING');
 
     Future<void> expectFallback(String name) async {
       await visible(tester, find.byType(MatrixPreview));
@@ -257,14 +278,9 @@ void main() {
           .widget<TextFormField>(find.byType(TextFormField).first)
           .controller!
           .text,
-      'PENDING',
+      '',
     );
 
-    await visible(tester, find.text('Apply name'));
-    await tester.tap(find.text('Apply name'));
-    await tester.pump(const Duration(seconds: 1));
-    expect(controller.name, 'PENDING');
-    await expectFallback('PENDING');
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
     controller.dispose();
