@@ -1,10 +1,11 @@
 # Prototype BLE configuration protocol v2
 
-Status: Studio implementation for the nRF5340 DK, pending new phone/hardware
-acceptance. Historical v1 owner-reported Android contact-link agreement and
-power-cycle checks passed; those results do not validate the v2 upgrade.
-Android first. Audio/app-key enrollment is later ADR 0011 work; no recording
-or firmware-update commands are exposed here. The badge is a peripheral/GATT
+Status: Studio, P3 audio and P4 motion implementations for the nRF5340 DK;
+new motion phone/hardware acceptance is pending. Historical owner-reported
+checks do not validate every later extension. Android first. Audio controls
+are specified separately in [audio-protocol.md](audio-protocol.md); recording
+remains disabled in normal firmware. There is no firmware-update command.
+The badge is a peripheral/GATT
 server; its network core runs IPC radio, application core runs host/GATT and
 badge logic. No UART transport, credentials or personal identity in advertising.
 
@@ -13,16 +14,18 @@ UUIDs use the suffix `-6e9b-4f4c-a8f8-731a9d46e1c0` below.
 | UUID prefix | Purpose | Properties | Encoding |
 |---|---|---|---|
 | f3b00001 | Service | — | Custom 128-bit UUID |
-| f3b00002 | Info | Read | 8 bytes: version=2, URL max=20, name max=32, brightness count=4, modes=4, flags, max frames=16, extension flags=7 |
+| f3b00002 | Info | Read | 8 bytes: version=2, URL max=20, name max=32, brightness count=4, modes=4/6/7, flags, max frames=16, extension flags=7/15/31 |
 | f3b00003 | Name | Read / Write | Read applied ASCII; writes use fragments below |
 | f3b00004 | URL | Read / Write | Exact ASCII HTTP(S), 1–20 bytes, V1-M QR fit required |
 | f3b00005 | Brightness | Read / Write | One byte: 16, 64, 128 or 255 |
-| f3b00006 | Mode | Read / Write | QR=0, text=1, drawing=2, animation=3; Apply also stores the boot default |
+| f3b00006 | Mode | Read / Write | QR=0, text=1, drawing=2, animation=3, level=4, spectrum=5, fluid=6; only advertised modes accepted; Apply also stores the boot default |
 | f3b00007 | Apply | Write with response | `[2, request_id:u32le, field:u8]`, six bytes |
 | f3b00008 | Status | Read / Notify | 12 bytes, layout below |
 | f3b00009 | Text | Read / Write | Applied content / staged fragments; 6–102 bytes |
 | f3b0000a | Artwork | Read / Write | Paged applied content / staged fragments; 132–2052 bytes |
 | f3b0000b | NFC sync | Read / Write | Seven-byte NFC state / staged `[1]` action |
+| f3b0000c | Motion | Read / Write | Applied/staged eight-byte motion setting |
+| f3b0000d | Motion status | Read | 16-byte sensor/orientation snapshot |
 
 Info is public; all other reads, writes and CCC subscriptions require
 authenticated LE Secure Connections, security level 4. Just Works and legacy
@@ -30,8 +33,8 @@ pairing are refused. New pairing requires an Action/Button 2 long press,
 healthy display and a 60-second window. The six-digit random passkey is shown
 in two rows of three digits, with leading zeroes, never logged. Bonded
 reconnects do not require a new window. One connection and one bond slot;
-no oldest-bond overwrite. Factory reset clears Bluetooth keys and the NFC
-receipt with the settings partition; NFC then requires explicit provisioning.
+no oldest-bond overwrite. Factory reset clears Bluetooth keys and settings; external tag configuration
+is retained and NFC policy/URL checks run again without a phone verifier.
 The window is an implementation timeout, not a measured acceptance criterion.
 Button 1 keeps mode cycling; short button actions are held during Apply or
 passkey display.
@@ -47,7 +50,7 @@ names cannot be applied. Other writes contain raw values. Prepared writes,
 nonzero ATT offsets and write-without-response are rejected. Write/status
 packets fit ATT MTU 23; ordinary long reads handle names longer than 20 bytes.
 
-Apply fields: URL=1, name=2, brightness=3, mode=4, text=5, artwork=6,
+Apply fields: URL=1, name=2, brightness=3, mode=4, text=5, artwork=6, motion=7,
 NFC resync=127 (ephemeral action). Apply changes **one staged
 field**, with no multi-field transaction. IDs are nonzero, strictly increasing
 within a connection. Duplicate/older IDs are rejected without replay; read
@@ -134,8 +137,8 @@ result is non-secret diagnostic status. Stage `[1]`, then Apply field127 to
 reconcile the current QR URL through the existing guarded NFC worker. This
 does not change URL, credentials or provisioning policy and does not persist
 a field127 setting. Successful completion additionally requires NFC-ready
-readback. Keep phones away during synchronization; a missing verification
-receipt requires the existing explicit provisioning workflow.
+readback. Keep phones away during synchronization. No saved RF-proof receipt
+or phone verifier is required; see ADR 0017 below.
 
 Settings schema remains v1 with optional `text` and `artwork` records. Older
 core settings survive the upgrade; missing/invalid extensions default to
@@ -165,11 +168,9 @@ adb install -r app/build/app/outputs/flutter-apk/app-debug.apk
 Sysbuild produces `merged.hex` for MCUboot/application and `merged_CPUNET.hex`
 for the network radio. Use `west flash` with this build directory so its domain
 flash order programs both cores; application-only flashing does not install
-the radio. Keep the
-provisioned NFC tag; a missing/invalid receipt needs the matching NFC verifier
-workflow below (proof3, accepted ADR0014; completed DK proof is recorded below).
-For that development operation the BLE build may additionally take
-`-ExtraConfFile firmware/configs/nfc-provisioning.conf`. No BLE provisioning bypass.
+the radio. Keep the protected NFC tag. Firmware performs local policy/NDEF
+checks without an RF-proof receipt or helper. Fresh tags use explicit wired
+setup below; normal Apply/Sync again never changes credentials.
 
 Install `app/build/app/outputs/flutter-apk/app-debug.apk`. Wait for the boot QR,
 hold Action/Button 2 for about one second, then release it. The QR remains
@@ -183,7 +184,33 @@ wrong passkey, pairing expiry, interrupted connection, dropped notification,
 tag contention, long names, persisted brightness/mode and factory reset.
 Software tests do not establish phone/radio/QR/NFC/security or RF-timing acceptance.
 
-### Restore NFC verification
+### NFC setup and synchronization
+
+Current behavior follows [ADR 0017](decisions/0017-local-nfc-synchronization.md).
+With a configured tag, boot, Apply link and Sync again perform guarded local
+policy and NDEF checks. An old false readiness flag does not prevent requesting
+recovery. Success still requires the resulting synchronized flag and exact URL
+readback. The bit is not proof of RF password authentication. Factory reset no
+longer creates a phone-verifier requirement.
+
+For a fresh or misconfigured tag, use a matching debug build and trusted SWD
+host. Keep readers away. No phone/helper/taps or confirmation prompt is needed:
+
+```powershell
+.\scripts\dev.ps1 build -BuildDir build/p4-nfc-setup -ExtraConfFile firmware/configs/nfc-provisioning.conf
+west flash -d build/p4-nfc-setup --runner jlink --no-erase
+& C:/ncs/toolchains/4f5b6ad6dd/opt/bin/python.exe scripts/nfc/badge_nfc.py configure --elf build/p4-nfc-setup/firmware/zephyr/zephyr.elf
+```
+
+Restore the normal BLE firmware afterwards. `configure` sets transient random
+credentials and finalizes readable policy/NDEF; it does not claim RF password
+proof. It fails on incompatible/locked tags rather than bypassing protection.
+
+### Restore NFC verification (historical optional RF diagnostic)
+
+The following proof3 procedure predates ADR 0017 and is **not required** for
+current link Apply, boot or Sync again. Its receipt no longer gates readiness.
+
 
 When NFC is unverified, contact-link Apply is unavailable. Name, brightness and
 mode can still be configured. A badge factory reset clears the NFC receipt;
@@ -246,6 +273,40 @@ and correct LinkedIn NFC while off plus QR/app after restart. Read-only matching
 ELF metadata confirms proof retained, ready/no error and desired=verified
 HTTPS://ZIADG.COM/L after restart. These DK/Click/panel results do not establish
 broader security, interrupted recovery, RF timing or Rev A acceptance.
+
+## Motion extension
+
+Info pairs are modes=4/extensions=7 for Studio, 6/15 for audio and 7/31 for
+audio plus motion. Extension bit 4 advertises Motion and its status snapshot.
+The matching app accepts older capability sets; older clients can reject the
+new set and should be updated with the firmware. Existing characteristic and
+field IDs are unchanged. Motion uses field 7; NFC action 127 has an independent
+staging slot. The eight-byte value is validated and saved as one setting,
+`badge/motion`, under additive schema v1. Missing old records use defaults.
+
+Motion encoding: `[1, auto, right, down, response, particles, rotation, 0]`.
+`auto` is 0/1; signed axes are +X=0, -X=1, +Y=2, -Y=3, +Z=4, -Z=5.
+Right and down must name different physical axes. Response is 1–5, particles
+16–192, and rotation 0–3 represents 0/90/180/270 degrees for manual mode.
+Default bytes: `01 01 00 02 03 60 00 00`. The mount is not yet bench-validated.
+
+Motion status is a read-only authenticated snapshot, not a sample stream:
+
+| Offset | Size | Meaning |
+|---|---|---|
+| 0 | 1 | Version=1 |
+| 1 | 1 | Flags: device ready=1, sample fresh=2, trigger registered=4 |
+| 2 | 1 | Current content rotation, quarter turns 0–3 |
+| 3 | 1 | Reserved zero |
+| 4 | 2 | Sample age in ms, unsigned LE; 65535 means unknown or saturated |
+| 6 | 2 | Filtered projected down X, signed LE mm/s² |
+| 8 | 2 | Filtered projected down Y, signed LE mm/s² |
+| 10 | 2 | Reserved zero |
+| 12 | 4 | Last sensor-read errno, signed LE |
+
+Fresh means no more than 250 ms old. Trigger registration is not evidence of
+observed interrupts. Current rotation can differ from a QR's locked entry
+rotation. See [motion-prototype.md](motion-prototype.md) for behavior and tests.
 
 References: [Zephyr GATT](https://docs.zephyrproject.org/latest/services/connectivity/bluetooth/api/gatt.html),
 [Zephyr LE host](https://docs.zephyrproject.org/latest/services/connectivity/bluetooth/bluetooth-le-host.html),

@@ -643,6 +643,13 @@ codes fit only with a reduced quiet zone and are experiments.
 
 ## Tests
 
+P4 adds bounded IMU-driven Fluid mode and four-way orientation to the full BLE
+DK configuration, with persistent sensor mapping and matching app controls.
+Native/Flutter tests and both DK builds pass; new physical behavior, frame time,
+stack peaks and combined-load I²C behavior remain unmeasured. This is still the
+nRF5340 prototype, not the nRF52840 port. Follow the
+[P4 guide](motion-prototype.md) and [software evidence](../validation/results/2026-10-15-dk-p4-motion/README.md).
+
 Tests use Ztest and run with Twister on the `native_sim` host target. They live
 under `firmware/tests/`. `native_sim` runs only on Linux, so on Windows
 `dev.ps1 test` runs the tests in the same toolchain container image as CI
