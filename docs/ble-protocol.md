@@ -160,7 +160,7 @@ Follow the [remaining P2 bench checklist](ble-bench.md) for settings,
 persistence, connection interruption and security/reset checks.
 
 ```powershell
-.\scripts\dev.ps1 build -BuildDir build/p2-ble -SysbuildConfFile firmware/configs/ble-sysbuild.conf
+.\scripts\dev.ps1 build -BuildDir build/p2-ble -SysbuildConfFile firmware/nrf5340_prototype/configs/ble-sysbuild.conf
 west flash -d build/p2-ble --runner jlink
 .\scripts\app\dev.ps1 build
 adb install -r app/build/app/outputs/flutter-apk/app-debug.apk
@@ -198,9 +198,9 @@ For a fresh or misconfigured tag, use a matching debug build and trusted SWD
 host. Keep readers away. No phone/helper/taps or confirmation prompt is needed:
 
 ```powershell
-.\scripts\dev.ps1 build -BuildDir build/p4-nfc-setup -ExtraConfFile firmware/configs/nfc-provisioning.conf
+.\scripts\dev.ps1 build -BuildDir build/p4-nfc-setup -ExtraConfFile firmware/nrf5340_prototype/configs/nfc-provisioning.conf
 west flash -d build/p4-nfc-setup --runner jlink --no-erase
-& C:/ncs/toolchains/4f5b6ad6dd/opt/bin/python.exe scripts/nfc/badge_nfc.py configure --elf build/p4-nfc-setup/firmware/zephyr/zephyr.elf
+& C:/ncs/toolchains/4f5b6ad6dd/opt/bin/python.exe scripts/nfc/badge_nfc.py configure --elf build/p4-nfc-setup/nrf5340_prototype/zephyr/zephyr.elf
 ```
 
 Restore the normal BLE firmware afterwards. `configure` sets transient random
@@ -222,13 +222,13 @@ and v0.4 cannot be used with the new host tools.
 Keep the phone away from the tag while building, flashing and booting:
 
 ```powershell
-.\scripts\dev.ps1 build -BuildDir build/p2-ble-provisioning -SysbuildConfFile firmware/configs/ble-sysbuild.conf -ExtraConfFile firmware/configs/nfc-provisioning.conf
+.\scripts\dev.ps1 build -BuildDir build/p2-ble-provisioning -SysbuildConfFile firmware/nrf5340_prototype/configs/ble-sysbuild.conf -ExtraConfFile firmware/nrf5340_prototype/configs/nfc-provisioning.conf
 west flash -d build/p2-ble-provisioning --runner jlink
 .\scripts\nfc\build_android.ps1 -Jdk 'C:/Program Files/Android/Android Studio/jbr'
 adb devices
 adb -s PHONE_SERIAL install -r build/p1-nfc-helper/badge-nfc-helper.apk
 $nfcPython = 'C:/ncs/toolchains/4f5b6ad6dd/opt/bin/python.exe'
-& $nfcPython scripts/nfc/badge_nfc.py provision --elf build/p2-ble-provisioning/firmware/zephyr/zephyr.elf --android-serial PHONE_SERIAL
+& $nfcPython scripts/nfc/badge_nfc.py provision --elf build/p2-ble-provisioning/nrf5340_prototype/zephyr/zephyr.elf --android-serial PHONE_SERIAL
 ```
 
 Replace PHONE_SERIAL with the connected Nothing phone from `adb devices`;

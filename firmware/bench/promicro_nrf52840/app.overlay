@@ -1,0 +1,27 @@
+/* SPDX-License-Identifier: MIT */
+/ {
+    chosen { zephyr,display = &bench_display; };
+    bench_display: bench_display {
+        compatible = "zephyr,dummy-dc";
+        width = <32>;
+        height = <32>;
+    };
+};
+/* No external peripherals or GPIO outputs on an unidentified clone. */
+&uart0 { status = "disabled"; };
+&i2c0 { status = "disabled"; };
+&i2c1 { status = "disabled"; };
+&spi2 { status = "disabled"; };
+&pwm0 { status = "disabled"; };
+&adc { status = "disabled"; };
+/* Preserve the UF2/MBR/SoftDevice regions. This candidate uses SDK SDv6 offsets;
+ * compare INFO_UF2 before deployment. These are bench-only asset locations. */
+&code_partition { reg = <0x26000 0x7a000>; };
+&flash0 {
+    partitions {
+        artwork_storage: partition@a0000 {
+            label = "artwork-storage";
+            reg = <0xa0000 0x42000>;
+        };
+    };
+};

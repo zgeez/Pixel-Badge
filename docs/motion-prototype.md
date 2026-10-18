@@ -62,7 +62,7 @@ Run from the feature worktree (`build/prototype-audio`). The existing build
 directory name is retained to reuse SDK artifacts; its output includes P4.
 
 ```powershell
-.\scripts\dev.ps1 build -BuildDir build/p3-recording -SysbuildConfFile firmware/configs/ble-sysbuild.conf -ExtraConfFile firmware/configs/audio-recording-bench.conf
+.\scripts\dev.ps1 build -BuildDir build/p3-recording -SysbuildConfFile firmware/nrf5340_prototype/configs/ble-sysbuild.conf -ExtraConfFile firmware/nrf5340_prototype/configs/audio-recording-bench.conf
 .\scripts\app\dev.ps1 build
 # When ready to deploy the matching firmware and app:
 west flash -d build/p3-recording --runner jlink --no-erase

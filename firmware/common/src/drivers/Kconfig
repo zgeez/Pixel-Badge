@@ -1,0 +1,9 @@
+# SPDX-License-Identifier: MIT
+
+menu "Smart LED Badge drivers"
+
+rsource "hub75/Kconfig"
+rsource "reva_matrix/Kconfig"
+rsource "icm42688_i2c/Kconfig"
+
+endmenu

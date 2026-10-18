@@ -63,4 +63,129 @@ ZTEST(display_health, test_initialization_retry_and_time_wrap)
 	zassert_equal(recovered.healthy_ms(1000), 500);
 }
 
+ZTEST(display_health, test_latched_scan_fault_rearms_and_confirms_before_recovery)
+{
+	DisplayHealth health;
+	bool initialized = true;
+	int fault = -EIO;
+	unsigned initializations = 0, confirmations = 0;
+	auto submit = [&](bool initialize) {
+		if (initialize) {
+			++initializations;
+			fault = 0; // Models blanking_on/off clearing the driver's latch.
+		}
+		return fault;
+	};
+	auto visible = [&]() {
+		++confirmations;
+		return fault;
+	};
+	health.report(health.present(initialized, submit, visible), 100);
+	zassert_true(health.recovering());
+	zassert_equal(initializations, 0);
+	zassert_equal(confirmations, 0);
+	health.report(health.present(initialized, submit, visible), 200);
+	zassert_equal(initializations, 1);
+	zassert_equal(confirmations, 1);
+	zassert_false(health.recovering());
+	zassert_false(health.restart_required(2200));
+	// Healthy frames do not continually restart the scanner.
+	zassert_equal(health.present(initialized, submit, visible), 0);
+	zassert_equal(initializations, 1);
+	zassert_equal(confirmations, 1);
+}
+
+ZTEST(display_health, test_rearming_without_scan_progress_keeps_failure_deadline)
+{
+	DisplayHealth health;
+	unsigned initializations = 0, confirmations = 0;
+	health.report(-ETIMEDOUT, 100);
+	for (uint32_t now = 200; now <= 2100; now += DisplayHealth::kRetryMs) {
+		const int result = health.present(
+			true,
+			[&](bool initialize) {
+				zassert_true(initialize);
+				++initializations;
+				return 0; // Configuration succeeds but scanning still fails.
+			},
+			[&]() {
+				++confirmations;
+				return -ETIMEDOUT;
+			});
+		zassert_equal(result, -ETIMEDOUT);
+		health.report(result, now);
+		zassert_true(health.recovering());
+		zassert_equal(health.restart_required(now), now == 2100);
+	}
+	zassert_equal(initializations, 20);
+	zassert_equal(confirmations, initializations);
+}
+
+ZTEST(display_health, test_intentional_disarm_outlives_watchdog_and_healthy_boot_intervals)
+{
+	DisplayHealth health;
+	BootGuard guard;
+	guard.start(0xa1, true);
+	const int physical_result = -EPERM;
+	for (uint32_t now = 0; now <= 31000; now += DisplayHealth::kRetryMs) {
+		health.report(physical_result, now, true);
+		zassert_false(health.recovering());
+		zassert_false(health.restart_required(now));
+		zassert_equal(health.acknowledge_boot(guard, false, true, now),
+			      now == BootGuard::kHealthyMs);
+	}
+}
+
+ZTEST(display_health, test_healthy_disarmed_runs_clear_separated_watchdog_resets)
+{
+	uint8_t retained = 0xa0;
+	for (unsigned boot = 0; boot < 5; ++boot) {
+		BootGuard guard;
+		DisplayHealth health;
+		retained = guard.start(retained, true);
+		zassert_equal(retained, 0xa1);
+		zassert_false(guard.safe_mode());
+		health.report(-EPERM, 0, true);
+		zassert_false(
+			health.acknowledge_boot(guard, false, true, BootGuard::kHealthyMs - 1));
+		if (health.acknowledge_boot(guard, false, true, BootGuard::kHealthyMs)) {
+			retained = 0xa0; // Same retained write as the main loop.
+		}
+		zassert_equal(retained, 0xa0);
+		zassert_false(health.acknowledge_boot(guard, false, true, 60000));
+	}
+}
+
+ZTEST(display_health, test_boot_acknowledgement_requires_ready_or_intentional_disarm_and_health)
+{
+	BootGuard guard;
+	DisplayHealth health;
+	guard.start(0xa1, true);
+	health.report(0, 0);
+	zassert_false(health.acknowledge_boot(guard, false, false, BootGuard::kHealthyMs));
+	zassert_true(health.acknowledge_boot(guard, true, false, BootGuard::kHealthyMs));
+
+	BootGuard faulty_guard;
+	DisplayHealth faulty;
+	faulty_guard.start(0xa1, true);
+	faulty.report(-EIO, 0, true);
+	zassert_false(faulty.acknowledge_boot(faulty_guard, false, true, BootGuard::kHealthyMs));
+	zassert_false(faulty.acknowledge_boot(faulty_guard, true, false, BootGuard::kHealthyMs));
+}
+
+ZTEST(display_health, test_disarm_exemption_does_not_hide_real_driver_failures)
+{
+	const int errors[] = {-EIO, -ENODEV, -ETIMEDOUT};
+	for (int error : errors) {
+		DisplayHealth health;
+		health.report(error, 100, true);
+		health.report(error, 2100, true);
+		zassert_true(health.restart_required(2100));
+	}
+	DisplayHealth armed;
+	armed.report(-EPERM, 100);
+	armed.report(-EPERM, 2100);
+	zassert_true(armed.restart_required(2100));
+}
+
 ZTEST_SUITE(display_health, nullptr, nullptr, nullptr, nullptr, nullptr);

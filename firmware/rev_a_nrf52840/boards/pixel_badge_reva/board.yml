@@ -1,0 +1,7 @@
+# SPDX-License-Identifier: MIT
+board:
+  name: pixel_badge_reva
+  full_name: Pixel Badge Rev A E73 nRF52840
+  vendor: others
+  socs:
+    - name: nrf52840

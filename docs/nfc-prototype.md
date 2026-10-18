@@ -47,7 +47,7 @@ provisioning run passed; repeat it after a lost receipt/factory reset.
 From the repository root in PowerShell:
 
 ```powershell
-.\scripts\dev.ps1 build -Pristine -BuildDir build/p1-provisioning -ExtraConfFile firmware/configs/nfc-provisioning.conf
+.\scripts\dev.ps1 build -Pristine -BuildDir build/p1-provisioning -ExtraConfFile firmware/nrf5340_prototype/configs/nfc-provisioning.conf
 west flash -d build/p1-provisioning --runner jlink
 .\scripts\nfc\build_android.ps1 -Jdk 'C:/Program Files/Java/jdk-25'
 adb devices
