@@ -77,20 +77,24 @@ uint16_t glyph(char character)
 void rotate(const Frame &source, Frame &destination, Rotation rotation)
 {
 	Frame rotated{};
+	if (!source.grayscale && rotation == Rotation::k0) {
+		destination = source;
+		return;
+	}
 	for (int y = 0; y < kMatrixSize; ++y) {
 		for (int x = 0; x < kMatrixSize; ++x) {
 			switch (rotation) {
 			case Rotation::k90:
-				rotated.set(31 - y, x, source.get(x, y));
+				rotated.set_level(31 - y, x, source.level(x, y));
 				break;
 			case Rotation::k180:
-				rotated.set(31 - x, 31 - y, source.get(x, y));
+				rotated.set_level(31 - x, 31 - y, source.level(x, y));
 				break;
 			case Rotation::k270:
-				rotated.set(y, 31 - x, source.get(x, y));
+				rotated.set_level(y, 31 - x, source.level(x, y));
 				break;
 			default:
-				rotated.set(x, y, source.get(x, y));
+				rotated.set_level(x, y, source.level(x, y));
 			}
 		}
 	}

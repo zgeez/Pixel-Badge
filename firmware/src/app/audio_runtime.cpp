@@ -1,5 +1,8 @@
 /* SPDX-License-Identifier: MIT */
 #include "badge/audio_runtime.hpp"
+#if defined(CONFIG_APP_BLE)
+#include "badge/ble.hpp"
+#endif
 #include "badge/audio_crypto.hpp"
 #include "badge/adpcm.hpp"
 #include "badge/recording.hpp"
@@ -146,6 +149,9 @@ int command(const uint8_t *data, size_t length)
 		return -ENOTSUP;
 	}
 	if (!allow_start || recording || requested || closing || !subscribed() ||
+#if defined(CONFIG_APP_BLE)
+	    ble_artwork_busy() ||
+#endif
 	    bt_gatt_get_mtu(connection) < 108) {
 		return -EBUSY;
 	}
@@ -481,7 +487,11 @@ bool audio_button(bool long_press)
 		atomic_set(&revoked, 1);
 		consumed = true;
 	} else if (long_press && IS_ENABLED(CONFIG_APP_AUDIO_RECORDING_BENCH) && proved &&
-		   secure(connection) && subscribed() && allow_start) {
+		   secure(connection) && subscribed() && allow_start
+#if defined(CONFIG_APP_BLE)
+		   && !ble_artwork_busy()
+#endif
+	) {
 		consumed = true;
 		if (random_bytes(button_nonce, 16)) {
 			button_deadline = k_uptime_get() + 3000;
@@ -508,6 +518,14 @@ bool audio_recording()
 	k_mutex_unlock(&audio_mutex);
 	return result;
 }
+bool audio_quiescent()
+{
+	k_mutex_lock(&audio_mutex, K_FOREVER);
+	const bool quiet = !active && !recording && !requested && !closing;
+	k_mutex_unlock(&audio_mutex);
+	return quiet;
+}
+
 bool audio_capture_active()
 {
 	return active;
@@ -518,26 +536,7 @@ AudioOverlay audio_overlay(Frame &frame)
 	const AudioOverlay result = audio_overlay_kind(recording, requested, closing,
 						       unavailable_deadline > k_uptime_get());
 	if (result == AudioOverlay::kRecording) {
-		render_audio(frame, analysis, false);
-		// Large fixed 5x7 REC, placed above the level meter, never animated or hidden.
-		constexpr uint8_t letters[3][7] = {{30, 17, 17, 30, 20, 18, 17},
-						   {31, 16, 16, 30, 16, 16, 31},
-						   {15, 16, 16, 16, 16, 16, 15}};
-		for (int y = 0; y < 15; ++y) {
-			for (int x = 0; x < 32; ++x) {
-				frame.set(x, y, false);
-			}
-		}
-		for (int l = 0; l < 3; ++l) {
-			for (int y = 0; y < 7; ++y) {
-				for (int x = 0; x < 5; ++x) {
-					if (letters[l][y] & (16 >> x)) {
-						frame.set(3 + l * 9 + x, y * 2);
-						frame.set(3 + l * 9 + x, y * 2 + 1);
-					}
-				}
-			}
-		}
+		render_recording_audio(frame, analysis);
 	} else if (result == AudioOverlay::kUnavailable) {
 		draw_name(frame, "NO REC", 0);
 	}

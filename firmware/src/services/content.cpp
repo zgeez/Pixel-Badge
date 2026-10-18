@@ -112,6 +112,47 @@ void render_text(Frame &output, const TextContent &content, const char *fallback
 		}
 		return;
 	}
+	if (layout == 3) {
+		size_t count = 0, start = 0;
+		int longest = 0;
+		for (size_t i = 0; i <= length; ++i) {
+			if (i == length || text[i] == '\n') {
+				lines[count++] = {start, i - start};
+				const int travel = static_cast<int>((i - start) * 6) * scale -
+						   scale - kMatrixSize;
+				if (travel > longest) {
+					longest = travel;
+				}
+				start = i + 1;
+			}
+		}
+		const size_t rows = kMatrixSize / (8 * scale), pages = (count + rows - 1) / rows;
+		/* All overflowing lines share a phase; their travel sets their speed.
+		 * Three physical pixels of overshoot replace endpoint holds. */
+		const uint32_t half_ms = uint32_t(longest + 6) * interval;
+		const uint32_t cycle_ms = longest == 0 ? 40U * interval : 2U * half_ms;
+		const uint32_t phase = elapsed % cycle_ms;
+		const uint32_t progress = phase <= half_ms ? phase : cycle_ms - phase;
+		const size_t first = (elapsed / cycle_ms % pages) * rows;
+		const size_t visible = count - first < rows ? count - first : rows;
+		const int top = (kMatrixSize - static_cast<int>(visible) * 8 * scale) / 2;
+		for (size_t row = 0; row < visible; ++row) {
+			const Line line = lines[first + row];
+			const int width = line.length == 0
+						  ? 0
+						  : static_cast<int>(line.length * 6 - 1) * scale;
+			const int travel = width > kMatrixSize ? width - kMatrixSize : 0;
+			const int shift = static_cast<int>(
+				(uint64_t(travel + 6) * progress + half_ms / 2) / half_ms);
+			const int left = travel == 0 ? aligned(width, alignment) : 3 - shift;
+			for (size_t i = 0; i < line.length; ++i) {
+				letter(output, text[line.start + i],
+				       left + static_cast<int>(i) * 6 * scale,
+				       top + static_cast<int>(row) * 8 * scale, scale);
+			}
+		}
+		return;
+	}
 	const size_t count = wrap(text, length, kMatrixSize / (6 * scale), lines);
 	const size_t rows = kMatrixSize / (8 * scale);
 	const size_t pages = (count + rows - 1) / rows;
@@ -130,26 +171,98 @@ void render_text(Frame &output, const TextContent &content, const char *fallback
 	}
 }
 
-void render_artwork(Frame &output, const Artwork &content, uint32_t elapsed, bool animate)
+void ArtworkPlayer::frame(Frame &out, const Artwork &art, unsigned index)
 {
-	output.clear();
-	if (!valid_artwork(content.bytes, content.length)) {
+	if (art.bytes == nullptr || art.length < 4) {
+		reset();
+		out.clear();
 		return;
 	}
-	const size_t index =
-		animate ? (elapsed / content_interval(content.bytes + 2)) % content.bytes[1] : 0;
-	memcpy(output.bytes, content.bytes + kArtworkHeaderBytes + index * kFrameBytes,
-	       kFrameBytes);
+	if (source_ != art.bytes || length_ != art.length) {
+		reset();
+		if (!valid_artwork(art.bytes, art.length)) {
+			out.clear();
+			return;
+		}
+		source_ = art.bytes;
+		length_ = art.length;
+	}
+	if (index >= art.bytes[1]) {
+		out.clear();
+		return;
+	}
+	if (index != index_) {
+		size_t offset = 6;
+		if (art.bytes[0] == 2 && index == index_ + 1) {
+			for (unsigned i = 0; i < index; i++) {
+				offset += 5 + content_interval(art.bytes + offset + 1);
+			}
+		}
+		if (art.bytes[0] == 2 && index == index_ + 1 && art.bytes[offset] == 3) {
+			const size_t size = content_interval(art.bytes + offset + 1);
+			offset += 5;
+			unsigned pixel = 0;
+			for (size_t i = 0; i < size; i += 3) {
+				const unsigned run = content_interval(art.bytes + offset + i);
+				const uint8_t shade = art.bytes[offset + i + 2];
+				for (unsigned n = 0; n < run; n++, pixel++) {
+					cached_.levels[pixel] ^= shade;
+				}
+			}
+			memset(cached_.bytes, 0, sizeof(cached_.bytes));
+			for (unsigned i = 0; i < 1024; i++) {
+				if (cached_.levels[i]) {
+					cached_.bytes[i / 8] |= 128 >> (i % 8);
+				}
+			}
+		} else {
+			(void)artwork_frame(art, index, cached_, false);
+		}
+		index_ = index;
+	}
+	out = cached_;
+}
+void ArtworkPlayer::render(Frame &out, const Artwork &art, uint32_t elapsed, bool animate)
+{
+	if (art.bytes == nullptr || art.length < 4) {
+		reset();
+		out.clear();
+		return;
+	}
+	if (source_ != art.bytes || length_ != art.length) {
+		reset();
+		if (!valid_artwork(art.bytes, art.length)) {
+			out.clear();
+			return;
+		}
+		source_ = art.bytes;
+		length_ = art.length;
+	}
+	frame(out, art, animate ? artwork_index(art, elapsed, false) : 0);
+}
+void render_artwork(Frame &output, const Artwork &content, uint32_t elapsed, bool animate)
+{
+	if (!valid_artwork(content.bytes, content.length)) {
+		output.clear();
+		return;
+	}
+	const unsigned index = animate ? artwork_index(content, elapsed, false) : 0;
+	(void)artwork_frame(content, index, output, false);
 }
 bool artwork_present(const Artwork &content, bool first_frame_only)
 {
 	if (!valid_artwork(content.bytes, content.length)) {
 		return false;
 	}
-	const size_t end = first_frame_only ? kArtworkHeaderBytes + kFrameBytes : content.length;
-	for (size_t i = kArtworkHeaderBytes; i < end; ++i) {
-		if (content.bytes[i] != 0) {
-			return true;
+	Frame frame;
+	ArtworkPlayer player;
+	const unsigned count = first_frame_only ? 1 : content.bytes[1];
+	for (unsigned i = 0; i < count; ++i) {
+		player.frame(frame, content, i);
+		for (unsigned n = 0; n < kFrameBytes; ++n) {
+			if (frame.bytes[n]) {
+				return true;
+			}
 		}
 	}
 	return false;

@@ -5,6 +5,11 @@
 
 namespace badge
 {
+namespace
+{
+Settings url_candidate; // Owned by the serialized URL transaction.
+}
+
 int UrlUpdate::begin(const char *url, size_t length, uint64_t now)
 {
 	if (phase_ != Phase::kIdle && phase_ != Phase::kDone) {
@@ -48,7 +53,8 @@ bool UrlUpdate::poll(SettingsService &settings, Modes &modes, SaveField write, v
 {
 	expire(now);
 	if (phase_ == Phase::kPrepare) {
-		Settings candidate = settings.values();
+		auto &candidate = url_candidate;
+		candidate = settings.values();
 		memcpy(previous_, candidate.url, sizeof(previous_));
 		memcpy(candidate.url, requested_, sizeof(candidate.url));
 		previous_mode_ = modes.active();

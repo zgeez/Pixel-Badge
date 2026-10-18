@@ -21,6 +21,10 @@ constexpr size_t kFrameBytes = kMatrixSize * kFrameStride;
  * SCREEN_INFO_MONO_MSB_FIRST. */
 struct Frame {
 	uint8_t bytes[kFrameBytes];
+	uint8_t levels[kMatrixSize * kMatrixSize]{};
+	bool grayscale = false;
+	uint8_t level(int x, int y) const;
+	void set_level(int x, int y, uint8_t value);
 
 	void clear();
 	void set(int x, int y, bool lit = true);

@@ -47,6 +47,9 @@ extern "C" int __wrap_settings_load_subtree_direct(const char *subtree,
 	if (!inject_reads) {
 		return __real_settings_load_subtree_direct(subtree, callback, context);
 	}
+	if (strcmp(subtree, "badge/art-meta") == 0) {
+		return 0;
+	}
 	zassert_equal(strcmp(subtree, "badge"), 0);
 	uint8_t schema = kSchemaVersion;
 	zassert_ok(callback("schema", 1, exact_read, &schema, context));

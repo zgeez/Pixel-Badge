@@ -15,6 +15,11 @@ namespace badge
 static_assert(sizeof(BADGE_DEFAULT_URL) <= kPayloadMax + 1);
 const Settings kDefaultSettings = {BADGE_DEFAULT_URL, "BADGE", 128, Mode::kQr, {}, {}, {}};
 
+namespace
+{
+SettingsService save_candidate;
+} // namespace
+
 const char *field_name(Field field)
 {
 	static const char *const names[] = {"schema", "url",  "name",    "brightness",
@@ -65,7 +70,7 @@ bool SettingsService::apply(Field field, const void *data, size_t length)
 		if (length != 1 || bytes[0] == 0) {
 			return false;
 		}
-		values_.brightness = bytes[0];
+		values_.brightness = bytes[0] == 16 ? 13 : bytes[0];
 		return true;
 	case Field::kDefaultMode:
 		if (length != 1 || bytes[0] > static_cast<uint8_t>(Mode::kFluid)) {
@@ -85,9 +90,7 @@ bool SettingsService::apply(Field field, const void *data, size_t length)
 		if (!valid_artwork(bytes, length)) {
 			return false;
 		}
-		memset(values_.artwork.bytes, 0, sizeof(values_.artwork.bytes));
-		memcpy(values_.artwork.bytes, bytes, length);
-		values_.artwork.length = length;
+		values_.artwork = {bytes, static_cast<uint32_t>(length)};
 		return true;
 	case Field::kMotion:
 		if (!valid_motion(bytes, length)) {
@@ -124,7 +127,8 @@ uint8_t SettingsService::finish_load()
 int SettingsService::save(Field field, const void *data, size_t length, SaveField write,
 			  void *context)
 {
-	SettingsService candidate = *this;
+	auto &candidate = save_candidate;
+	candidate = *this;
 	if (write == nullptr || !candidate.apply(field, data, length)) {
 		return -EINVAL;
 	}
@@ -146,8 +150,12 @@ int SettingsService::save(Field field, const void *data, size_t length, SaveFiel
 		constexpr unsigned fields = sizeof(data) / sizeof(data[0]);
 		static_assert(fields == static_cast<unsigned>(Field::kCount) - 1);
 		for (unsigned i = 0; i < fields; ++i) {
-			const int rc =
-				write(context, static_cast<Field>(i + 1), data[i], lengths[i]);
+			const Field target = static_cast<Field>(i + 1);
+			const bool requested_art = field == Field::kArtwork && target == field;
+			const int rc = write(
+				context, target,
+				requested_art ? candidate.values_.artwork.bytes : data[i],
+				requested_art ? candidate.values_.artwork.length : lengths[i]);
 			if (rc != 0) {
 				return rc;
 			}
@@ -158,6 +166,10 @@ int SettingsService::save(Field field, const void *data, size_t length, SaveFiel
 			return rc;
 		}
 		schema_ok_ = true;
+		if (field == Field::kArtwork) {
+			values_ = candidate.values_;
+			return 0;
+		}
 	}
 	int rc = write(context, field, data, length);
 	if (rc == 0) {

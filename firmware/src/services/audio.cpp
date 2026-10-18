@@ -213,4 +213,27 @@ void render_audio(Frame &output, const AudioAnalysis &analysis, bool spectrum)
 		output.set(31, 1);
 	}
 }
+void render_recording_audio(Frame &output, const AudioAnalysis &analysis)
+{
+	output.clear();
+	for (unsigned band = 0; band < kAudioBands; ++band) {
+		const unsigned rows = height(analysis.bands[band]) * 28 / 32;
+		for (unsigned y = 0; y < rows; ++y) {
+			for (unsigned x = 0; x < 3; ++x) {
+				output.set(band * 4 + x, 27 - y);
+			}
+		}
+	}
+	const unsigned columns = height(analysis.rms);
+	for (unsigned x = 0; x < columns; ++x) {
+		output.set(x, 30);
+		output.set(x, 31);
+	}
+	// Fixed frame corners distinguish the active recording view even in silence.
+	output.set(0, 0);
+	output.set(31, 0);
+	if (analysis.clipped) {
+		output.set(31, 1);
+	}
+}
 } // namespace badge

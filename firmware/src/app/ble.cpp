@@ -1,5 +1,8 @@
 /* SPDX-License-Identifier: MIT */
 #include "badge/ble.hpp"
+#include "badge/settings_store.hpp"
+#include <zephyr/sys/byteorder.h>
+#include <zephyr/sys/atomic.h>
 #include "badge/nfc.hpp"
 #include "badge/text.hpp"
 #include "badge/modes.hpp"
@@ -42,9 +45,10 @@ K_MUTEX_DEFINE(ble_mutex);
 K_SEM_DEFINE(ble_started, 0, 1);
 K_SEM_DEFINE(main_requested, 0, 1);
 K_SEM_DEFINE(main_completed, 0, 1);
-K_MSGQ_DEFINE(config_requests, sizeof(ConfigCommand), 1, 4);
+K_MSGQ_DEFINE(config_requests, sizeof(uint8_t), 1, 1);
 BleProtocol protocol;
 Settings snapshot = kDefaultSettings;
+uint32_t snapshot_art_crc;
 Mode active_mode = Mode::kQr;
 bt_conn *connection;
 bool writable, enabled, job_active;
@@ -53,7 +57,45 @@ bool passkey_visible;
 uint32_t displayed_passkey;
 ConfigCommand main_command;
 int main_result;
-uint16_t artwork_read_offset;
+ArtworkReadCursor artwork_read;
+atomic_t artwork_uploading, artwork_applying;
+int64_t artwork_upload_deadline;
+K_SEM_DEFINE(artwork_requested, 0, 1);
+K_SEM_DEFINE(artwork_completed, 0, 1);
+struct ArtFragment {
+	uint32_t offset, total;
+	size_t length;
+	uint8_t bytes[235];
+	int result;
+	const uint8_t *view;
+} art_fragment;
+void artwork_worker(void *, void *, void *)
+{
+	while (true) {
+		k_sem_take(&artwork_requested, K_FOREVER);
+		art_fragment.view = nullptr;
+		art_fragment.result = stage_artwork_flash(art_fragment.offset, art_fragment.total,
+							  art_fragment.bytes, art_fragment.length,
+							  &art_fragment.view);
+		k_sem_give(&artwork_completed);
+	}
+}
+K_THREAD_DEFINE(artwork_tid, 4096, artwork_worker, nullptr, nullptr, nullptr, 9, 0, 0);
+int stage_art(void *, uint32_t offset, uint32_t total, const uint8_t *bytes, size_t length,
+	      const uint8_t **view)
+{
+	if (length > sizeof(art_fragment.bytes)) {
+		return -EINVAL;
+	}
+	art_fragment.offset = offset;
+	art_fragment.total = total;
+	art_fragment.length = length;
+	memcpy(art_fragment.bytes, bytes, length);
+	k_sem_give(&artwork_requested);
+	k_sem_take(&artwork_completed, K_FOREVER);
+	*view = art_fragment.view;
+	return art_fragment.result;
+}
 
 uint8_t flags()
 {
@@ -82,9 +124,9 @@ ssize_t read_info(bt_conn *conn, const bt_gatt_attr *attr, void *buf, uint16_t l
 							       : 4,
 				flags(),
 				kArtworkFrames,
-				IS_ENABLED(CONFIG_APP_MOTION)  ? 31
-				: IS_ENABLED(CONFIG_APP_AUDIO) ? 15
-							       : 7};
+				IS_ENABLED(CONFIG_APP_MOTION)  ? 255
+				: IS_ENABLED(CONFIG_APP_AUDIO) ? 239
+							       : 231};
 	k_mutex_unlock(&ble_mutex);
 	return bt_gatt_attr_read(conn, attr, buf, len, offset, info, sizeof(info));
 }
@@ -94,8 +136,8 @@ ssize_t read_setting(bt_conn *conn, const bt_gatt_attr *attr, void *buf, uint16_
 	if (!secure(conn)) {
 		return att_error(-EACCES);
 	}
-	uint8_t data[kTextBytes];
-	size_t length = 1;
+	uint8_t data[244];
+	size_t length = 1, artwork_payload = 0;
 	const Field field = static_cast<Field>(reinterpret_cast<uintptr_t>(attr->user_data));
 	k_mutex_lock(&ble_mutex, K_FOREVER);
 	if (field == Field::kUrl) {
@@ -108,15 +150,29 @@ ssize_t read_setting(bt_conn *conn, const bt_gatt_attr *attr, void *buf, uint16_
 		length = snapshot.text.length;
 		memcpy(data, snapshot.text.bytes, length);
 	} else if (field == Field::kArtwork) {
-		const uint16_t total = snapshot.artwork.length;
-		const uint16_t cursor = artwork_read_offset <= total ? artwork_read_offset : total;
-		length = total - cursor < 16 ? total - cursor : 16;
-		data[0] = cursor;
-		data[1] = cursor >> 8;
-		data[2] = total;
-		data[3] = total >> 8;
-		memcpy(data + 4, snapshot.artwork.bytes + cursor, length);
-		length += 4;
+		if (artwork_read.sequential && offset != 0) {
+			k_mutex_unlock(&ble_mutex);
+			return BT_GATT_ERR(BT_ATT_ERR_INVALID_OFFSET);
+		}
+		if (artwork_read.metadata) {
+			sys_put_le32(snapshot.artwork.length, data);
+			sys_put_le32(snapshot_art_crc, data + 4);
+			length = 8;
+		} else {
+			const uint32_t total = snapshot.artwork.length;
+			const uint32_t cursor =
+				artwork_read.offset <= total ? artwork_read.offset : total;
+			const size_t header = artwork_read.wide ? 8 : 4;
+			const size_t available = artwork_read.capacity(len);
+			length = MIN(total - cursor, available);
+			artwork_payload = length;
+			for (unsigned i = 0; i < (artwork_read.wide ? 4U : 2U); i++) {
+				data[i] = cursor >> (8 * i);
+				data[(artwork_read.wide ? 4 : 2) + i] = total >> (8 * i);
+			}
+			memcpy(data + header, snapshot.artwork.bytes + cursor, length);
+			length += header;
+		}
 	} else if (field == Field::kMotion) {
 		length = kMotionBytes;
 		memcpy(data, snapshot.motion.bytes, length);
@@ -133,8 +189,12 @@ ssize_t read_setting(bt_conn *conn, const bt_gatt_attr *attr, void *buf, uint16_
 		data[0] = field == Field::kBrightness ? snapshot.brightness
 						      : static_cast<uint8_t>(active_mode);
 	}
+	const ssize_t result = bt_gatt_attr_read(conn, attr, buf, len, offset, data, length);
+	if (field == Field::kArtwork) {
+		artwork_read.complete(offset, result, length, artwork_payload);
+	}
 	k_mutex_unlock(&ble_mutex);
-	return bt_gatt_attr_read(conn, attr, buf, len, offset, data, length);
+	return result;
 }
 ssize_t stage_setting(bt_conn *conn, const bt_gatt_attr *attr, const void *buf, uint16_t len,
 		      uint16_t offset, uint8_t write_flags)
@@ -144,20 +204,49 @@ ssize_t stage_setting(bt_conn *conn, const bt_gatt_attr *attr, const void *buf, 
 	}
 	const Field field = static_cast<Field>(reinterpret_cast<uintptr_t>(attr->user_data));
 	k_mutex_lock(&ble_mutex, K_FOREVER);
-	if (field == Field::kArtwork && len == 3 && static_cast<const uint8_t *>(buf)[0] == 0) {
-		const int rc = secure(conn) && connection == conn ? 0 : -EACCES;
-		const uint16_t cursor = content_interval(static_cast<const uint8_t *>(buf) + 1);
-		const bool within = cursor <= snapshot.artwork.length;
-		if (rc == 0 && within) {
-			artwork_read_offset = cursor;
-		}
+	const auto *read_command = static_cast<const uint8_t *>(buf);
+	if (field == Field::kArtwork &&
+	    ((len == 1 && (read_command[0] == 3 || read_command[0] == 4)) ||
+	     (len == 3 && read_command[0] == 0) || (len == 5 && read_command[0] == 2))) {
+		const bool allowed = secure(conn) && connection == conn;
+		const bool selected =
+			allowed && artwork_read.select(read_command, len, snapshot.artwork.length);
 		k_mutex_unlock(&ble_mutex);
-		return rc != 0 ? att_error(rc) : !within ? att_error(-EINVAL) : len;
+		return !allowed ? att_error(-EACCES) : selected ? len : att_error(-EINVAL);
+	}
+	if (field == Field::kArtwork) {
+		if (!secure(conn) || connection != conn || !writable || passkey_visible ||
+		    job_active) {
+			k_mutex_unlock(&ble_mutex);
+			return att_error(-EACCES);
+		}
+		atomic_set(&artwork_uploading, 1);
+		artwork_upload_deadline = k_uptime_get() + 10000;
+		k_mutex_unlock(&ble_mutex);
+#if defined(CONFIG_APP_AUDIO)
+		bool recording_busy = audio_ui_busy();
+		const int64_t pause_deadline = k_uptime_get() + 500;
+		while (!recording_busy && !audio_quiescent() && k_uptime_get() < pause_deadline) {
+			k_msleep(1);
+		}
+		recording_busy = recording_busy || !audio_quiescent();
+#else
+		const bool recording_busy = false;
+#endif
+		k_mutex_lock(&ble_mutex, K_FOREVER);
+		if (recording_busy || nfc_update_busy()) {
+			atomic_clear(&artwork_uploading);
+			k_mutex_unlock(&ble_mutex);
+			return att_error(-EBUSY);
+		}
 	}
 	const int rc = job_active ? -EBUSY
 				  : protocol.stage(field, static_cast<const uint8_t *>(buf), len,
 						   secure(conn) && connection == conn && writable &&
 							   !passkey_visible);
+	if (field == Field::kArtwork && rc != 0) {
+		atomic_clear(&artwork_uploading);
+	}
 	k_mutex_unlock(&ble_mutex);
 	return rc == 0 ? len : att_error(rc);
 }
@@ -181,8 +270,9 @@ ssize_t apply_setting(bt_conn *conn, const bt_gatt_attr *, const void *buf, uint
 	if (offset != 0 || write_flags != 0) {
 		return BT_GATT_ERR(BT_ATT_ERR_INVALID_OFFSET);
 	}
-	/* Large bounded asset storage must not live on the Bluetooth RX stack. */
-	static ConfigCommand command;
+	/* The serialized job owns one mailbox through main completion.
+	 * The queue carries only a wakeup, never additional artwork copies. */
+	auto &command = main_command;
 	k_mutex_lock(&ble_mutex, K_FOREVER);
 	int rc = job_active ? -EBUSY
 			    : protocol.accept(static_cast<const uint8_t *>(buf), len,
@@ -190,9 +280,13 @@ ssize_t apply_setting(bt_conn *conn, const bt_gatt_attr *, const void *buf, uint
 						      !passkey_visible,
 					      command);
 	if (rc == 0) {
-		rc = k_msgq_put(&config_requests, &command, K_NO_WAIT);
+		const uint8_t token = 1;
+		rc = k_msgq_put(&config_requests, &token, K_NO_WAIT);
 		if (rc == 0) {
 			job_active = true;
+			if (command.field == Field::kArtwork) {
+				atomic_set(&artwork_applying, 1);
+			}
 		} else {
 			protocol.complete(command, rc);
 		}
@@ -297,7 +391,8 @@ void connected(bt_conn *conn, uint8_t error)
 	k_mutex_lock(&ble_mutex, K_FOREVER);
 	connection = bt_conn_ref(conn);
 	protocol.reset();
-	artwork_read_offset = 0;
+	atomic_clear(&artwork_uploading);
+	artwork_read = {};
 	k_mutex_unlock(&ble_mutex);
 	/* Bonded reconnection does not require the physical pairing window. The
 	 * pairing_accept callback blocks all new pairing outside that window. */
@@ -318,6 +413,7 @@ void disconnected(bt_conn *conn, uint8_t)
 		connection = nullptr;
 	}
 	protocol.reset();
+	atomic_clear(&artwork_uploading);
 	passkey_visible = false;
 	k_mutex_unlock(&ble_mutex);
 	/* Recycling has not finished here. Advertising starts in recycled(). */
@@ -384,6 +480,7 @@ bt_conn_auth_info_cb authentication_info{};
 void worker(void *, void *, void *)
 {
 	k_sem_take(&ble_started, K_FOREVER);
+	protocol.artwork_staging(stage_art, nullptr);
 	LOG_INF("BLE startup: registering callbacks");
 	k_work_init(&status_work, notify_status);
 	k_work_init(&advertise_work, advertise);
@@ -423,10 +520,10 @@ void worker(void *, void *, void *)
 	LOG_INF("BLE ready: configuration service available");
 	k_work_submit(&advertise_work);
 	while (true) {
-		/* One worker owns the command; keep the 2 KiB asset off its stack,
-		 * including the startup path through bt_enable(). */
-		static ConfigCommand command;
-		k_msgq_get(&config_requests, &command, K_FOREVER);
+		/* job_active keeps the shared mailbox immutable until main completion. */
+		uint8_t token;
+		k_msgq_get(&config_requests, &token, K_FOREVER);
+		const auto &command = main_command;
 		k_mutex_lock(&ble_mutex, K_FOREVER);
 		const bool current = protocol.current(command) && writable;
 		k_mutex_unlock(&ble_mutex);
@@ -440,7 +537,6 @@ void worker(void *, void *, void *)
 		}
 		/* Main owns all settings/mode/display state and publishes readback
 		 * before status completion. No Bluetooth callback touches flash/I2C. */
-		main_command = command;
 		main_result = result;
 		k_sem_give(&main_requested);
 		k_sem_take(&main_completed, K_FOREVER);
@@ -482,12 +578,20 @@ bool ble_pairing_frame(Frame &frame)
 	}
 	return visible;
 }
+bool ble_artwork_busy()
+{
+	return atomic_get(&artwork_uploading) != 0 || atomic_get(&artwork_applying) != 0;
+}
+
 void poll_ble(const Settings &settings, Modes &modes, bool allow_writes, ApplyConfig apply,
 	      void *context)
 {
 	const bool requested = k_sem_take(&main_requested, K_NO_WAIT) == 0;
 	k_mutex_lock(&ble_mutex, K_FOREVER);
 	writable = allow_writes;
+	if (artwork_upload_deadline <= k_uptime_get()) {
+		atomic_clear(&artwork_uploading);
+	}
 	bool expired = pairing_deadline != 0 &&
 		       (!writable || pairing_deadline <= static_cast<uint64_t>(k_uptime_get()));
 	bt_conn *cancel = expired && passkey_visible && connection != nullptr
@@ -514,9 +618,14 @@ void poll_ble(const Settings &settings, Modes &modes, bool allow_writes, ApplyCo
 	k_mutex_lock(&ble_mutex, K_FOREVER);
 	/* settings references the live main-owned values, including apply() changes. */
 	snapshot = settings;
+	snapshot_art_crc = current_artwork_crc(snapshot.artwork);
 	active_mode = modes.active();
 	if (requested) {
 		protocol.complete(main_command, main_result);
+		if (main_command.field == Field::kArtwork) {
+			atomic_clear(&artwork_uploading);
+			atomic_clear(&artwork_applying);
+		}
 		job_active = false;
 	}
 	k_mutex_unlock(&ble_mutex);

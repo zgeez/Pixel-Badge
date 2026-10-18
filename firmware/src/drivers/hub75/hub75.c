@@ -5,10 +5,9 @@
  *
  * Monochrome window (PIXEL_FORMAT_MONO01, rows packed MSB first) in the top
  * half of the panel. A TIMER compare at the end of each row slot interrupts;
- * the handler switches the row off, sets the address, latches the row shifted
- * during the previous slot, switches it on, then shifts the next row while
- * this one is lit. A second compare switches OE off through DPPI and GPIOTE,
- * so the on-time (brightness) is set by hardware.
+ * the handler blanks output, sets the address, latches the previously shifted
+ * row, then shifts the next row while the timer is stopped. Starting the timer
+ * schedules both OE edges through DPPI and GPIOTE, so on-time is set by hardware.
  *
  * Writes go to a back buffer that the interrupt swaps in at the frame start.
  */
@@ -16,6 +15,7 @@
 #define DT_DRV_COMPAT smartledbadge_hub75
 
 #include <string.h>
+#include "badge/hub75_timing.h"
 
 #include <zephyr/device.h>
 #include <zephyr/drivers/display.h>
@@ -36,8 +36,6 @@ LOG_MODULE_REGISTER(hub75, CONFIG_DISPLAY_LOG_LEVEL);
 
 #define MAX_ADDR_LINES 5
 #define TICKS_PER_US   16
-/* OE stays off for at least this long at the end of each slot. */
-#define MIN_OFF_US     2
 /* Time allowed between scheduling the off compare and switching OE on. */
 #define ON_MARGIN      (1 * TICKS_PER_US)
 
@@ -73,12 +71,14 @@ struct hub75_config {
 };
 
 struct hub75_data {
-	uint32_t on_ticks;
 	volatile uint32_t frames;
 	uint8_t oe_ch;
 	uint8_t front;
 	uint8_t next_row;
 	uint8_t brightness;
+	uint8_t plane;
+	enum display_pixel_format input_format;
+	nrfx_gppi_handle_t on_link;
 	volatile bool swap_pending;
 	volatile bool back_stale;
 	/* Read by the interrupt: a blanked display is never switched on. */
@@ -108,14 +108,14 @@ static void set_address(const struct hub75_config *cfg, uint8_t row)
 	}
 }
 
-static void shift_row(const struct hub75_config *cfg, const uint8_t *line)
+static void shift_row(const struct hub75_config *cfg, const uint8_t *line, uint8_t plane_mask)
 {
 	NRF_GPIO_Type *port = cfg->data_port;
 
 	for (uint16_t i = 0; i < cfg->panel_columns; i++) {
 		/* The first pixel shifted ends up at the far end of the row. */
 		uint16_t x = cfg->mirror_x ? i : cfg->panel_columns - 1 - i;
-		bool lit = x < cfg->width && (line[x >> 3] & BIT(7 - (x & 7)));
+		bool lit = x < cfg->width && (line[x] & plane_mask);
 
 		nrf_gpio_port_out_clear(port, cfg->data_mask);
 		if (lit) {
@@ -128,59 +128,62 @@ static void shift_row(const struct hub75_config *cfg, const uint8_t *line)
 	nrf_gpio_port_out_clear(port, cfg->data_mask);
 }
 
+/* All content uses eight weighted bit planes, including binary QR/text.
+ * A common schedule prevents unchanged white pixels changing duty when a
+ * single intermediate shade is introduced. Each slot is one-shot: a late ISR extends blanking,
+ * never an LED pulse. OE edges are timer/DPPI tasks, including the short LSB.
+ * 16us minimum slots and 250ns base duty are implementation values requiring
+ * panel/combined-load optical and scope acceptance, not measured guarantees. */
 static void hub75_isr(const void *arg)
 {
 	const struct device *dev = arg;
 	const struct hub75_config *cfg = dev->config;
 	struct hub75_data *data = dev->data;
-	uint8_t row = data->next_row;
-	uint8_t next = (row + 1 == cfg->height) ? 0 : row + 1;
-
+	const uint8_t row = data->next_row;
+	const uint8_t plane = data->plane;
 	nrf_timer_event_clear(cfg->timer, NRF_TIMER_EVENT_COMPARE0);
-
 	oe_task(cfg, data->oe_ch, false);
+	nrfx_gppi_conn_disable(data->on_link);
 	if (data->blanked) {
 		return;
 	}
 	set_address(cfg, row);
 	nrf_gpio_port_out_set(cfg->lat_pin.port, cfg->lat_pin.mask);
 	nrf_gpio_port_out_clear(cfg->lat_pin.port, cfg->lat_pin.mask);
-
-	if (data->on_ticks > 0) {
-		/* The off compare is set from now, so every nonzero brightness
-		 * gets its full on-time, and the row is always off by the end of
-		 * the slot. A late interrupt skips the row rather than leave it
-		 * on. */
-		uint32_t last = (cfg->row_period_us - MIN_OFF_US) * TICKS_PER_US;
-		uint32_t now;
-		uint32_t off_at;
-
-		nrf_timer_task_trigger(cfg->timer, NRF_TIMER_TASK_CAPTURE2);
-		now = nrf_timer_cc_get(cfg->timer, NRF_TIMER_CC_CHANNEL2);
-		off_at = MIN(now + ON_MARGIN + data->on_ticks, last);
-		if (now + ON_MARGIN < off_at) {
-			nrf_timer_cc_set(cfg->timer, NRF_TIMER_CC_CHANNEL1, off_at);
-			oe_task(cfg, data->oe_ch, true);
-		}
+	const uint32_t on = badge_gray_on_ticks(plane, data->brightness);
+	const uint32_t end = ON_MARGIN + on;
+	const uint32_t period = badge_gray_slot_ticks(on);
+	nrf_timer_cc_set(cfg->timer, NRF_TIMER_CC_CHANNEL0, period);
+	nrf_timer_cc_set(cfg->timer, NRF_TIMER_CC_CHANNEL3, ON_MARGIN);
+	nrf_timer_cc_set(cfg->timer, NRF_TIMER_CC_CHANNEL1, end);
+	nrf_timer_event_clear(cfg->timer, NRF_TIMER_EVENT_COMPARE1);
+	nrf_timer_event_clear(cfg->timer, NRF_TIMER_EVENT_COMPARE3);
+	if (on) {
+		nrfx_gppi_conn_enable(data->on_link);
 	}
 
+	uint8_t next = row + 1 == cfg->height ? 0 : row + 1;
 	if (next == 0) {
-		data->frames++;
-		if (data->swap_pending) {
-			data->front ^= 1;
-			data->swap_pending = false;
-			data->back_stale = true;
+		data->plane = plane + 1;
+		if (data->plane == 8) {
+			data->plane = 0;
+			data->frames++;
+			if (data->swap_pending) {
+				data->front ^= 1;
+				data->swap_pending = false;
+				data->back_stale = true;
+			}
 		}
 	}
-	shift_row(cfg, buffer(cfg, data->front) + (size_t)next * cfg->stride);
 	data->next_row = next;
-}
-
-static uint32_t on_ticks_for(const struct hub75_config *cfg, uint8_t brightness)
-{
-	uint32_t max_on = (cfg->row_period_us - MIN_OFF_US) * TICKS_PER_US;
-
-	return max_on * brightness / 255U;
+	nrf_timer_task_trigger(cfg->timer, NRF_TIMER_TASK_CLEAR);
+	/* Keep the one-shot timer stopped throughout GPIO shifting. Starting it
+	 * earlier lets short gray slots expire inside this ISR; successive pending
+	 * interrupts can then starve every thread, including the watchdog feeder.
+	 * A full slot of thread time now follows the shift, even on the shortest
+	 * plane. OE remains off until the hardware on compare after START. */
+	shift_row(cfg, buffer(cfg, data->front) + (size_t)next * cfg->stride, BIT(data->plane));
+	nrf_timer_task_trigger(cfg->timer, NRF_TIMER_TASK_START);
 }
 
 static int hub75_blanking_on(const struct device *dev)
@@ -190,6 +193,7 @@ static int hub75_blanking_on(const struct device *dev)
 
 	/* Set first, so an interrupt that still runs leaves OE off. */
 	data->blanked = true;
+	nrfx_gppi_conn_disable(data->on_link);
 	nrf_timer_task_trigger(cfg->timer, NRF_TIMER_TASK_STOP);
 	irq_disable(cfg->irqn);
 	nrf_timer_event_clear(cfg->timer, NRF_TIMER_EVENT_COMPARE0);
@@ -215,7 +219,8 @@ static int hub75_blanking_off(const struct device *dev)
 		return 0;
 	}
 	data->next_row = 0;
-	shift_row(cfg, buffer(cfg, data->front));
+	data->plane = 0;
+	shift_row(cfg, buffer(cfg, data->front), 1);
 	nrf_timer_task_trigger(cfg->timer, NRF_TIMER_TASK_CLEAR);
 	nrf_timer_event_clear(cfg->timer, NRF_TIMER_EVENT_COMPARE0);
 	NVIC_ClearPendingIRQ((IRQn_Type)cfg->irqn);
@@ -226,21 +231,14 @@ static int hub75_blanking_off(const struct device *dev)
 }
 
 static void copy_region(const struct hub75_config *cfg, uint8_t *dst, uint16_t x, uint16_t y,
-			const struct display_buffer_descriptor *desc, const uint8_t *src)
+			const struct display_buffer_descriptor *desc, const uint8_t *src, bool gray)
 {
-	for (uint16_t yy = 0; yy < desc->height; yy++) {
-		uint8_t *line = dst + (size_t)(y + yy) * cfg->stride;
-
-		for (uint16_t xx = 0; xx < desc->width; xx++) {
-			size_t bit = (size_t)yy * desc->pitch + xx;
-			uint16_t px = x + xx;
-			uint8_t mask = BIT(7 - (px & 7));
-
-			if (src[bit >> 3] & BIT(7 - (bit & 7))) {
-				line[px >> 3] |= mask;
-			} else {
-				line[px >> 3] &= ~mask;
-			}
+	for (uint16_t yy = 0; yy < desc->height; ++yy) {
+		for (uint16_t xx = 0; xx < desc->width; ++xx) {
+			const size_t pixel = (size_t)yy * desc->pitch + xx;
+			dst[(size_t)(y + yy) * cfg->stride + x + xx] =
+				gray ? src[pixel]
+				     : (src[pixel >> 3] & BIT(7 - (pixel & 7)) ? 255 : 0);
 		}
 	}
 }
@@ -255,13 +253,17 @@ static int hub75_write(const struct device *dev, const uint16_t x, const uint16_
 	if (desc->width == 0 || desc->height == 0 || x + desc->width > cfg->width ||
 	    y + desc->height > cfg->height || desc->pitch < desc->width ||
 	    desc->buf_size <
-		    DIV_ROUND_UP((size_t)desc->pitch * (desc->height - 1) + desc->width, 8)) {
+		    (data->input_format == PIXEL_FORMAT_L_8
+			     ? (size_t)desc->pitch * (desc->height - 1) + desc->width
+			     : DIV_ROUND_UP((size_t)desc->pitch * (desc->height - 1) + desc->width,
+					    8))) {
 		return -EINVAL;
 	}
 
 	if (data->blanked) {
 		/* No swaps while blanked: write the shown buffer directly. */
-		copy_region(cfg, buffer(cfg, data->front), x, y, desc, buf);
+		copy_region(cfg, buffer(cfg, data->front), x, y, desc, buf,
+			    data->input_format == PIXEL_FORMAT_L_8);
 		data->back_stale = true;
 		return 0;
 	}
@@ -279,7 +281,7 @@ static int hub75_write(const struct device *dev, const uint16_t x, const uint16_
 		memcpy(dst, buffer(cfg, data->front), (size_t)cfg->height * cfg->stride);
 		data->back_stale = false;
 	}
-	copy_region(cfg, dst, x, y, desc, buf);
+	copy_region(cfg, dst, x, y, desc, buf, data->input_format == PIXEL_FORMAT_L_8);
 	if (!desc->frame_incomplete) {
 		data->swap_pending = true;
 	}
@@ -297,7 +299,7 @@ int badge_hub75_wait_visible(const struct device *dev, unsigned timeout_ms)
 		k_msleep(1);
 	}
 	/* A front-buffer swap precedes the row-zero latch. Require one complete
-	 * scan as well, so all REC rows have actually reached the panel. */
+	 * scan as well, so the recording view has actually reached the panel. */
 	uint32_t frame = data->frames;
 	while (data->frames == frame) {
 		if (data->blanked || k_uptime_get() >= deadline) {
@@ -310,12 +312,10 @@ int badge_hub75_wait_visible(const struct device *dev, unsigned timeout_ms)
 
 static int hub75_set_brightness(const struct device *dev, const uint8_t brightness)
 {
-	const struct hub75_config *cfg = dev->config;
 	struct hub75_data *data = dev->data;
 
 	data->brightness = brightness;
 	/* Used from the next row: the interrupt sets the off compare per row. */
-	data->on_ticks = on_ticks_for(cfg, brightness);
 	return 0;
 }
 
@@ -326,16 +326,19 @@ static void hub75_get_capabilities(const struct device *dev, struct display_capa
 	memset(caps, 0, sizeof(*caps));
 	caps->x_resolution = cfg->width;
 	caps->y_resolution = cfg->height;
-	caps->supported_pixel_formats = PIXEL_FORMAT_MONO01;
-	caps->current_pixel_format = PIXEL_FORMAT_MONO01;
+	caps->supported_pixel_formats = PIXEL_FORMAT_MONO01 | PIXEL_FORMAT_L_8;
+	caps->current_pixel_format = ((struct hub75_data *)dev->data)->input_format;
 	caps->screen_info = SCREEN_INFO_MONO_MSB_FIRST;
 	caps->current_orientation = DISPLAY_ORIENTATION_NORMAL;
 }
 
 static int hub75_set_pixel_format(const struct device *dev, const enum display_pixel_format pf)
 {
-	ARG_UNUSED(dev);
-	return pf == PIXEL_FORMAT_MONO01 ? 0 : -ENOTSUP;
+	if (pf != PIXEL_FORMAT_MONO01 && pf != PIXEL_FORMAT_L_8) {
+		return -ENOTSUP;
+	}
+	((struct hub75_data *)dev->data)->input_format = pf;
+	return 0;
 }
 
 static DEVICE_API(display, hub75_api) = {
@@ -383,7 +386,8 @@ static int hub75_init(const struct device *dev)
 	nrf_timer_bit_width_set(cfg->timer, NRF_TIMER_BIT_WIDTH_32);
 	nrf_timer_prescaler_set(cfg->timer, 0);
 	nrf_timer_cc_set(cfg->timer, NRF_TIMER_CC_CHANNEL0, cfg->row_period_us * TICKS_PER_US);
-	nrf_timer_shorts_enable(cfg->timer, NRF_TIMER_SHORT_COMPARE0_CLEAR_MASK);
+	nrf_timer_shorts_enable(cfg->timer, NRF_TIMER_SHORT_COMPARE0_CLEAR_MASK |
+						    NRF_TIMER_SHORT_COMPARE0_STOP_MASK);
 	nrf_timer_event_clear(cfg->timer, NRF_TIMER_EVENT_COMPARE0);
 	nrf_timer_int_enable(cfg->timer, NRF_TIMER_INT_COMPARE0_MASK);
 	hub75_set_brightness(dev, CONFIG_HUB75_DISPLAY_INIT_BRIGHTNESS);
@@ -398,6 +402,15 @@ static int hub75_init(const struct device *dev)
 		return err;
 	}
 	nrfx_gppi_conn_enable(h);
+	err = nrfx_gppi_conn_alloc(
+		nrf_timer_event_address_get(cfg->timer, NRF_TIMER_EVENT_COMPARE3),
+		nrf_gpiote_task_address_get(cfg->gpiote->p_reg,
+					    nrf_gpiote_clr_task_get(data->oe_ch)),
+		&data->on_link);
+	if (err < 0) {
+		return err;
+	}
+	data->input_format = PIXEL_FORMAT_MONO01;
 
 	data->blanked = true;
 	cfg->irq_config();
@@ -425,10 +438,9 @@ static int hub75_init(const struct device *dev)
 		     "height exceeds the rows the address lines select");                          \
 	BUILD_ASSERT(DT_INST_PROP(n, width) <= DT_INST_PROP(n, panel_columns),                     \
 		     "width exceeds panel-columns");                                               \
-	BUILD_ASSERT(DT_INST_PROP(n, row_period_us) > 4 * MIN_OFF_US, "row period too short");     \
+	BUILD_ASSERT(DT_INST_PROP(n, row_period_us) > 8, "row period too short");                  \
                                                                                                    \
-	static uint8_t hub75_fb_##n[2 * DT_INST_PROP(n, height) *                                  \
-				    DIV_ROUND_UP(DT_INST_PROP(n, width), 8)];                      \
+	static uint8_t hub75_fb_##n[2 * DT_INST_PROP(n, height) * DT_INST_PROP(n, width)];         \
 	static struct hub75_data hub75_data_##n;                                                   \
                                                                                                    \
 	static void hub75_irq_config_##n(void)                                                     \
@@ -466,7 +478,7 @@ static int hub75_init(const struct device *dev)
 		.irqn = DT_IRQN(HUB75_TIMER(n)),                                                   \
 		.width = DT_INST_PROP(n, width),                                                   \
 		.height = DT_INST_PROP(n, height),                                                 \
-		.stride = DIV_ROUND_UP(DT_INST_PROP(n, width), 8),                                 \
+		.stride = DT_INST_PROP(n, width),                                                  \
 		.panel_columns = DT_INST_PROP(n, panel_columns),                                   \
 		.row_period_us = DT_INST_PROP(n, row_period_us),                                   \
 		.addr_lines = DT_INST_PROP_LEN(n, addr_gpios),                                     \

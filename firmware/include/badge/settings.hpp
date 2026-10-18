@@ -48,7 +48,9 @@ const char *field_name(Field field);
 using SaveField = int (*)(void *context, Field field, const void *data, size_t length);
 
 /* Single owner (the application loop). No multi-field transaction is implied.
- * Storage callback must atomically replace one field or return an error. */
+ * Storage callback must atomically replace one field or return an error.
+ * Artwork is a borrowed immutable view: its backing must outlive all consumers
+ * (mapped inactive/active flash on target, static legacy load cache at boot). */
 class SettingsService
 {
 public:

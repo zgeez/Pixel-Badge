@@ -51,6 +51,7 @@ ZTEST(settings, test_valid_load_and_unknown_schema)
 	zassert_true(service.load(Field::kBrightness, &brightness, 1));
 	zassert_true(service.load(Field::kDefaultMode, &mode, 1));
 	zassert_equal(service.finish_load(), 224);
+	zassert_equal(service.values().brightness, 13);
 	zassert_equal(strcmp(service.values().url, "https://a.b/X"), 0);
 	zassert_equal(service.values().default_mode, Mode::kName);
 	service.begin_load();
@@ -79,7 +80,7 @@ ZTEST(settings, test_write_error_and_invalid_edit_keep_previous)
 }
 
 struct Records {
-	uint8_t bytes[static_cast<unsigned>(Field::kCount)][kArtworkBytes]{};
+	uint8_t bytes[static_cast<unsigned>(Field::kCount)][kLegacyArtworkBytes]{};
 	size_t lengths[static_cast<unsigned>(Field::kCount)]{};
 	int fail_at = -1;
 	int calls = 0;

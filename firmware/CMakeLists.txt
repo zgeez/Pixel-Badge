@@ -12,6 +12,7 @@ target_sources(app PRIVATE
 	src/main.cpp
 	src/app/bringup.cpp
 	src/services/test_pattern.cpp
+    src/services/artwork_store.cpp
 	src/services/qr.cpp
 	src/services/ndef.cpp
 	src/services/ntag.cpp
