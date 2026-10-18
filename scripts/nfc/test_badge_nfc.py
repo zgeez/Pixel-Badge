@@ -15,8 +15,8 @@ from badge_nfc import Mailbox, PhoneProof, NfcOperationError, normalize_url, wai
 
 class Link:
     def __init__(self):
-        self.memory = bytearray(120)
-        struct.pack_into("<4I", self.memory, 0, 0x424E4643, 3, 0, 0)
+        self.memory = bytearray(132)
+        struct.pack_into("<4I", self.memory, 0, 0x424E4643, 4, 0, 0)
         self.reads = []
 
     def memory_read8(self, address, count):
@@ -73,8 +73,21 @@ class Tests(unittest.TestCase):
         link = Link()
         mailbox = Mailbox(link, 0)
         mailbox.command(3, credentials=b"\1\2\3\4\5\6")
-        self.assertEqual(link.memory[112:], bytes(8))
-        self.assertTrue(all(address + size <= 88 for address, size in link.reads))
+        self.assertEqual(link.memory[124:], bytes(8))
+        self.assertTrue(all(address + size <= 96 for address, size in link.reads))
+
+    def test_full_length_urls_have_separate_terminated_mailbox_slots(self):
+        link = Link()
+        value = b"HTTPS://EXAMPLE.COM/ABCDE"
+        self.assertEqual(len(value), 25)
+        link.memory[40:68] = value.ljust(28, b"\0")
+        link.memory[68:96] = value.ljust(28, b"\0")
+        result = Mailbox(link, 0).command(2, payload=value)
+        self.assertEqual(result["desired"], value.decode())
+        self.assertEqual(result["verified"], value.decode())
+        self.assertEqual(link.memory[96:124], value.ljust(28, b"\0"))
+        self.assertEqual(link.memory[124:], bytes(8))
+        self.assertTrue(all(address + size <= 96 for address, size in link.reads))
 
     def test_busy_mailbox_rejected(self):
         link = Link()
@@ -83,7 +96,7 @@ class Tests(unittest.TestCase):
             Mailbox(link, 0)
 
     def test_legacy_firmware_mailbox_rejected(self):
-        for version in [1, 2]:
+        for version in [1, 2, 3]:
             link = Link()
             struct.pack_into("<I", link.memory, 4, version)
             with self.assertRaises(RuntimeError):
@@ -94,13 +107,13 @@ class Tests(unittest.TestCase):
         struct.pack_into("<i", link.memory, 20, -5)
         with self.assertRaisesRegex(NfcOperationError, r"NFC command 3 failed \(-5\)"):
             Mailbox(link, 0).command(3, credentials=b"\1\2\3\4\5\6")
-        self.assertEqual(link.memory[112:], bytes(8))
+        self.assertEqual(link.memory[124:], bytes(8))
 
     def test_setup_write_failures_clear_even_partially_written_credentials(self):
         for fail_at in range(1, 5):
             with self.subTest(write=fail_at):
                 link = Link()
-                link.memory[112:] = bytes([7] * 8)
+                link.memory[124:] = bytes([7] * 8)
                 writes = 0
 
                 def fail_write(original):
@@ -108,8 +121,8 @@ class Tests(unittest.TestCase):
                         nonlocal writes
                         writes += 1
                         if writes == fail_at:
-                            if address == 112:
-                                link.memory[112:115] = bytes(values[:3])
+                            if address == 124:
+                                link.memory[124:127] = bytes(values[:3])
                             raise OSError("synthetic setup failure")
                         return original(address, values)
                     return write
@@ -118,7 +131,7 @@ class Tests(unittest.TestCase):
                 link.memory_write32 = fail_write(link.memory_write32)
                 with self.assertRaisesRegex(OSError, "synthetic setup failure"):
                     Mailbox(link, 0).command(3, credentials=bytes(range(6)))
-                self.assertEqual(link.memory[112:], bytes(8))
+                self.assertEqual(link.memory[124:], bytes(8))
                 self.assertEqual(writes, fail_at + 1)
 
     def test_cleanup_failure_preserves_original_setup_error(self):
@@ -127,14 +140,14 @@ class Tests(unittest.TestCase):
             OSError("synthetic setup failure"), OSError("synthetic cleanup failure")])
         with self.assertRaisesRegex(OSError, "synthetic setup failure"):
             Mailbox(link, 0).command(3)
-        self.assertEqual(link.memory_write8.call_args.args, (112, [0] * 8))
+        self.assertEqual(link.memory_write8.call_args.args, (124, [0] * 8))
 
     def test_cleanup_failure_cannot_report_command_success(self):
         link = Link()
         original = link.memory_write8
 
         def write(address, values):
-            if address == 112 and values == [0] * 8:
+            if address == 124 and values == [0] * 8:
                 raise OSError("must not expose native payload")
             original(address, values)
 

@@ -14,6 +14,7 @@ from pathlib import Path
 
 MAGIC = 0x424E4643
 PROOF_VERSION = 3
+MAILBOX_VERSION = 4
 PACKAGE = "dev.badge.nfc"
 
 
@@ -30,30 +31,30 @@ class Mailbox:
         self.link, self.address = link, address
         header = bytes(link.memory_read8(address, 16))
         magic, version, request, response = struct.unpack("<4I", header)
-        if magic != MAGIC or version != PROOF_VERSION or request != response:
+        if magic != MAGIC or version != MAILBOX_VERSION or request != response:
             raise NfcOperationError("NFC mailbox unavailable or busy")
         self.sequence = request
 
     def snapshot(self):
         # Deliberately excludes command input and the credential region.
-        data = bytes(self.link.memory_read8(self.address, 88))
+        data = bytes(self.link.memory_read8(self.address, 96))
         words = struct.unpack("<8I", data[:32])
         return {
             "result": struct.unpack("<i", data[20:24])[0],
             "ready": words[6] == 1,
             "address": words[7],
             "uid": data[32:39],
-            "desired": data[40:64].split(b"\0", 1)[0].decode("ascii"),
-            "verified": data[64:88].split(b"\0", 1)[0].decode("ascii"),
+            "desired": data[40:68].split(b"\0", 1)[0].decode("ascii"),
+            "verified": data[68:96].split(b"\0", 1)[0].decode("ascii"),
         }
 
     def command(self, command, payload=b"", credentials=b"", timeout=12):
         completed = False
         try:
-            if len(payload) > 23 or len(credentials) > 6:
+            if len(payload) > 25 or len(credentials) > 6:
                 raise ValueError("NFC command input too long")
-            self.link.memory_write8(self.address + 88, list(payload.ljust(24, b"\0")))
-            self.link.memory_write8(self.address + 112, list(credentials.ljust(8, b"\0")))
+            self.link.memory_write8(self.address + 96, list(payload.ljust(28, b"\0")))
+            self.link.memory_write8(self.address + 124, list(credentials.ljust(8, b"\0")))
             self.link.memory_write32(self.address + 16, [command])
             self.sequence = (self.sequence + 1) & 0xFFFFFFFF
             self.link.memory_write32(self.address + 8, [self.sequence])
@@ -70,7 +71,7 @@ class Mailbox:
             raise NfcOperationError(f"NFC command {command} timed out; inspect non-secret RTT status")
         finally:
             try:
-                self.link.memory_write8(self.address + 112, [0] * 8)
+                self.link.memory_write8(self.address + 124, [0] * 8)
             except Exception:
                 # A lost SWD link may prevent erasure. Preserve an existing
                 # failure; never report success if cleanup itself failed.
@@ -171,7 +172,7 @@ def elf_mailbox(path):
     with Path(path).open("rb") as stream:
         symbols = ELFFile(stream).get_section_by_name(".symtab")
         found = symbols.get_symbol_by_name("badge_nfc_mailbox") if symbols else None
-        if not found or found[0]["st_size"] != 120:
+        if not found or found[0]["st_size"] != 132:
             raise NfcOperationError("Build the NFC provisioning configuration first")
         return found[0]["st_value"]
 
@@ -237,7 +238,7 @@ def provision(args, mailbox):
 
 def normalize_url(url):
     # Match the .env configuration policy: normalize only the scheme so short
-    # links can fit V1-M alphanumeric mode; preserve paths and escapes exactly.
+    # links can fit V1 alphanumeric mode; preserve paths and escapes exactly.
     for scheme in ("https://", "http://"):
         if url[:len(scheme)].lower() == scheme:
             return scheme.upper() + url[len(scheme):]
