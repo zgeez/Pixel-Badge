@@ -1,0 +1,107 @@
+/* SPDX-License-Identifier: MIT */
+/dts-v1/;
+#include <nordic/nrf52840_qiaa.dtsi>
+#include <zephyr/dt-bindings/gpio/nordic-nrf-gpio.h>
+#include <zephyr/dt-bindings/input/input-event-codes.h>
+#include <zephyr/dt-bindings/adc/adc.h>
+#include <zephyr/dt-bindings/sensor/icm42688.h>
+#include "pixel_badge_reva_nrf52840-pinctrl.dtsi"
+
+/ {
+	model = "Pixel Badge Rev A E73 nRF52840";
+	compatible = "smart-led-badge,rev-a-nrf52840";
+	chosen {
+		zephyr,sram = &sram0;
+		zephyr,flash = &flash0;
+		zephyr,code-partition = &slot0_partition;
+		zephyr,display = &matrix0;
+	};
+	leds {
+		compatible = "gpio-leds";
+		status_led: status_led { gpios = <&gpio0 28 GPIO_ACTIVE_HIGH>; };
+	};
+	buttons {
+		compatible = "gpio-keys";
+		btn_mode: mode { gpios = <&gpio1 6 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>; zephyr,code = <INPUT_KEY_0>; };
+		btn_action: action { gpios = <&gpio1 10 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>; zephyr,code = <INPUT_KEY_1>; };
+	};
+	matrix0: matrix {
+		compatible = "smartledbadge,reva-matrix";
+		width = <32>;
+		height = <32>;
+		spi = <&spi3>;
+		timer = <&timer3>;
+		lat-gpios = <&gpio1 9 GPIO_ACTIVE_HIGH>;
+		blank-gpios = <&gpio0 5 GPIO_ACTIVE_HIGH>;
+		arm-gpios = <&gpio0 6 GPIO_ACTIVE_HIGH>;
+		safe-gpios = <&gpio0 26 GPIO_ACTIVE_HIGH>;
+		enable-gpios = <&gpio0 7 GPIO_ACTIVE_HIGH>;
+	};
+	zephyr,user {
+		mtx-lat-gpios = <&gpio1 9 GPIO_ACTIVE_HIGH>;
+		mtx-blank-gpios = <&gpio0 5 GPIO_ACTIVE_HIGH>;
+		mtx-arm-gpios = <&gpio0 6 GPIO_ACTIVE_HIGH>;
+		mtx-safe-gpios = <&gpio0 26 GPIO_ACTIVE_HIGH>;
+		led-en-gpios = <&gpio0 7 GPIO_ACTIVE_HIGH>;
+		vbat-meas-en-gpios = <&gpio1 11 GPIO_ACTIVE_HIGH>;
+		chg-en-gpios = <&gpio0 31 GPIO_ACTIVE_HIGH>;
+		chg-int-gpios = <&gpio1 4 GPIO_ACTIVE_LOW>;
+		pwr-sw-gpios = <&gpio1 13 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+		ntag-i2c-bus = <&i2c1>;
+		nfc-pwr-gpios = <&gpio1 0 (GPIO_ACTIVE_HIGH | NRF_GPIO_DRIVE_H0H1)>;
+		nfc-fd-gpios = <&gpio1 2 GPIO_ACTIVE_LOW>;
+		imu-int2-gpios = <&gpio0 10 GPIO_ACTIVE_HIGH>;
+		io-channels = <&adc 0>, <&adc 1>, <&adc 2>, <&adc 3>;
+		io-channel-names = "vbat", "cc1", "cc2", "vled";
+	};
+	aliases { led0 = &status_led; sw0 = &btn_mode; sw1 = &btn_action; watchdog0 = &wdt0; imu0 = &imu; };
+};
+/* VDDH=VDD, normal-voltage supply; external LF load capacitors on the PCB. */
+&reg0 { status = "disabled"; };
+/* REG1 retains its default LDO mode during initial bring-up. */
+&uicr { gpio-as-nreset; nfct-pins-as-gpios; };
+&gpiote { status = "okay"; };
+&gpio0 { status = "okay"; };
+&gpio1 { status = "okay"; };
+&timer3 { status = "okay"; };
+&spi3 {
+	compatible = "nordic,nrf-spim";
+	status = "okay";
+	pinctrl-0 = <&spi3_default>; pinctrl-1 = <&spi3_sleep>; pinctrl-names = "default", "sleep";
+};
+&i2c0 {
+	compatible = "nordic,nrf-twim";
+	status = "okay"; clock-frequency = <I2C_BITRATE_FAST>;
+	pinctrl-0 = <&i2c0_default>; pinctrl-1 = <&i2c0_sleep>; pinctrl-names = "default", "sleep";
+	imu: icm42688@68 {
+		compatible = "invensense,icm42688p-i2c"; reg = <0x68>;
+		int-gpios = <&gpio0 9 GPIO_ACTIVE_HIGH>;
+		accel-pwr-mode = <ICM42688_DT_ACCEL_LN>; accel-odr = <ICM42688_DT_ACCEL_ODR_100>; accel-fs = <ICM42688_DT_ACCEL_FS_2>;
+		gyro-pwr-mode = <ICM42688_DT_GYRO_LN>; gyro-odr = <ICM42688_DT_GYRO_ODR_100>; gyro-fs = <ICM42688_DT_GYRO_FS_2000>;
+	};
+	/* BQ25620 at0x6B shares this bus. Charger policy is a later port increment. */
+};
+&i2c1 {
+	compatible = "nordic,nrf-twim";
+	status = "okay"; clock-frequency = <I2C_BITRATE_STANDARD>;
+	pinctrl-0 = <&i2c1_default>; pinctrl-1 = <&i2c1_sleep>; pinctrl-names = "default", "sleep";
+};
+&pdm0 { status = "okay"; pinctrl-0 = <&pdm0_default>; pinctrl-1 = <&pdm0_sleep>; pinctrl-names = "default", "sleep"; };
+&adc {
+	status = "okay"; #address-cells = <1>; #size-cells = <0>;
+	channel@0 { reg = <0>; zephyr,gain = "ADC_GAIN_1_4"; zephyr,reference = "ADC_REF_INTERNAL"; zephyr,acquisition-time = <ADC_ACQ_TIME(ADC_ACQ_TIME_MICROSECONDS, 10)>; zephyr,input-positive = <NRF_SAADC_AIN6>; zephyr,resolution = <12>; };
+	channel@1 { reg = <1>; zephyr,gain = "ADC_GAIN_2"; zephyr,reference = "ADC_REF_INTERNAL"; zephyr,acquisition-time = <ADC_ACQ_TIME(ADC_ACQ_TIME_MICROSECONDS, 10)>; zephyr,input-positive = <NRF_SAADC_AIN0>; zephyr,resolution = <12>; };
+	channel@2 { reg = <2>; zephyr,gain = "ADC_GAIN_2"; zephyr,reference = "ADC_REF_INTERNAL"; zephyr,acquisition-time = <ADC_ACQ_TIME(ADC_ACQ_TIME_MICROSECONDS, 10)>; zephyr,input-positive = <NRF_SAADC_AIN1>; zephyr,resolution = <12>; };
+	channel@3 { reg = <3>; zephyr,gain = "ADC_GAIN_4"; zephyr,reference = "ADC_REF_INTERNAL"; zephyr,acquisition-time = <ADC_ACQ_TIME(ADC_ACQ_TIME_MICROSECONDS, 10)>; zephyr,input-positive = <NRF_SAADC_AIN5>; zephyr,resolution = <12>; };
+};
+&flash0 {
+	partitions {
+		compatible = "fixed-partitions"; #address-cells = <1>; #size-cells = <1>;
+		boot_partition: partition@0 { label = "mcuboot"; reg = <0x0 0x10000>; };
+		slot0_partition: partition@10000 { label = "image-0"; reg = <0x10000 0x50000>; };
+		slot1_partition: partition@60000 { label = "image-1"; reg = <0x60000 0x50000>; };
+		artwork_storage: partition@b0000 { label = "artwork-storage"; reg = <0xb0000 0x42000>; };
+		reserved_partition: partition@f2000 { label = "reserved"; reg = <0xf2000 0x6000>; };
+		storage_partition: partition@f8000 { label = "storage"; reg = <0xf8000 0x8000>; };
+	};
+};

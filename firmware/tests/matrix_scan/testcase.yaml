@@ -1,0 +1,8 @@
+# SPDX-License-Identifier: MIT
+tests:
+  drivers.matrix_scan:
+    platform_allow:
+      - native_sim/native
+    tags:
+      - display
+      - reva
