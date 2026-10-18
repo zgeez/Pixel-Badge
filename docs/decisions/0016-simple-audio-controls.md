@@ -44,3 +44,5 @@ Firmware and app upgrade together to audio State v2. Old clients fail the audio
 version check. Normal settings GATT remains v2. Long recordings require a live
 foreground app, reliable BLE and battery power throughout. WAV export needs
 additional destination space and is always explicit.
+
+2026-10-16: [ADR0018](0018-grayscale-studio-recording-view.md) amends per-pixel intensity and/or the recording display. Historical acceptance does not validate the new grayscale scan or recording-view visibility.

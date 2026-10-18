@@ -1,0 +1,4 @@
+[00:00:00.061,767] <inf> prototype: reset cause 0x00000002 (read 0)
+[00:00:00.222,778] <inf> badge_ble: BLE ready: configuration service available
+[00:00:00.227,294] <inf> badge_ble: BLE advertising started
+[00:00:30.150,238] <inf> prototype: healthy boot; reset-loop counter cleared

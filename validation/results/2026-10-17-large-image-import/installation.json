@@ -1,0 +1,11 @@
+{
+  "version_name": "0.10.2",
+  "version_code": 30,
+  "draft_preserved": true,
+  "draft_hash_before": "4881c598b4bf36232dc6796477d72ced629668bae1bc81a0fca9a6ea81733dd3",
+  "draft_hash_after": "4881c598b4bf36232dc6796477d72ced629668bae1bc81a0fca9a6ea81733dd3",
+  "apk_sha256": "227ed795d4f00f091309debb9cb2d025b5ede74b57f67158cbcb328ad48ed172",
+  "firmware_changed": false,
+  "physical_import_exercised": false,
+  "physical_import_note": "Phone at lock/ambient screen; synthetic test file removed without importing or changing draft."
+}

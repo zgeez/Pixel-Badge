@@ -44,3 +44,5 @@ decision.
 | [0015](0015-nrf52840-e73-module.md) | Ebyte E73-2G4M08S1C (nRF52840) module for Rev A (amends 0002) | Accepted 2026-10-13 |
 | [0016](0016-simple-audio-controls.md) | Record/Stop using the bonded phone, automatic session setup and storage-based recording limits (amends 0011) | Accepted 2026-10-14 |
 | [0017](0017-local-nfc-synchronization.md) | NFC synchronization and wired setup without a phone verifier (amends 0013/0014) | Accepted 2026-10-15 |
+| [0018](0018-grayscale-studio-recording-view.md) | 8-bit Studio, bounded 32-frame artwork and recording visualizers | Accepted by owner 2026-10-16; hardware acceptance pending |
+| [0019](0019-large-artwork-fixed-workspaces.md) | 128-frame flash artwork and fixed app workspaces | Accepted by owner 2026-10-16; physical/port gates pending |

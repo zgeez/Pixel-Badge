@@ -1,55 +1,28 @@
 # Firmware
 
-P3 adds normal Level/Spectrum modes and automatic Pixel Badge audio setup, encrypted
-voice streaming and private Android recording/playback/export. Default firmware
-disables recording until hardware/privacy/REC visibility acceptance; an explicit
-bench image enables testing. See [audio prototype and tests](audio-prototype.md)
-and [audio wire contract](audio-protocol.md). Software checks do not validate the
-actual microphone clock, RF throughput or Rev A rail/port integration.
+The nRF5340 DK prototype implements QR/text, persistent drawings/animations,
+BLE configuration through Pixel Badge, synchronized NFC links, microphone
+level/spectrum visualization, encrypted phone recording and IMU-driven
+Fluid/orientation. Recording stays disabled in default builds pending physical
+recording-view visibility/security/endurance acceptance; the explicit bench fragment
+allows development tests. P0-P4 software is merged through PR26.
 
-The Pixel Studio extension adds case-sensitive 96-character text with fitting,
-wrapping/pagination and scrolling; persistent 32 × 32 drawings; and up to
-16 animation frames. BLE protocol v2 adds bounded content staging, paged
-artwork readback and guarded NFC resync. QR and NFC retain one shared URL.
-See [the wire contract](ble-protocol.md) and
-[Studio validation](../validation/results/2026-10-13-pixel-studio/README.md).
-This extension is software-tested on the existing nRF5340 DK target;
-new phone/panel acceptance and the selected Rev A hardware port are pending.
+The current cleanup adds automatic V1 QR correction selection, longer fitting
+links and smaller BLE staging buffers. Pixel Badge adds a named local library,
+image/GIF conversion and simpler connection/editor flows. Physical acceptance
+and the nRF52840/Rev A port remain separate. The old custom-board definition
+still targets nRF5340 and must not be flashed to Rev A's E73/nRF52840.
 
-Status: **prototype foundation**. The default nRF5340 DK application implements
-QR/name modes, persistent settings, two-button controls, a watchdog and
-reset-loop safe mode. On 2026-10-11 the owner reported all six foundation
-bench steps passed. A separate direct RTT capture confirms normal QR boot
-and healthy-counter clearing; it does not capture the earlier button,
-persistence, factory-reset or forced-watchdog tests. That pass predates the
-display, schema and settings-read recovery corrections; the revised image
-requires a new bench run.
-See the [foundation result](validation.md#result-prototype-foundation-on-the-dk).
-Peripheral bring-up checks and QR screening remain separate options. P1 NFC
-updates and explicit RF provisioning are implemented and host-tested. Provisioning
-has historical SWD/RTT confirmation, but helper v0.2 could mistake an RF I/O
-error for password rejection. The corrected v0.4 factory-password check was
-inconclusive. Owner accepted ADR0014's two positive RF authentication sessions;
-matching helper v0.5/proof3 completed both checks and firmware finalization.
-The receipt survived restoring normal BLE firmware; [positive-proof evidence](../validation/results/2026-10-12-dk-positive-nfc-proof/README.md).
-On 2026-10-12 the owner reported LinkedIn URL
-reads before power-off, while off and after restoration passed. Protection,
-timing and broader phone/content acceptance remain pending.
-See the [P1 procedure](nfc-prototype.md). P2 BLE configuration and the Flutter
-Android app are implemented as an opt-in development build, with software
-verification passed. Owner confirms GitHub/LinkedIn QR/NFC agreement after
-Pixel Badge Apply and LinkedIn off-state NFC plus QR/app retention after restart;
-direct restarted-DK status verified /L with no NFC error before the later reset.
-Identity/display, settings/bond persistence, fragmented names, interrupted
-connection agreement and pairing rejection/expiry checks are recorded in the
-[P2 bench result](../validation/results/2026-10-13-dk-p2-settings/README.md).
-The subsequent controlled reset cleared the NFC receipt. Recovery passed both
-phone checks but failed firmware finalization; normal firmware is restored with
-default settings and NFC unverified. Further bench testing ended at the owner's
-request. Unauthorized ATT writes, complete recovery and RF timing remain pending.
-Audio modes remain future work.
-Rev A remains a board
-compatibility build with no badge matrix backend.
+Current behavior and evidence:
+- [BLE/Studio protocol](ble-protocol.md), [app](../app/README.md)
+- [Local NFC synchronization](decisions/0017-local-nfc-synchronization.md)
+- [Audio and recording](audio-prototype.md), [motion](motion-prototype.md)
+- [Complete DK deployment and retention limits](../validation/results/2026-10-15-dk-complete-prototype/README.md)
+- [Prototype polish and firmware review](../validation/results/2026-10-16-prototype-polish/README.md)
+
+Historical foundation, pairing and NFC bench reports remain in validation/results.
+Owner functional reports and software tests do not establish complete RF,
+power, optical, timing or Rev A hardware acceptance.
 
 ## Platform
 
@@ -143,7 +116,7 @@ reappear. Future bonds/keys outside `badge/` are not erased by this recovery.
 
 - URL: bounded ASCII HTTP(S) URL with a nonempty authority, no whitespace,
   controls or user-info; percent escapes must have two hex digits. Maximum
-  20 characters, additionally required to fit V1-M. Encoding keeps all URL
+  25 QR alphanumeric characters or 17 ASCII bytes, required to fit V1. Encoding keeps all URL
   bytes and path case; it does not uppercase a link to make it fit.
 - Name: 1–32 printable ASCII bytes. The original 3 × 5 font renders lowercase
   as uppercase; common punctuation is supported and other glyphs show `?`.
@@ -305,10 +278,10 @@ make build
 
 Prototype builds read the repository-root `.env` when it exists. The four
 `BADGE_URL_PORTFOLIO`, `BADGE_URL_LINKEDIN`, `BADGE_URL_GITHUB` and
-`BADGE_URL_RESUME` entries must all be valid V1-M URLs. Only the HTTP(S) scheme
+`BADGE_URL_RESUME` entries must all be valid V1 URLs. Only the HTTP(S) scheme
 is uppercased to allow alphanumeric encoding; every other byte, including path
-case, is preserved. Alphanumeric URLs fit up to 20 characters; URLs needing
-byte encoding fit up to 14. Unrelated `.env` entries are ignored and values
+case, is preserved. Alphanumeric URLs fit up to 25 characters; URLs needing
+byte encoding fit up to 17. Unrelated `.env` entries are ignored and values
 are never evaluated as commands or environment-variable substitutions.
 
 Portfolio is the local build default. To select another link before the phone
@@ -678,3 +651,73 @@ data-ready interrupt path. It proves
 the driver logic, not behavior on the real part.
 `firmware/tests/test_pattern` checks the frame bit layout and the test
 patterns.
+
+
+### Grayscale Studio extension (2026-10-16)
+
+[ADR0018](decisions/0018-grayscale-studio-recording-view.md) adds 0..255
+single-color intensity, 32-frame animations within an 8192-byte encoded limit,
+individual frame timing and playback direction. The DK HUB75 backend now uses
+eight weighted planes for all pixels, including binary QR/text, with timer/DPPI
+OE-on and OE-off edges and one-shot row slots. There is no content-dependent
+switch of white-pixel duty. This lowers binary-only nominal duty to the existing
+gray schedule; QR brightness and combined-load optics need fresh bench checks.
+Late interrupts extend blanking. The 250 ns base pulse is an implementation
+parameter; actual refresh and optical steps require
+scope/panel measurements, including audio/BLE/motion load. Rev A scanning is a
+separate backend and has not been ported by this change.
+
+Artwork uses two verified chunk banks and an atomic manifest in the unchanged
+32 KiB NVS partition; legacy binary records load on upgrade. There is no required
+factory reset. Large main-owned workspaces live in static RAM, and BLE queues
+carry a wake token rather than repeated 8 KiB artwork copies. Native interrupted
+write tests cover maximum artwork, both banks and repeated garbage collection.
+Target build memory is evidence of DK allocation only, not nRF52840 fit.
+
+
+### Dedicated artwork store (2026-10-16)
+
+[ADR0019](decisions/0019-large-artwork-fixed-workspaces.md) supersedes the prior
+8KiB/32-frame bound. Artwork is an immutable flash view. Two132KiB raw banks use
+264KiB of the DK's inert network-update reservation;24KiB remains reserved. Code,
+MCUboot/update slots and the32KiB settings partition do not move. This is not the
+nRF52840 layout and does not retain a full network-update reserve. The NVS
+format3 manifest selects one CRC-checked bank; old inline/chunk artwork loads on
+upgrade without erase. An interrupted inactive upload leaves the old bank active.
+
+The worker writes aligned bounded fragments and erases pages lazily. Main-owned
+playback uses a frame cache and indexed offsets rather than animation-size RAM
+copies; settings and BLE commands hold views. Upload/Apply excludes recording
+starts, rejects an already active recording/NFC transaction, and pauses local PDM
+before flash operations. Wide BLE transfer/readback and metadata caching are in
+[ble-protocol.md](ble-protocol.md). Existing display blanking/fault behavior and
+release recording gate remain. Measure upload/erase effects under combined load;
+software bounds alone do not establish timing, optical or Rev A acceptance.
+
+
+### Grayscale scheduling recovery (2026-10-17)
+
+HUB75 shifts the next row with its one-shot timer stopped and OE off, then starts
+both timed OE edges. Short grayscale compares cannot be retriggered while that
+GPIO shift is still executing. This prevents that path from starving the watchdog
+thread; scan period now explicitly includes shifting. A35-second RAM scan check
+and a93-frame imported animation stayed writable with advancing scan counters.
+See [recovery validation](../validation/results/2026-10-17-upload-recovery/README.md).
+Optical refresh/gray-step and combined-load acceptance remain open.
+
+### Editor and transfer update (2026-10-17)
+
+Matching Pixel Badge0.10.0/build28 adds per-line bouncing text, a5% global
+brightness preset and sequential artwork reads. Legacy stored16 brightness
+normalizes to13; accepted25/50/100% presets are unchanged. New capability bit7
+gates the extended client paths. Sequential short ATT responses remove the
+cursor-write round trip per page while retaining bounds, CRC, metadata and exact
+Apply readback checks. Uploads remain acknowledged and use the existing inactive
+bank/manifest transaction. Storage partitions and the schema are unchanged.
+
+Normal, recording and NFC-setup DK builds pass, as do51 targeted native cases.
+The recording image and app were installed without erase; persistent flash was
+byte-identical immediately after deployment, with bond/NFC/healthy boot retained.
+A fresh bonded artwork read transferred3551 bytes in786ms at MTU247. This does
+not validate maximum-size upload speed, optics, combined load or the nRF52840 port.
+See [evidence](../validation/results/2026-10-17-editor-transfer/README.md).

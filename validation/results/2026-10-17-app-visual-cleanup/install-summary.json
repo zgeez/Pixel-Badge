@@ -1,0 +1,9 @@
+{
+  "version": "0.9.0",
+  "build": 25,
+  "apk_sha256": "1e2e41dda326feabe8113f27fc1c92fccad7696543bf9df9010b8b9d551a9f41",
+  "process_running": true,
+  "draft_hash_preserved": true,
+  "fatal_or_unhandled_log_lines": 0,
+  "phone_unlock_pending": true
+}

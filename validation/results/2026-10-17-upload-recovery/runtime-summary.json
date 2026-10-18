@@ -1,0 +1,19 @@
+{
+  "temporary_gray_test_seconds": 35.0,
+  "temporary_gray_test_samples": 1488,
+  "temporary_gray_writable_throughout": true,
+  "animation_samples": 35,
+  "animation_elapsed_seconds": 34.2,
+  "first_scan_counter": 30248,
+  "last_scan_counter": 32620,
+  "animation_mode_throughout": true,
+  "writable_throughout": true,
+  "retention_values": [
+    160
+  ],
+  "encoded_artwork_bytes": 36297,
+  "imported_frames": 93,
+  "negotiated_mtu": 247,
+  "app_version": "0.8.2",
+  "app_build": 24
+}

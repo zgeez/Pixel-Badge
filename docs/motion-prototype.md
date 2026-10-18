@@ -69,10 +69,12 @@ west flash -d build/p3-recording --runner jlink --no-erase
 adb install -r app/build/app/outputs/flutter-apk/app-debug.apk
 ```
 
-The current app is 0.5.4/build 18. The initial software handoff used 0.5.0/build
+The current app source is 0.6.1/build 20. The initial software handoff used 0.5.0/build
 14; follow-ups fix Sensor mounting state restoration, remove the separate
 NFC verifier requirement and remove the app's Identity block. The matching
-recording-enabled firmware and app are deployed.
+recording-enabled firmware and app 0.6.0/build 19 were deployed before this
+UI follow-up. Sensor mounting controls are removed from the current app;
+existing mapping bytes are retained when other motion settings are applied.
 Use `--no-erase`; it does not substitute for a settings backup. The wired NFC
 repair unexpectedly returned the badge to defaults without a loaded bond,
 despite this flag; the cause remains unresolved. The owner re-paired and
@@ -86,7 +88,8 @@ without that record receive defaults.
    the Motion card reports IMU ready. If not, inspect IMU power, I²C and INT1
    wiring using the existing fixture pin map.
 2. Hold or temporarily mount the loose IMU relative to the panel. Set the
-   right/down axes and Apply motion. Select Fluid. Tilt in all four directions
+   sensor according to the existing right/down mapping, then Apply motion.
+   The app no longer offers axis editing. Select Fluid. Tilt in all four directions
    and flip it; particles should settle toward the corresponding physical
    edge. Try low/high response and particle amount.
 3. Select Text and test four quarter-turn poses. Check that flat and diagonal
