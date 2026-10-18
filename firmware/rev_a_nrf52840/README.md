@@ -19,6 +19,11 @@ These commands build only. No Rev A hardware has been flashed or tested.
 Use the matrix variant only during the staged electrical bring-up. The default
 image keeps LED_EN/ARM low and BLANK high; display availability, new passkey
 pairing and recording visibility intentionally cannot succeed in that state.
+The intentional disarm does not trigger display recovery or watchdog resets:
+the service loop, BLE advertising/readback and local NFC startup remain active.
+Display-dependent writes, new pairing and capture remain unavailable; a blank
+matrix is never acknowledged as a physically visible frame. Actual driver
+initialization errors still follow bounded recovery and restart policy.
 Charging remains disabled. Battery sensing, charger/USB policy, load shedding,
 complete self-test and low-power transitions still need implementation.
 

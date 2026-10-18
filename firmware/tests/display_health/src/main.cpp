@@ -121,4 +121,33 @@ ZTEST(display_health, test_rearming_without_scan_progress_keeps_failure_deadline
 	zassert_equal(confirmations, initializations);
 }
 
+ZTEST(display_health, test_intentional_disarm_outlives_watchdog_and_healthy_boot_intervals)
+{
+	DisplayHealth health;
+	BootGuard guard;
+	guard.start(0xa1, true);
+	const int physical_result = -EPERM;
+	for (uint32_t now = 0; now <= 31000; now += DisplayHealth::kRetryMs) {
+		health.report(physical_result, now, true);
+		zassert_false(health.recovering());
+		zassert_false(health.restart_required(now));
+	}
+	zassert_true(guard.healthy(health.healthy_ms(31000)));
+}
+
+ZTEST(display_health, test_disarm_exemption_does_not_hide_real_driver_failures)
+{
+	const int errors[] = {-EIO, -ENODEV, -ETIMEDOUT};
+	for (int error : errors) {
+		DisplayHealth health;
+		health.report(error, 100, true);
+		health.report(error, 2100, true);
+		zassert_true(health.restart_required(2100));
+	}
+	DisplayHealth armed;
+	armed.report(-EPERM, 100);
+	armed.report(-EPERM, 2100);
+	zassert_true(armed.restart_required(2100));
+}
+
 ZTEST_SUITE(display_health, nullptr, nullptr, nullptr, nullptr, nullptr);

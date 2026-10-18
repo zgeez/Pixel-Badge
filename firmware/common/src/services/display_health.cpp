@@ -1,10 +1,14 @@
 /* SPDX-License-Identifier: MIT */
 #include "badge/display_health.hpp"
+#include <errno.h>
 
 namespace badge
 {
-void DisplayHealth::report(int result, uint32_t now)
+void DisplayHealth::report(int result, uint32_t now, bool intentionally_disarmed)
 {
+	if (intentionally_disarmed && result == -EPERM) {
+		result = 0;
+	}
 	if (restart_required(now)) {
 		return;
 	}

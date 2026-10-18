@@ -71,7 +71,11 @@ without scan progress does not reset the existing failure/reboot deadline.
 The generic `badge_display_wait_visible` hook replaces the HUB75-specific name
 for either backend. Recording still requires a submitted visible frame. The
 new backend is disarmed by default; an explicit matrix bench fragment enables
-it. This implementation does not establish refresh rate, optical intensity
+it. The intentional disarmed result is excluded from watchdog failure tracking,
+while physical display readiness remains false. BLE/NFC service startup can
+continue without permitting invisible pairing codes or capture; other driver
+errors retain the recovery/restart policy. This implementation does not establish
+refresh rate, optical intensity
 steps, row/column orientation, current limits or monostable protection.
 
 ## Flash and RAM

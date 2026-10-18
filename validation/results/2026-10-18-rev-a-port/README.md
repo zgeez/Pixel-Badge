@@ -110,3 +110,33 @@ Local evidence: `build/port-fix-native/twister.json`,
 `build/port-fix-native.log`, `build/port-fix-reva.log` and
 `build/port-fix-prototype.log`. No hardware was reflashed or physically tested;
 these results do not establish actual scan-fault recovery or optical timing.
+
+## Intentional disarm and service-loop health - PR28 follow-up
+
+The default Rev A configuration previously treated the intentional unblank
+`-EPERM` result as a persistent display failure and stopped watchdog feeding.
+The application now recognizes this state only when the Rev A matrix is built
+with output disabled and initialization reaches that expected result. It
+excludes this deliberate disarm from health failure tracking, skips repeated
+display initialization/brightness writes and logs the state once.
+
+Physical display readiness remains false and visibility consumers still receive
+`-EPERM`. Existing display-dependent write, new-pairing and capture gates stay
+closed; no blank frame is acknowledged as visibly presented. The service loop,
+BLE startup and local NFC startup can continue. Actual initialization errors,
+runtime faults in enabled builds and unexpected `-EPERM` retain bounded recovery
+and watchdog escalation.
+
+Nine native display-health/boot-guard cases in two configurations passed. New
+cases cover 31 seconds of simulated disarmed health/boot-guard time, other
+driver failures during disarm, and unexpected permission errors in enabled
+operation. Default disarmed Rev A, enabled matrix/recording Rev A and nRF5340
+recording builds passed. Both Rev A configurations passed compiled contract and
+wrong-GPIO/overlap negative checks; format, hygiene and whitespace passed.
+
+Updated linker allocations: safe Rev A254120 flash/100869 RAM; enabled Rev A
+254480/100869; prototype206632/104497. Partition, bootloader and radio sizes
+remain unchanged. Local logs: `build/pr28-disarmed-{safe,matrix,prototype}.log`,
+`build/pr28-disarmed-native.log` and `build/pr28-disarmed-native/twister.json`.
+No flash or physical reset-loop/visibility test was performed. Sources are a
+local correction on top of27277c4 until owner signing and push.

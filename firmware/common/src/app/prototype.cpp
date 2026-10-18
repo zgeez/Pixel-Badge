@@ -207,9 +207,14 @@ void run_prototype()
 						  safe ? kDefaultSettings.brightness
 						       : settings.values().brightness);
 	bool display_ready = display_rc == 0;
+	const bool display_disarmed = IS_ENABLED(CONFIG_REVA_MATRIX) &&
+				      !IS_ENABLED(CONFIG_REVA_MATRIX_OUTPUT) &&
+				      display_rc == -EPERM;
 	DisplayHealth display_health;
-	display_health.report(display_rc, 0);
-	if (!display_ready) {
+	display_health.report(display_rc, 0, display_disarmed);
+	if (display_disarmed) {
+		LOG_INF("matrix intentionally disarmed; service loop remains active");
+	} else if (!display_ready) {
 		LOG_WRN("display initialization failed (%d); retrying", display_rc);
 	}
 	Button classifier[2];
@@ -356,8 +361,11 @@ void run_prototype()
 				rotate_overlay = rotate_overlay || overlay != AudioOverlay::kNone;
 #endif
 			}
-			brightness_rc = display_set_brightness(
-				display, audio_recording() ? 255 : settings.values().brightness);
+			if (!display_disarmed) {
+				brightness_rc = display_set_brightness(
+					display,
+					audio_recording() ? 255 : settings.values().brightness);
+			}
 #endif
 #endif
 #if defined(CONFIG_APP_MOTION)
@@ -365,7 +373,9 @@ void run_prototype()
 				rotate(frame, frame, modes.display_rotation());
 			}
 #endif
-			int rc = brightness_rc;
+			/* Disarmed is a stable configuration, not a retryable driver fault.
+			 * Keep the physical error for visibility gates without repeating IO. */
+			int rc = display_disarmed ? -EPERM : brightness_rc;
 			if (rc == 0) {
 				auto submit = [&](bool initialize) {
 					if (initialize) {
@@ -400,9 +410,9 @@ void run_prototype()
 				!pairing_overlay && modes.active() == Mode::kQr ? rc : -EAGAIN);
 #endif
 			const bool recovering = display_health.recovering();
-			display_health.report(rc, completed);
+			display_health.report(rc, completed, display_disarmed);
 			if (rc != 0) {
-				if (!recovering) {
+				if (!display_disarmed && !recovering) {
 					LOG_WRN("display write failed (%d); retrying", rc);
 				}
 			} else {

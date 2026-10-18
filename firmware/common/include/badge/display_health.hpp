@@ -20,7 +20,9 @@ public:
 		const int result = submit(!ready || recovering());
 		return result == 0 && recovering() ? confirm_visible() : result;
 	}
-	void report(int result, uint32_t now);
+	/* Intentional -EPERM keeps the service loop healthy, not the display ready.
+	 * Callers must retain the physical result for pairing/audio/NFC visibility. */
+	void report(int result, uint32_t now, bool intentionally_disarmed = false);
 	bool restart_required(uint32_t now);
 	bool recovering() const
 	{
