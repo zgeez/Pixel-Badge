@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: MIT */
 #include "badge/audio.hpp"
+#include "badge/audio_capture.hpp"
 #include <zephyr/ztest.h>
 #include <string.h>
 using namespace badge;
@@ -151,5 +152,27 @@ ZTEST(audio, test_recording_uses_full_spectrum_and_level_view)
 	zassert_true(frame.get(31, 0));
 	zassert_false(frame.get(4, 14));
 	zassert_false(frame.get(4, 31));
+}
+ZTEST(audio, test_rev_a_capture_profile_and_native_voice_block)
+{
+	constexpr auto reva = audio_capture_profile(true);
+	constexpr auto prototype = audio_capture_profile(false);
+	zassert_equal(reva.rate, 16000);
+	zassert_equal(reva.min_clock, 1280000);
+	zassert_equal(reva.max_clock, reva.min_clock);
+	zassert_equal(reva.min_clock / 80, reva.rate);
+	zassert_equal(prototype.rate, 32000);
+	zassert_equal(prototype.min_clock, 1800000);
+	// One Rev A 20ms block feeds the FFT and exactly two 160-sample packets.
+	int16_t samples[320];
+	for (size_t i = 0; i < 320; ++i) {
+		samples[i] = i % 16 < 8 ? 10000 : -10000;
+	}
+	AudioAnalyzer analyzer;
+	AudioAnalysis analysis;
+	zassert_true(analyzer.analyze(samples, 320, analysis));
+	zassert_equal(analysis.rms, 10000);
+	// A 1kHz tone at16kHz falls in FFT bin16, in band4.
+	zassert_true(analysis.bands[4] > analysis.bands[2]);
 }
 ZTEST_SUITE(audio, nullptr, nullptr, nullptr, nullptr, nullptr);
