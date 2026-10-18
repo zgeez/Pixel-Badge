@@ -38,6 +38,7 @@ private:
 	bool available(Mode mode) const;
 	Settings settings_ = kDefaultSettings;
 	Frame qr_{};
+	mutable ArtworkPlayer artwork_player_;
 	Mode mode_ = Mode::kQr;
 	bool safe_ = false;
 	Rotation current_rotation_ = Rotation::k0;

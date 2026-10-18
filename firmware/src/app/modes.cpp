@@ -7,7 +7,7 @@ namespace badge
 {
 uint8_t next_brightness(uint8_t current)
 {
-	constexpr uint8_t levels[] = {16, 64, 128, 255};
+	constexpr uint8_t levels[] = {13, 64, 128, 255};
 	for (uint8_t level : levels) {
 		if (current < level) {
 			return level;
@@ -19,6 +19,7 @@ uint8_t next_brightness(uint8_t current)
 void Modes::start(const Settings &settings, bool safe_mode)
 {
 	safe_ = safe_mode;
+	artwork_player_.reset();
 	settings_ = safe_ ? kDefaultSettings : settings;
 	mode_ = available(settings_.default_mode) ? settings_.default_mode : Mode::kQr;
 	entered_at_ = 0;
@@ -87,8 +88,10 @@ bool Modes::select(Mode mode, uint32_t now)
 
 bool Modes::configure(const Settings &settings)
 {
-	Frame qr;
-	if (safe_ || !encode_url(settings.url, strlen(settings.url), qr)) {
+	artwork_player_.reset();
+	Frame qr = qr_;
+	if (safe_ || (strcmp(settings_.url, settings.url) != 0 &&
+		      !encode_url(settings.url, strlen(settings.url), qr))) {
 		return false;
 	}
 #if defined(CONFIG_APP_MOTION)
@@ -100,6 +103,11 @@ bool Modes::configure(const Settings &settings)
 #endif
 	settings_ = settings;
 	qr_ = qr;
+	if (!available(mode_)) {
+		mode_ = Mode::kQr;
+		entered_at_ = 0;
+		qr_rotation_ = current_rotation_;
+	}
 	return true;
 }
 
@@ -126,8 +134,8 @@ void Modes::render(Frame &output, uint32_t now) const
 	} else if (mode_ == Mode::kName) {
 		render_text(content, settings_.text, settings_.name, now - entered_at_);
 	} else if (mode_ <= Mode::kAnimation) {
-		render_artwork(content, settings_.artwork, now - entered_at_,
-			       mode_ == Mode::kAnimation);
+		artwork_player_.render(content, settings_.artwork, now - entered_at_,
+				       mode_ == Mode::kAnimation);
 	} else {
 		content.clear();
 	}

@@ -17,10 +17,13 @@ import java.util.concurrent.Executors
 class BadgeApplication : Application() {
     lateinit var audio: BadgeAudio
         private set
+    lateinit var media: BadgeMedia
+        private set
     private val connectionLease = ConnectionLease()
     private val draftIo = Executors.newSingleThreadExecutor()
     val engine: FlutterEngine by lazy {
         val flutterEngine = FlutterEngine(this)
+        media = BadgeMedia(this, MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.ziadg.badge_app/editor"))
         audio = BadgeAudio(this, MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.ziadg.badge_app/audio"))
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.ziadg.badge_app/drafts")
             .setMethodCallHandler { call, result ->
@@ -36,12 +39,12 @@ class BadgeApplication : Application() {
                             // including when the base file is temporarily absent.
                             val input = try { file.openRead() } catch (_: FileNotFoundException) { null }
                             input?.bufferedReader(Charsets.UTF_8)?.use {
-                                require(file.baseFile.length() <= 65536)
+                                require(file.baseFile.length() <= 16777216)
                                 it.readText()
                             }
                         } else {
                             val text = call.arguments as? String ?: error("Invalid draft")
-                            require(text.toByteArray(Charsets.UTF_8).size <= 65536)
+                            require(text.toByteArray(Charsets.UTF_8).size <= 16777216)
                             val stream = file.startWrite()
                             try {
                                 stream.write(text.toByteArray(Charsets.UTF_8))

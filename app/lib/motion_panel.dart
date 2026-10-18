@@ -12,7 +12,9 @@ class MotionPanel extends StatefulWidget {
     required this.enabled,
     required this.apply,
     required this.refresh,
+    this.framed = true,
   });
+  final bool framed;
   final List<int> value;
   final MotionStatus? status;
   final bool enabled;
@@ -32,32 +34,9 @@ class _MotionPanelState extends State<MotionPanel> {
     }
   }
 
-  Widget axis(String label, int value, int other, ValueChanged<int> update) =>
-      DropdownButtonFormField<int>(
-        key: ValueKey('$label-$value-$other'),
-        decoration: InputDecoration(labelText: label),
-        initialValue: value,
-        items: [
-          for (var i = 0; i < 6; i++)
-            if (i ~/ 2 != other ~/ 2)
-              DropdownMenuItem(
-                value: i,
-                child: Text(['+X', '−X', '+Y', '−Y', '+Z', '−Z'][i]),
-              ),
-        ],
-        onChanged: widget.enabled
-            ? (value) => setState(() => update(value!))
-            : null,
-      );
   @override
-  Widget build(BuildContext context) => StudioPanel(
-    title: 'Motion',
-    trailing: IconButton(
-      tooltip: 'Refresh motion status',
-      onPressed: widget.enabled ? widget.refresh : null,
-      icon: const Icon(Icons.refresh),
-    ),
-    child: Column(
+  Widget build(BuildContext context) {
+    final content = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
@@ -84,9 +63,13 @@ class _MotionPanelState extends State<MotionPanel> {
         if (!design.automatic)
           Wrap(
             spacing: 6,
+            runSpacing: 6,
             children: [
               for (var i = 0; i < 4; i++)
                 ChoiceChip(
+                  showCheckmark: false,
+                  labelPadding: const EdgeInsets.symmetric(horizontal: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
                   label: Text('${i * 90}°'),
                   selected: design.rotation == i,
                   onSelected: widget.enabled
@@ -118,52 +101,30 @@ class _MotionPanelState extends State<MotionPanel> {
               ? (v) => setState(() => design.particles = v.round())
               : null,
         ),
-        ExpansionTile(
-          key: const PageStorageKey('motion-sensor-mounting'),
-          tilePadding: EdgeInsets.zero,
-          title: const Text('Sensor mounting'),
+        const SizedBox(height: 12),
+        Row(
           children: [
-            const Text(
-              'Align the loose sensor with the panel. Choose the sensor arrows that point right and down on the panel; hold them in that position for testing.',
+            IconButton(
+              tooltip: 'Refresh motion status',
+              onPressed: widget.enabled ? widget.refresh : null,
+              icon: const Icon(Icons.refresh),
             ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: axis(
-                    'Panel right',
-                    design.right,
-                    design.down,
-                    (v) => design.right = v,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: axis(
-                    'Panel down',
-                    design.down,
-                    design.right,
-                    (v) => design.down = v,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            if (widget.status != null)
-              Text(
-                'Down vector ${widget.status!.x}, ${widget.status!.y} mm/s² · ${widget.status!.rotation * 90}°',
+            const SizedBox(width: 8),
+            Expanded(
+              child: FilledButton.icon(
+                onPressed: widget.enabled
+                    ? () => widget.apply(design.encode())
+                    : null,
+                icon: const Icon(Icons.save_outlined),
+                label: const Text('Apply motion'),
               ),
+            ),
           ],
         ),
-        const SizedBox(height: 12),
-        FilledButton.icon(
-          onPressed: widget.enabled
-              ? () => widget.apply(design.encode())
-              : null,
-          icon: const Icon(Icons.save_outlined),
-          label: const Text('Apply motion'),
-        ),
       ],
-    ),
-  );
+    );
+    return widget.framed
+        ? StudioPanel(title: 'Motion', child: content)
+        : content;
+  }
 }

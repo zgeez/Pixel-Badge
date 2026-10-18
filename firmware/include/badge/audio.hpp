@@ -39,5 +39,6 @@ constexpr AudioOverlay audio_overlay_kind(bool recording, bool requested, bool c
 						 : AudioOverlay::kNone;
 }
 void clear_audio(void *memory, size_t bytes);
+void render_recording_audio(Frame &output, const AudioAnalysis &analysis);
 void render_audio(Frame &output, const AudioAnalysis &analysis, bool spectrum);
 } // namespace badge

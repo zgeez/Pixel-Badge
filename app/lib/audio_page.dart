@@ -2,6 +2,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'audio_controller.dart';
+import 'selection_control.dart';
 
 String audioTime(int ms) {
   final seconds = ms ~/ 1000, hours = ms ~/ 3600000;
@@ -14,8 +15,13 @@ class AudioPage extends StatelessWidget {
     super.key,
     required this.audio,
     required this.selectVisualization,
+    this.compact = false,
+    this.recordBlocked = false,
+    this.openLibrary,
   });
   final AudioController audio;
+  final bool compact, recordBlocked;
+  final VoidCallback? openLibrary;
   final Future<void> Function(int) selectVisualization;
   void help(BuildContext context) => showDialog<void>(
     context: context,
@@ -23,7 +29,7 @@ class AudioPage extends StatelessWidget {
       title: const Text('Audio'),
       scrollable: true,
       content: const Text(
-        'Level and spectrum run on the badge. Recordings are encrypted on this phone and excluded from backups. Export saves a WAV where you choose.\n\nKeep the app open while recording and keep REC visible on the badge. Leaving the app stops recording; Bluetooth stays connected. Hold Mode on the badge to request recording, or press either button to stop.\n\nRecording ends when you stop, the connection ends, storage runs low, or the WAV file limit is reached (about 37 hours).',
+        'Level and spectrum run on the badge. Recordings are encrypted on this phone and excluded from backups. Export saves a WAV where you choose.\n\nKeep the app open while recording and keep the recording visualizers visible on the badge. Leaving the app stops recording; Bluetooth stays connected. Hold Mode on the badge to request recording, or press either button to stop.\n\nRecording ends when you stop, the connection ends, storage runs low, or the WAV file limit is reached (about 37 hours).',
       ),
       actions: [
         TextButton(
@@ -37,6 +43,7 @@ class AudioPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final enabled =
+        !recordBlocked &&
         audio.authenticated &&
         !audio.busy &&
         !audio.stopping &&
@@ -50,6 +57,125 @@ class AudioPage extends StatelessWidget {
         : audio.recording
         ? 'Keep the app open'
         : audio.message;
+    if (compact) {
+      return Column(
+        children: [
+          Row(
+            children: [
+              for (final item in [
+                (4, Icons.graphic_eq, 'Level'),
+                (5, Icons.equalizer, 'Spectrum'),
+              ])
+                Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.only(right: item.$1 == 4 ? 8 : 0),
+                    child: Tooltip(
+                      message: 'Show ${item.$3}',
+                      child: OutlinedButton(
+                        onPressed:
+                            audio.available &&
+                                !audio.recording &&
+                                !recordBlocked
+                            ? () => unawaited(selectVisualization(item.$1))
+                            : null,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(item.$2, size: 20),
+                            if (MediaQuery.textScalerOf(context).scale(14) <=
+                                20) ...[
+                              const SizedBox(width: 6),
+                              Flexible(
+                                child: Text(
+                                  item.$3,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          Expanded(
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (audio.playback.id == null &&
+                      MediaQuery.sizeOf(context).height >= 700 &&
+                      MediaQuery.textScalerOf(context).scale(14) <= 20)
+                    Icon(
+                      audio.recording ? Icons.graphic_eq : Icons.mic_none,
+                      size: 64,
+                      color: audio.recording ? colors.error : colors.primary,
+                    ),
+                  const SizedBox(height: 12),
+                  if (audio.recording)
+                    Text(
+                      audioTime(audio.recordingWatch.elapsedMilliseconds),
+                      style: Theme.of(context).textTheme.headlineSmall,
+                    ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Text(
+                      status,
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ),
+                  FilledButton.icon(
+                    onPressed: audio.recording
+                        ? () => unawaited(audio.stop())
+                        : enabled
+                        ? () => unawaited(audio.start())
+                        : null,
+                    icon: Icon(audio.recording ? Icons.stop : Icons.mic),
+                    label: Text(audio.recording ? 'Stop' : 'Record'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (audio.playback.id != null && !audio.recording)
+            RecordingControls(audio: audio),
+          Row(
+            children: [
+              Expanded(
+                child: TextButton(
+                  onPressed: openLibrary,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.library_music_outlined),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Text(
+                          'Recordings (${audio.recordings.length})',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              IconButton(
+                tooltip: 'Audio help',
+                onPressed: () => help(context),
+                icon: const Icon(Icons.help_outline),
+              ),
+            ],
+          ),
+        ],
+      );
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -232,12 +358,22 @@ class AudioPage extends StatelessWidget {
                 await audio.libraryAction(method, id);
               },
               itemBuilder: (_) => const [
-                PopupMenuItem(value: 'export', child: Text('Export WAV')),
-                PopupMenuItem(value: 'delete', child: Text('Delete')),
+                PopupMenuItem(
+                  value: 'export',
+                  child: MenuActionLabel(Icons.ios_share, 'Export WAV'),
+                ),
+                PopupMenuItem(
+                  value: 'delete',
+                  child: MenuActionLabel(
+                    Icons.delete_outline,
+                    'Delete',
+                    destructive: true,
+                  ),
+                ),
               ],
             ),
           ),
-          if (selected) RecordingControls(audio: audio),
+          if (selected) RecordingControls(audio: audio, showPlayPause: false),
         ],
       ),
     );
@@ -245,8 +381,13 @@ class AudioPage extends StatelessWidget {
 }
 
 class RecordingControls extends StatefulWidget {
-  const RecordingControls({super.key, required this.audio});
+  const RecordingControls({
+    super.key,
+    required this.audio,
+    this.showPlayPause = true,
+  });
   final AudioController audio;
+  final bool showPlayPause;
   @override
   State<RecordingControls> createState() => _RecordingControlsState();
 }
@@ -297,6 +438,14 @@ class _RecordingControlsState extends State<RecordingControls> {
                 onPressed: () =>
                     unawaited(widget.audio.seek(player.positionMs - 10000)),
               ),
+              if (widget.showPlayPause)
+                IconButton.filledTonal(
+                  tooltip: player.playing
+                      ? 'Pause recording'
+                      : 'Play recording',
+                  icon: Icon(player.playing ? Icons.pause : Icons.play_arrow),
+                  onPressed: () => unawaited(widget.audio.togglePlayback()),
+                ),
               IconButton(
                 tooltip: 'Stop playback',
                 icon: const Icon(Icons.stop),

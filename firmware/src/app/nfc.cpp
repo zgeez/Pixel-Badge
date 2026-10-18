@@ -53,20 +53,20 @@ int synchronize(Ntag &tag, const char *url)
 }
 
 #if defined(CONFIG_APP_NFC_DEBUG_COMMANDS)
-/* Optional legacy RF tools retain mailbox v3. Readiness is local sync only. */
+/* Mailbox v4 has wider URLs; optional RF proof remains v3. Readiness is local sync only. */
 constexpr uint8_t kProofVersion = 3;
 struct Mailbox {
 	uint32_t magic, version, request, response, command;
 	int32_t result;
 	uint32_t state, address;
 	uint8_t uid[8];
-	char desired[24], verified[24], input[24];
+	char desired[28], verified[28], input[28];
 	uint8_t credentials[8];
 };
-static_assert(sizeof(Mailbox) == 120);
+static_assert(sizeof(Mailbox) == 132);
 extern "C" {
-__used volatile Mailbox badge_nfc_mailbox = {
-	0x424e4643, kProofVersion, 0, 0, 0, -EAGAIN, 0, 0, {}, {}, {}, {}, {}};
+__used volatile Mailbox badge_nfc_mailbox = {0x424e4643, 4,  0,  0,  0,  -EAGAIN, 0,
+					     0,          {}, {}, {}, {}, {}};
 }
 
 void publish(Ntag &tag, int result, uint32_t sequence)
@@ -161,7 +161,7 @@ void commands(Ntag &tag)
 		}
 		const uint32_t command = badge_nfc_mailbox.command;
 		atomic_set(&operation_active, 1);
-		char input[24];
+		char input[28];
 		uint8_t credentials[8];
 		for (unsigned i = 0; i < sizeof(input); ++i) {
 			input[i] = badge_nfc_mailbox.input[i];

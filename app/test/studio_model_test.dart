@@ -85,24 +85,24 @@ void main() {
   });
   test('maximum animation uses bounded MTU-safe contiguous fragments', () {
     final art = MatrixDesign();
-    while (art.frames.length < 16) {
+    while (art.frames.length < maxFrames) {
       art.add();
       setPixel(art.current, art.selected, art.selected, true);
     }
     final value = art.encode(),
         packets = stagePackets(BadgeField.artwork, value);
-    expect(value.length, 2052);
+    expect(value.length, 16388);
     final assembled = <int>[];
     for (final packet in packets) {
       expect(packet.length, lessThanOrEqualTo(20));
       expect(packet[0], 1);
       expect(packet[1] + (packet[2] << 8), assembled.length);
-      expect(packet[3] + (packet[4] << 8), 2052);
+      expect(packet[3] + (packet[4] << 8), 16388);
       assembled.addAll(packet.sublist(5));
     }
     expect(assembled, value);
     expect(() => art.add(), throwsStateError);
-    final invalid = Uint8List.fromList(value)..[1] = 17;
+    final invalid = Uint8List.fromList(value)..[1] = 129;
     expect(() => MatrixDesign.decode(invalid), throwsFormatException);
   });
   test(

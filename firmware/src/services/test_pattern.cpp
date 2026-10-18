@@ -12,12 +12,17 @@ namespace badge
 void Frame::clear()
 {
 	memset(bytes, 0, sizeof(bytes));
+	memset(levels, 0, sizeof(levels));
+	grayscale = false;
 }
 
 void Frame::set(int x, int y, bool lit)
 {
 	if (x < 0 || y < 0 || x >= kMatrixSize || y >= kMatrixSize) {
 		return;
+	}
+	if (grayscale) {
+		levels[y * kMatrixSize + x] = lit ? 255 : 0;
 	}
 	uint8_t &b = bytes[y * kFrameStride + x / 8];
 	const uint8_t mask = static_cast<uint8_t>(0x80U >> (x % 8));
@@ -33,6 +38,29 @@ bool Frame::get(int x, int y) const
 	return (bytes[y * kFrameStride + x / 8] & (0x80U >> (x % 8))) != 0;
 }
 
+uint8_t Frame::level(int x, int y) const
+{
+	if (x < 0 || y < 0 || x >= kMatrixSize || y >= kMatrixSize) {
+		return 0;
+	}
+	return grayscale ? levels[y * kMatrixSize + x] : (get(x, y) ? 255 : 0);
+}
+void Frame::set_level(int x, int y, uint8_t value)
+{
+	if (x < 0 || y < 0 || x >= kMatrixSize || y >= kMatrixSize) {
+		return;
+	}
+	if (!grayscale) {
+		for (int yy = 0; yy < kMatrixSize; ++yy) {
+			for (int xx = 0; xx < kMatrixSize; ++xx) {
+				levels[yy * kMatrixSize + xx] = get(xx, yy) ? 255 : 0;
+			}
+		}
+		grayscale = true;
+	}
+	set(x, y, value != 0);
+	levels[y * kMatrixSize + x] = value;
+}
 void draw(Frame &frame, Pattern pattern)
 {
 	frame.clear();

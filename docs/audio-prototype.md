@@ -22,10 +22,10 @@ After a failed settings Apply, Refresh before selecting a visualization.
 
 Recording starts from the app, or Mode (Button1) long requests a fresh accept
 from the foreground subscribed app within3s. Otherwise NO REC appears. Either
-badge button or app Stop stops recording. REC is a steady large label with a
-live level bar, at fixed DK brightness255 (candidate, not visibility acceptance).
-Capture starts only after the matrix driver confirms a REC buffer swap and full
-scan. Pending, active and draining REC overrides a stale NO REC message; the
+badge button or app Stop stops recording. ADR0018 replaces REC lettering with a full-height spectrum and a
+full-width level meter, with lit corners in silence, at fixed DK brightness255 (candidate, not visibility acceptance).
+Capture starts only after the matrix driver confirms the recording-view buffer swap and full
+scan. Pending, active and draining recording view overrides a stale NO REC message; the
 visibility gate uses the kind of overlay actually rendered, not just recording
 state. Prior visualization DMA is stopped/erased. A31-tap anti-alias FIR precedes
 2:1 decimation to nominal16kHz; independent10ms IMA ADPCM blocks are encrypted
@@ -43,7 +43,7 @@ use about40.32MB/hour; exported WAV uses115.2MB/hour. These are format sizes,
 not validated recording endurance. Stop
 waits boundedly for DMA release and zero-rate disable before erasing the pool;
 unconfirmed stop resets instead of claiming cleanup. No audio or keys in logs,
-telemetry or dumps. Settings cannot replace REC while recording.
+telemetry or dumps. Settings cannot replace the recording view while recording.
 
 Android wraps one fresh recording-file key with Keystore before capture, then
 uses local chunk encryption in noBackupFilesDir (older files remain readable);
@@ -90,7 +90,7 @@ presets empty; scripts import only four validated public link defines.
    shows Ready to record without an enrollment button, extra code or duration
    selector. Reconnect again and confirm it prepares automatically.
 3. **Recording/playback:** Record, speak5-10s, Stop. Expected
-   steady REC+level throughout; prior mode returns after cleanup; a private
+   spectrum+level view throughout; prior mode returns after cleanup; a private
    recording appears and Play sounds right. Export WAV to a chosen location,
    verify playback, Delete the private copy. Nothing automatically in Media.
    In app0.4.0+, pause, drag the seek slider forward/backward, resume and use
@@ -104,7 +104,7 @@ presets empty; scripts import only four validated public link defines.
    In normal firmware, Mode long-press shows NO REC even when the bonded app is
    authenticated and subscribed; it does not create a button challenge.
 5. **Automatic stops:** separate recordings for Home, lock, Bluetooth off,
-   and disconnect. Expected capture/REC ends; reopening never resumes.
+   and disconnect. Expected capture/recording view ends; reopening never resumes.
    Home/lock retain BLE; recording and playback stop/pause. Reopen and Refresh
    without reconnecting, and check Back/reopen retains the link too. Bluetooth
    off or badge power-off must end the connection/service. Force-stop still
@@ -129,3 +129,5 @@ checks do not substitute for those gates.
 
 See [wire contract](audio-protocol.md), [ADR0011](decisions/0011-visible-voice-recording.md)
 and [software evidence](../validation/results/2026-10-14-p3-audio-start/README.md).
+
+The owner changed the recording view on 2026-10-16; see [ADR0018](decisions/0018-grayscale-studio-recording-view.md). Repeat visibility acceptance for this view; prior REC-label results do not validate it.

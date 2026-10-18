@@ -50,7 +50,7 @@ class DefaultUrlTests(unittest.TestCase):
         self.assertEqual(config.normalize_url("http://EXAMPLE.COM/R", "URL"),
                          "HTTP://EXAMPLE.COM/R")
         self.assertEqual(config.normalize_url("https://a.b/ab", "URL"), "HTTPS://a.b/ab")
-        for value in ("http://EXAMPLE.COM/RR", "https://a.b/abcd",
+        for value in ("http://EXAMPLE.COM/RRRRRRRR", "https://a.b/abcdefg",
                       "HTTPS://", "HTTPS:///R", "HTTP://A/%ZZ", "HTTP://A B",
                       "HTTP://A/\x00", "HTTP://A/é", "HTTP://A/\\R",
                       "HTTP://X@A", "ftp://A.B", 'HTTP://A/"'):

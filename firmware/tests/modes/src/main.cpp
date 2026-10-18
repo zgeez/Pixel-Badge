@@ -1,4 +1,5 @@
 /* SPDX-License-Identifier: MIT */
+#include "../../common/artwork_fixture.hpp"
 #include "badge/modes.hpp"
 #include <zephyr/ztest.h>
 #include <string.h>
@@ -48,7 +49,7 @@ ZTEST(modes, test_brightness_cycle)
 	zassert_equal(next_brightness(16), 64);
 	zassert_equal(next_brightness(64), 128);
 	zassert_equal(next_brightness(128), 255);
-	zassert_equal(next_brightness(255), 16);
+	zassert_equal(next_brightness(255), 13);
 	zassert_equal(next_brightness(17), 64);
 }
 
@@ -83,16 +84,16 @@ ZTEST(modes, test_artwork_selection_requires_content_and_preserves_mode)
 	zassert_false(modes.select(Mode::kAnimation, 20));
 	zassert_equal(modes.active(), Mode::kQr);
 
-	Settings drawing = kDefaultSettings;
-	drawing.artwork.bytes[kArtworkHeaderBytes] = 0x80;
+	OwnedSettings drawing;
+	mutable_art(drawing)[kArtworkHeaderBytes] = 0x80;
 	zassert_true(modes.configure(drawing));
 	zassert_true(modes.select(Mode::kCanvas, 30));
 	zassert_false(modes.select(Mode::kAnimation, 40));
 	zassert_equal(modes.active(), Mode::kCanvas);
 
-	drawing.artwork.bytes[1] = 2;
+	mutable_art(drawing)[1] = 2;
 	drawing.artwork.length += kFrameBytes;
-	drawing.artwork.bytes[kArtworkHeaderBytes + kFrameBytes] = 0x40;
+	mutable_art(drawing)[kArtworkHeaderBytes + kFrameBytes] = 0x40;
 	zassert_true(modes.configure(drawing));
 	zassert_true(modes.select(Mode::kAnimation, 50));
 	Frame before, after;
@@ -102,28 +103,29 @@ ZTEST(modes, test_artwork_selection_requires_content_and_preserves_mode)
 	zassert_equal(modes.active(), Mode::kAnimation);
 	zassert_mem_equal(before.bytes, after.bytes, sizeof(before.bytes));
 
-	memset(drawing.artwork.bytes + kArtworkHeaderBytes, 0, 2 * kFrameBytes);
+	memset(mutable_art(drawing) + kArtworkHeaderBytes, 0, 2 * kFrameBytes);
 	zassert_true(modes.configure(drawing));
 	zassert_false(modes.select(Mode::kCanvas, 300));
 	zassert_false(modes.select(Mode::kAnimation, 300));
-	modes.next(300);
 	zassert_equal(modes.active(), Mode::kQr);
+	modes.next(300);
+	zassert_equal(modes.active(), Mode::kName);
 }
 
 ZTEST(modes, test_boot_falls_back_when_saved_artwork_mode_is_unavailable)
 {
-	Settings settings = kDefaultSettings;
+	OwnedSettings settings;
 	Modes modes;
 	settings.default_mode = Mode::kCanvas;
 	modes.start(settings, false);
 	zassert_equal(modes.active(), Mode::kQr);
-	settings.artwork.bytes[kArtworkHeaderBytes] = 0x80;
+	mutable_art(settings)[kArtworkHeaderBytes] = 0x80;
 	modes.start(settings, false);
 	zassert_equal(modes.active(), Mode::kCanvas);
 	settings.default_mode = Mode::kAnimation;
 	modes.start(settings, false);
 	zassert_equal(modes.active(), Mode::kQr);
-	settings.artwork.bytes[1] = 2;
+	mutable_art(settings)[1] = 2;
 	settings.artwork.length += kFrameBytes;
 	modes.start(settings, false);
 	zassert_equal(modes.active(), Mode::kAnimation);
@@ -131,11 +133,11 @@ ZTEST(modes, test_boot_falls_back_when_saved_artwork_mode_is_unavailable)
 
 ZTEST(modes, test_drawing_requires_pixels_in_the_rendered_first_frame)
 {
-	Settings design = kDefaultSettings;
+	OwnedSettings design;
 	design.default_mode = Mode::kCanvas;
-	design.artwork.bytes[1] = 2;
+	mutable_art(design)[1] = 2;
 	design.artwork.length += kFrameBytes;
-	design.artwork.bytes[kArtworkHeaderBytes + kFrameBytes] = 0x40;
+	mutable_art(design)[kArtworkHeaderBytes + kFrameBytes] = 0x40;
 	Modes modes;
 	modes.start(design, false);
 	zassert_equal(modes.active(), Mode::kQr);
@@ -155,7 +157,7 @@ ZTEST(modes, test_drawing_requires_pixels_in_the_rendered_first_frame)
 	modes.start(design, false);
 	zassert_equal(modes.active(), Mode::kAnimation);
 
-	design.artwork.bytes[kArtworkHeaderBytes] = 0x80;
+	mutable_art(design)[kArtworkHeaderBytes] = 0x80;
 	zassert_true(modes.configure(design));
 	zassert_true(modes.select(Mode::kCanvas, 200));
 	modes.render(after, 500);
@@ -163,6 +165,22 @@ ZTEST(modes, test_drawing_requires_pixels_in_the_rendered_first_frame)
 	design.artwork.length = kArtworkHeaderBytes;
 	zassert_true(modes.configure(design));
 	zassert_false(modes.select(Mode::kCanvas, 600));
+}
+
+ZTEST(modes, test_replacing_artwork_revalidates_active_mode)
+{
+	OwnedSettings settings;
+	mutable_art(settings)[kArtworkHeaderBytes] = 0x80;
+	Modes modes;
+	modes.start(settings, false);
+	zassert_true(modes.select(Mode::kCanvas, 0));
+	mutable_art(settings)[kArtworkHeaderBytes] = 0;
+	zassert_true(modes.configure(settings));
+	zassert_equal(modes.active(), Mode::kQr);
+	Frame frame, expected;
+	modes.render(frame, 10);
+	encode_url(settings.url, strlen(settings.url), expected);
+	zassert_mem_equal(frame.bytes, expected.bytes, sizeof(frame.bytes));
 }
 
 ZTEST_SUITE(modes, nullptr, nullptr, nullptr, nullptr, nullptr);

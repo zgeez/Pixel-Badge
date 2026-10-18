@@ -38,14 +38,21 @@ const gpio_dt_spec buttons[] = {GPIO_DT_SPEC_GET(DT_ALIAS(sw0), gpios),
 				GPIO_DT_SPEC_GET(DT_ALIAS(sw1), gpios)};
 // Single main-loop owner. Bounded settings/particles live in BSS, not on its stack.
 Modes modes;
+SettingsService prototype_settings, prototype_candidate;
 
 int present(const device *display, const Frame &frame)
 {
 	display_buffer_descriptor descriptor{};
-	descriptor.buf_size = sizeof(frame.bytes);
+	const int format_rc = display_set_pixel_format(
+		display, frame.grayscale ? PIXEL_FORMAT_L_8 : PIXEL_FORMAT_MONO01);
+	if (format_rc != 0) {
+		return format_rc;
+	}
+	descriptor.buf_size = frame.grayscale ? sizeof(frame.levels) : sizeof(frame.bytes);
 	descriptor.width = descriptor.pitch = kMatrixSize;
 	descriptor.height = kMatrixSize;
-	return display_write(display, 0, 0, &descriptor, frame.bytes);
+	return display_write(display, 0, 0, &descriptor,
+			     frame.grayscale ? frame.levels : frame.bytes);
 }
 
 int initialize_display(const device *display, const Frame &frame, uint8_t brightness)
@@ -79,8 +86,9 @@ int apply_config(void *pointer, const ConfigCommand &command)
 		return -EBUSY;
 	}
 	auto &context = *static_cast<ConfigContext *>(pointer);
-	SettingsService candidate = context.settings;
-	if (!candidate.load(command.field, command.data, command.length)) {
+	auto &candidate = prototype_candidate;
+	candidate = context.settings;
+	if (!candidate.load(command.field, command.value(), command.length)) {
 		return -EINVAL;
 	}
 	const Mode previous_mode = context.modes.active();
@@ -105,8 +113,8 @@ int apply_config(void *pointer, const ConfigCommand &command)
 		rc = present(context.display, frame);
 	}
 	if (rc == 0) {
-		rc = context.settings.save(command.field, command.data, command.length, store_field,
-					   nullptr);
+		rc = context.settings.save(command.field, command.value(), command.length,
+					   store_field, nullptr);
 	}
 	if (rc != 0) {
 		context.modes.configure(context.settings.values());
@@ -170,7 +178,7 @@ void run_prototype()
 			}
 		}
 	}
-	SettingsService settings;
+	auto &settings = prototype_settings;
 	const int load_rc = load_settings(settings, factory_reset);
 	if (load_rc != 0) {
 		LOG_ERR("settings load/reset failed (%d); safe mode", load_rc);
@@ -295,7 +303,11 @@ void run_prototype()
 		}
 #if defined(CONFIG_APP_AUDIO)
 		audio_tick(!safe && load_rc == 0 && display_ready && !display_health.recovering() &&
-				   !nfc_update_busy(),
+				   !nfc_update_busy()
+#if defined(CONFIG_APP_BLE)
+				   && !ble_artwork_busy()
+#endif
+				   ,
 			   modes.active() == Mode::kAudioLevel ||
 				   modes.active() == Mode::kAudioSpectrum,
 			   modes.active() == Mode::kAudioSpectrum);
@@ -307,12 +319,13 @@ void run_prototype()
 			audio_capture_active() || audio_ui_busy() ||
 #endif
 			modes.active() == Mode::kAnimation || modes.active() == Mode::kFluid ||
-			(modes.active() == Mode::kName && settings.values().text.bytes[1] == 2);
+			(modes.active() == Mode::kName && text_animated(settings.values().text));
 		const uint32_t render_interval =
 			fast_content && !display_health.recovering() ? 20 : DisplayHealth::kRetryMs;
 		if ((changed && !display_health.recovering()) ||
 		    now - last_render >= render_interval) {
 			Frame frame;
+			int brightness_rc = 0;
 			modes.render(frame, now);
 			[[maybe_unused]] bool pairing_overlay = false;
 #if defined(CONFIG_APP_BLE)
@@ -338,7 +351,7 @@ void run_prototype()
 				rotate_overlay = rotate_overlay || overlay != AudioOverlay::kNone;
 #endif
 			}
-			(void)display_set_brightness(
+			brightness_rc = display_set_brightness(
 				display, audio_recording() ? 255 : settings.values().brightness);
 #endif
 #endif
@@ -347,7 +360,8 @@ void run_prototype()
 				rotate(frame, frame, modes.display_rotation());
 			}
 #endif
-			int rc = display_ready
+			int rc = brightness_rc != 0 ? brightness_rc
+				 : display_ready
 					 ? present(display, frame)
 					 : initialize_display(display, frame,
 							      safe ? kDefaultSettings.brightness

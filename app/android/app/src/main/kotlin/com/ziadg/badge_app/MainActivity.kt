@@ -15,12 +15,15 @@ class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         runtime.audio.attachActivity(this)
+        runtime.media.attachActivity(this)
     }
     override fun onDestroy() {
         runtime.audio.attachActivity(null)
+        runtime.media.attachActivity(null)
         super.onDestroy()
     }
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: android.content.Intent?) {
+        if (runtime.media.exportResult(requestCode, resultCode, data)) return
         if (runtime.audio.exportResult(requestCode, resultCode, data)) return
         super.onActivityResult(requestCode, resultCode, data)
     }

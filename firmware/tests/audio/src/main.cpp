@@ -129,4 +129,27 @@ ZTEST(audio, test_recording_overlay_overrides_stale_unavailable_message)
 	zassert_equal(audio_overlay_kind(true, false, false, false), AudioOverlay::kRecording);
 	zassert_equal(audio_overlay_kind(false, false, false, false), AudioOverlay::kNone);
 }
+ZTEST(audio, test_recording_uses_full_spectrum_and_level_view)
+{
+	AudioAnalysis analysis;
+	for (auto &band : analysis.bands) {
+		band = 32768;
+	}
+	analysis.rms = 32768;
+	Frame frame;
+	render_recording_audio(frame, analysis);
+	for (unsigned band = 0; band < 8; band++) {
+		zassert_true(frame.get(band * 4, 0));
+		zassert_true(frame.get(band * 4, 27));
+	}
+	for (int x = 0; x < 32; x++) {
+		zassert_true(frame.get(x, 30));
+		zassert_true(frame.get(x, 31));
+	}
+	render_recording_audio(frame, AudioAnalysis{});
+	zassert_true(frame.get(0, 0));
+	zassert_true(frame.get(31, 0));
+	zassert_false(frame.get(4, 14));
+	zassert_false(frame.get(4, 31));
+}
 ZTEST_SUITE(audio, nullptr, nullptr, nullptr, nullptr, nullptr);

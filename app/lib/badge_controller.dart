@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'protocol.dart';
 import 'motion_model.dart';
+import 'qr_capacity.dart';
 
 abstract interface class BadgeLink {
   Future<Uint8List> read(String uuid);
@@ -11,6 +12,19 @@ abstract interface class BadgeLink {
   Stream<Uint8List> get statuses;
   Stream<bool> get connections;
   Future<void> close();
+}
+
+abstract interface class BulkArtworkLink {
+  Future<int> artworkPayloadSize();
+  void invalidateArtworkCache();
+}
+
+abstract interface class ArtworkTransferLink {
+  Future<void> transferPriority(bool active);
+}
+
+abstract interface class ArtworkReadProgressLink {
+  void setArtworkReadProgress(void Function(double)? listener);
 }
 
 class BadgeController extends ChangeNotifier {
@@ -46,6 +60,8 @@ class BadgeController extends ChangeNotifier {
   Map<BadgeField, Uint8List> values = {};
   String get url => ascii.decode(values[BadgeField.url] ?? []);
   String get name => ascii.decode(values[BadgeField.name] ?? []);
+  List<int> get brightnessPresets =>
+      capabilities.hasEditorV2 ? brightnessLevels : legacyBrightnessLevels;
   int get brightness => values[BadgeField.brightness]?.first ?? 128;
   int get mode => values[BadgeField.mode]?.first ?? 0;
 
@@ -99,7 +115,7 @@ class BadgeController extends ChangeNotifier {
     if (busy) throw StateError('Wait for the current operation.');
     busy = true;
     confirmed = false;
-    message = 'Reading settings from the badge…';
+    message = 'Reading settings from the badge...';
     notifyListeners();
     try {
       await _refresh();
@@ -120,14 +136,44 @@ class BadgeController extends ChangeNotifier {
     if (link == null || !connected) {
       throw StateError('Connect to the badge first.');
     }
+    if (capabilities.hasLargeArtwork && link is BulkArtworkLink) {
+      // Establish the large ATT payload before the first readback, not only
+      // when uploading or preparing audio later in the connection sequence.
+      await (link as BulkArtworkLink).artworkPayloadSize();
+      if (!connected || generation != _generation) {
+        throw StateError('Connection lost during transfer setup.');
+      }
+    }
     final before = BadgeStatus.decode(await link.read(statusUuid));
     if (before.phase == 1) {
       throw StateError('Badge is still applying a setting.');
     }
     final next = <BadgeField, Uint8List>{};
     for (final field in capabilities.settings) {
-      final value = await link.read(field.uuid);
+      final progress = link is ArtworkReadProgressLink
+          ? link as ArtworkReadProgressLink
+          : null;
+      if (field == BadgeField.artwork && progress != null) {
+        uploadProgress = 0;
+        progress.setArtworkReadProgress((value) {
+          if (generation == _generation &&
+              connected &&
+              busy &&
+              (value == 1 ||
+                  (value * 100).floor() != (uploadProgress * 100).floor())) {
+            uploadProgress = value;
+            notifyListeners();
+          }
+        });
+      }
+      late Uint8List value;
+      try {
+        value = await link.read(field.uuid);
+      } finally {
+        if (field == BadgeField.artwork) progress?.setArtworkReadProgress(null);
+      }
       validateValue(field, value);
+      if (field == BadgeField.artwork) uploadProgress = 1;
       next[field] = value;
     }
     final after = BadgeStatus.decode(await link.read(statusUuid));
@@ -214,15 +260,62 @@ class BadgeController extends ChangeNotifier {
         value[0] >= capabilities.modeCount) {
       throw StateError('Update badge firmware to use Studio modes.');
     }
-    final packets = stagePackets(field, value);
+    if (field == BadgeField.url &&
+        capabilities.maxUrlLength == 20 &&
+        QrCapacity.fit(ascii.decode(value), extended: false) == null) {
+      throw StateError('Update badge firmware to use this longer QR link.');
+    }
+    if (field == BadgeField.artwork &&
+        (value.length < 4 ||
+            value[1] > capabilities.maxFrames ||
+            value.length >
+                (capabilities.hasLargeArtwork
+                    ? 131718
+                    : capabilities.hasGrayscale
+                    ? 8192
+                    : 2052) ||
+            (value[0] == 2 && !capabilities.hasGrayscale))) {
+      throw StateError(
+        'Update badge firmware for grayscale and longer animations.',
+      );
+    }
+    if (!capabilities.hasEditorV2 &&
+        ((field == BadgeField.text && value.length > 1 && value[1] == 3) ||
+            (field == BadgeField.brightness &&
+                value.length == 1 &&
+                value[0] == 13))) {
+      throw StateError('Update badge firmware to use this feature.');
+    }
+    validateValue(field, value);
     final link = _link!;
     final generation = _generation;
     busy = true;
     uploadProgress = 0;
     confirmed = false;
-    message = 'Applying… waiting for badge confirmation.';
+    message = 'Applying... waiting for badge confirmation.';
     notifyListeners();
+    var transferPriority = false;
+    final transferWatch = Stopwatch()..start();
     try {
+      if (field == BadgeField.artwork && link is ArtworkTransferLink) {
+        await (link as ArtworkTransferLink).transferPriority(true);
+        transferPriority = true;
+      }
+      final payloadSize =
+          field == BadgeField.artwork &&
+              capabilities.hasLargeArtwork &&
+              link is BulkArtworkLink
+          ? await (link as BulkArtworkLink).artworkPayloadSize()
+          : 20;
+      if (!connected || generation != _generation) {
+        throw StateError("Connection lost.");
+      }
+      final packets = stagePackets(
+        field,
+        value,
+        wideArtwork: capabilities.hasLargeArtwork,
+        payloadSize: payloadSize,
+      );
       final status = BadgeStatus.decode(await link.read(statusUuid));
       if (status.version != capabilities.version) {
         throw const FormatException(
@@ -248,6 +341,14 @@ class BadgeController extends ChangeNotifier {
         uploadProgress = (index + 1) / packets.length;
         notifyListeners();
       }
+      assert(() {
+        if (field == BadgeField.artwork) {
+          debugPrint(
+            'Pixel Badge artwork upload: ${value.length} bytes / ${transferWatch.elapsedMilliseconds} ms',
+          );
+        }
+        return true;
+      }());
       if (!connected || generation != _generation) {
         throw StateError('Connection lost before Apply.');
       }
@@ -262,9 +363,17 @@ class BadgeController extends ChangeNotifier {
           nfcResult = completion.result;
           throw StateError(nfcMessage);
         }
+        if (field == BadgeField.artwork && completion.result == -5) {
+          throw StateError(
+            'Artwork storage error. Restart the badge before retrying.',
+          );
+        }
         throw StateError(
           'Badge rejected the change (${completion.result}). Refresh its current settings.',
         );
+      }
+      if (field == BadgeField.artwork && link is BulkArtworkLink) {
+        (link as BulkArtworkLink).invalidateArtworkCache();
       }
       await _refresh();
       if ((field != BadgeField.nfcSync && !sameBytes(values[field]!, value)) ||
@@ -279,6 +388,11 @@ class BadgeController extends ChangeNotifier {
       message = '$error';
       rethrow;
     } finally {
+      if (transferPriority) {
+        try {
+          await (link as ArtworkTransferLink).transferPriority(false);
+        } catch (_) {}
+      }
       busy = false;
       _completion = null;
       _field = null;

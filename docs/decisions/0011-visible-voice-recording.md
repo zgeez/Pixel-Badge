@@ -131,3 +131,5 @@ stop and every automatic stop condition work.
 
 - [Firmware: audio privacy requirement](../firmware.md#audio-privacy-requirement)
 - [Validation: microphone and audio processing](../validation.md#8-microphone-and-audio-processing)
+
+2026-10-16: [ADR0018](0018-grayscale-studio-recording-view.md) amends per-pixel intensity and/or the recording display. Historical acceptance does not validate the new grayscale scan or recording-view visibility.

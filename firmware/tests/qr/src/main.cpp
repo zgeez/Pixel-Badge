@@ -63,12 +63,33 @@ ZTEST(qr, test_v1_m_full_quiet_zone)
 	}
 }
 
+ZTEST(qr, test_strongest_fitting_correction)
+{
+	const char *urls[] = {"HTTP://A", "HTTPS://A.B/L", "HTTPS://EXAMPLE.COM",
+			      "HTTPS://EXAMPLE.COM/ABCDE"};
+	const qrcodegen_Ecc levels[] = {qrcodegen_Ecc_HIGH, qrcodegen_Ecc_QUARTILE,
+					qrcodegen_Ecc_MEDIUM, qrcodegen_Ecc_LOW};
+	for (unsigned i = 0; i < 4; ++i) {
+		Frame actual;
+		zassert_true(encode_url(urls[i], strlen(urls[i]), actual));
+		bool matched = false;
+		for (int mask = 0; mask < 8; ++mask) {
+			const Frame reference = reference_frame(urls[i], levels[i], mask);
+			matched |= memcmp(actual.bytes, reference.bytes, sizeof(actual.bytes)) == 0;
+		}
+		zassert_true(matched, "incorrect QR correction for %s", urls[i]);
+	}
+}
+
 ZTEST(qr, test_capacity_and_charset)
 {
 	Frame frame;
 	zassert_true(encode_url("HTTPS://EXAMPLE.COM/", 20, frame));
 	zassert_true(valid_url("https://a.b/abc", 14));
-	zassert_false(valid_url("https://a.b/abcd", 15));
+	zassert_true(valid_url("https://a.b/abcd", 15));
+	zassert_true(valid_url("https://a.b/abcde", 17));
+	zassert_false(valid_url("https://a.b/abcdef", 18));
+	zassert_true(valid_url("HTTPS://EXAMPLE.COM/ABCDE", 25));
 	zassert_false(valid_url(nullptr, 1));
 	zassert_false(valid_url("", 0));
 	zassert_false(valid_url("HTTPS://", 8));
@@ -83,7 +104,7 @@ ZTEST(qr, test_capacity_and_charset)
 	const char unicode[] = "HTTP://A/\xc3\xa9";
 	zassert_false(valid_url(unicode, sizeof(unicode) - 1));
 	const Frame previous = frame;
-	zassert_false(encode_url("HTTPS://EXAMPLE.COM/A", 21, frame));
+	zassert_false(encode_url("HTTPS://EXAMPLE.COM/ABCDEF", 26, frame));
 	zassert_mem_equal(frame.bytes, previous.bytes, sizeof(frame.bytes));
 }
 

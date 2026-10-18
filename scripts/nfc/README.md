@@ -18,7 +18,7 @@ Use `--jlink-serial` when multiple probes are attached. `--android-serial`
 selects the single authorized USB phone for provisioning. `--elf` must match
 the image actually flashed. `status` reads cached non-secret data only.
 
-The firmware mailbox is version 3, 120 bytes. Little-endian offsets:
+The firmware mailbox is version 4, 132 bytes. Little-endian offsets:
 
 | Offset | Field |
 |---|---|
@@ -27,9 +27,9 @@ The firmware mailbox is version 3, 120 bytes. Little-endian offsets:
 | 16 / 20 | Command / signed errno result |
 | 24 / 28 | Verified-and-ready flag / seven-bit I2C address |
 | 32 | UID, seven bytes plus padding |
-| 40 / 64 | Desired / last verified URL, 24-byte slots |
-| 88 | Command input, 24 bytes |
-| 112 | Transient credentials, eight bytes (PWD4/PACK2/padding2) |
+| 40 / 68 | Desired / last verified URL, 28-byte slots |
+| 96 | Command input, 28 bytes |
+| 124 | Transient credentials, eight bytes (PWD4/PACK2/padding2) |
 
 Commands are status=1, set-url=2, begin-provision=3, RF-proof-confirm=4,
 sync=5. The host writes the sequence last and waits for the matching response.
@@ -89,7 +89,7 @@ Unauthenticated RF-write/metadata/bypass rejection remains a release bench gate.
 HTTP proofs require integer `proof_version: 3`, true `generated_ok`,
 `repeated_generated_ok` and `fresh_sessions`, matching UID and a consumed
 one-use challenge; old helper proofs are rejected. Firmware also rejects old
-proof receipts and uses mailbox version 3 so an old host cannot finalize new
+proof receipts and uses mailbox version 4 so an old host cannot finalize new
 firmware. Install v0.5 with matching firmware/host and
 repeat explicit provisioning. No credentials or prior URI are recovered from
 an old receipt; the tag's previous EEPROM content remains available to readers.
@@ -105,3 +105,6 @@ when the target becomes unreachable; a failed SWD cleanup cannot prove RAM was
 cleared.
 The pure Java RF checks run with `javac --release 8` and
 `java -cp build/nfc-jvm NfcProofTest`, as in CI.
+
+Mailbox v4 accommodates up to 25 URL characters plus NUL. RF proof stays at
+version 3; use matching new host tools and firmware for the wider mailbox.

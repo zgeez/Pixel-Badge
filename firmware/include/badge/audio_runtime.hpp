@@ -16,6 +16,8 @@ AudioOverlay audio_overlay(Frame &frame);
 bool audio_recording();
 bool audio_ui_busy();
 bool audio_capture_active();
+/* Thread-safe handoff for flash uploads after the main owner stops DMA. */
+bool audio_quiescent();
 void audio_tick(bool display_healthy, bool visual, bool spectrum);
 void audio_display_result(int result);
 void audio_halt();

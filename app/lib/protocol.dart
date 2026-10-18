@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 import 'dart:convert';
 import 'dart:typed_data';
+import 'qr_capacity.dart';
+import 'artwork_codec.dart';
 
 enum BadgeField {
   url(1, 4),
@@ -24,7 +26,8 @@ final infoUuid = badgeUuid(2);
 final applyUuid = badgeUuid(7);
 final statusUuid = badgeUuid(8);
 final motionStatusUuid = badgeUuid(13);
-const brightnessLevels = [16, 64, 128, 255];
+const brightnessLevels = [13, 64, 128, 255];
+const legacyBrightnessLevels = [16, 64, 128, 255];
 const legacyFields = [
   BadgeField.url,
   BadgeField.name,
@@ -37,10 +40,17 @@ class BadgeCapabilities {
     this.version, {
     this.hasAudio = false,
     this.hasMotion = false,
+    this.maxUrlLength = 20,
+    this.hasGrayscale = false,
+    this.hasLargeArtwork = false,
+    this.hasEditorV2 = false,
+    this.maxFrames = 16,
   });
   static const legacy = BadgeCapabilities(1);
   static const studio = BadgeCapabilities(2);
-  final int version;
+  final int version, maxUrlLength, maxFrames;
+  final bool hasGrayscale;
+  final bool hasLargeArtwork, hasEditorV2;
   final bool hasAudio;
   final bool hasMotion;
   int get modeCount => hasMotion
@@ -59,16 +69,22 @@ class BadgeCapabilities {
   factory BadgeCapabilities.decode(List<int> bytes) {
     if (bytes.length != 8 ||
         (bytes[0] != 1 && bytes[0] != 2) ||
-        bytes[1] != 20 ||
+        (bytes[1] != 20 && !(bytes[0] == 2 && bytes[1] == 25)) ||
         bytes[2] != 32 ||
         bytes[3] != 4 ||
         bytes[5] & ~7 != 0 ||
+        (bytes[7] & 128 != 0 && bytes[7] & 64 == 0) ||
         (bytes[0] == 1
             ? bytes[4] != 2 || bytes[6] != 0 || bytes[7] != 0
-            : !((bytes[4] == 4 && bytes[7] == 7) ||
-                      (bytes[4] == 6 && bytes[7] == 15) ||
-                      (bytes[4] == 7 && bytes[7] == 31)) ||
-                  bytes[6] != 16)) {
+            : !((bytes[4] == 4 && bytes[7] & ~224 == 7) ||
+                      (bytes[4] == 6 && bytes[7] & ~224 == 15) ||
+                      (bytes[4] == 7 && bytes[7] & ~224 == 31)) ||
+                  bytes[6] !=
+                      (bytes[7] & 64 != 0
+                          ? 128
+                          : bytes[7] & 32 != 0
+                          ? 32
+                          : 16))) {
       throw const FormatException(
         'This badge uses an unsupported configuration protocol.',
       );
@@ -77,6 +93,11 @@ class BadgeCapabilities {
       bytes[0],
       hasAudio: bytes[4] >= 6,
       hasMotion: bytes[4] == 7,
+      maxUrlLength: bytes[1],
+      hasGrayscale: bytes[7] & 32 != 0,
+      hasLargeArtwork: bytes[7] & 64 != 0,
+      hasEditorV2: bytes[7] & 128 != 0,
+      maxFrames: bytes[6],
     );
   }
 }
@@ -97,24 +118,46 @@ List<int> encodeAscii(String value, {bool lineBreaks = false}) {
   return ascii.encode(value);
 }
 
-/// Default-MTU readback, with explicit cursors and a stable declared size.
+/// Paged readback, with explicit cursors and a stable declared size.
 Future<Uint8List> readArtworkPages(
   Future<void> Function(Uint8List) writeCursor,
-  Future<Uint8List> Function() readPage,
-) async {
+  Future<Uint8List> Function() readPage, {
+  bool wide = false,
+  bool sequential = false,
+  void Function(double)? onProgress,
+}) async {
   final output = <int>[];
+  onProgress?.call(0);
   int? total;
+  if (sequential) {
+    await writeCursor(Uint8List.fromList([4]));
+  }
   do {
-    await writeCursor(
-      Uint8List.fromList([0, output.length & 255, output.length >> 8]),
-    );
+    if (!sequential) {
+      await writeCursor(
+        wide
+            ? (ByteData(5)
+                    ..setUint8(0, 2)
+                    ..setUint32(1, output.length, Endian.little))
+                  .buffer
+                  .asUint8List()
+            : Uint8List.fromList([0, output.length & 255, output.length >> 8]),
+      );
+    }
     final page = await readPage();
-    if (page.length < 5 || page.length > 20) {
+    final header = wide ? 8 : 4;
+    if (page.length <= header || page.length > (wide ? 244 : 20)) {
       throw const FormatException('Incomplete artwork readback.');
     }
-    final offset = page[0] + (page[1] << 8), size = page[2] + (page[3] << 8);
-    if (size < 132 ||
-        size > 2052 ||
+    final raw = ByteData.sublistView(page);
+    final offset = wide
+            ? raw.getUint32(0, Endian.little)
+            : raw.getUint16(0, Endian.little),
+        size = wide
+            ? raw.getUint32(4, Endian.little)
+            : raw.getUint16(2, Endian.little);
+    if (size < 4 ||
+        size > maxArtworkBytes ||
         offset != output.length ||
         (total != null && total != size)) {
       throw const FormatException(
@@ -122,10 +165,11 @@ Future<Uint8List> readArtworkPages(
       );
     }
     total = size;
-    output.addAll(page.sublist(4));
+    output.addAll(page.sublist(header));
     if (output.length > total) {
       throw const FormatException('Malformed artwork page.');
     }
+    onProgress?.call(output.length / total);
   } while (output.length < total);
   final bytes = Uint8List.fromList(output);
   validateValue(BadgeField.artwork, bytes);
@@ -155,7 +199,7 @@ void validateValue(BadgeField field, List<int> value) {
     if (value.length < 6 ||
         value.length > 102 ||
         value[0] != 1 ||
-        value[1] > 2 ||
+        value[1] > 3 ||
         value[2] > 3 ||
         value[3] > 2 ||
         value[4] + (value[5] << 8) < 50 ||
@@ -168,17 +212,7 @@ void validateValue(BadgeField field, List<int> value) {
     return;
   }
   if (field == BadgeField.artwork) {
-    if (value.length < 4 ||
-        value[0] != 1 ||
-        value[1] < 1 ||
-        value[1] > 16 ||
-        value.length != 4 + value[1] * 128 ||
-        value[2] + (value[3] << 8) < 50 ||
-        value[2] + (value[3] << 8) > 2000) {
-      throw const FormatException(
-        'Use 1–16 frames with a 50–2000 ms frame interval.',
-      );
-    }
+    decodeArtwork(value, forBadge: true);
     return;
   }
   if (field == BadgeField.nfcSync) {
@@ -201,32 +235,55 @@ void validateValue(BadgeField field, List<int> value) {
         "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~:/?#[]!\$&'()*+,;=%";
     final prefix = RegExp(r'^https?://', caseSensitive: false).firstMatch(text);
     if (value.isEmpty ||
-        value.length > 20 ||
+        value.length > 25 ||
         prefix == null ||
         prefix.end == text.length ||
         '/?#:'.contains(text[prefix.end]) ||
         text.split('').any((c) => !allowed.contains(c)) ||
         RegExp(r'%(?![0-9a-fA-F]{2})').hasMatch(text)) {
       throw const FormatException(
-        'Use an HTTP(S) link of at most 20 ASCII characters.',
+        'Use a short HTTP(S) link: up to 25 QR alphanumeric characters or 17 ASCII bytes, including the scheme.',
       );
     }
-    // Fixed V1-M limits: 20 characters in this application, 14 in byte mode.
-    if (!RegExp(r'^[0-9A-Z $%*+./:\-]+$').hasMatch(text) && text.length > 14) {
+    if (QrCapacity.fit(text) == null) {
       throw const FormatException(
-        'This link does not fit the badge QR. Use a short link.',
+        'Too long for 32 by 32: maximum 25 QR alphanumeric characters or 17 ASCII bytes, including HTTP(S)://. Use a shorter link.',
       );
     }
   } else if (value.length != 1 ||
       (field == BadgeField.brightness
-          ? !brightnessLevels.contains(value.single)
+          ? (!brightnessLevels.contains(value.single) &&
+                !legacyBrightnessLevels.contains(value.single))
           : value.single > 6)) {
     throw const FormatException('Unsupported setting value.');
   }
 }
 
-List<Uint8List> stagePackets(BadgeField field, List<int> value) {
+List<Uint8List> stagePackets(
+  BadgeField field,
+  List<int> value, {
+  bool wideArtwork = false,
+  int payloadSize = 20,
+}) {
   validateValue(field, value);
+  if (field == BadgeField.artwork && wideArtwork) {
+    final size = payloadSize.clamp(20, 244) - 9;
+    return [
+      for (var offset = 0; offset < value.length; offset += size)
+        Uint8List.fromList([
+          ...(ByteData(9)
+                ..setUint8(0, 2)
+                ..setUint32(1, offset, Endian.little)
+                ..setUint32(5, value.length, Endian.little))
+              .buffer
+              .asUint8List(),
+          ...value.sublist(offset, (offset + size).clamp(0, value.length)),
+        ]),
+    ];
+  }
+  if (field == BadgeField.artwork && value.length > 65535) {
+    throw const FormatException('Update badge firmware for larger artwork.');
+  }
   if (field == BadgeField.text || field == BadgeField.artwork) {
     final size = field == BadgeField.artwork ? 15 : 16;
     return [
@@ -241,7 +298,10 @@ List<Uint8List> stagePackets(BadgeField field, List<int> value) {
         ]),
     ];
   }
-  if (field != BadgeField.name) return [Uint8List.fromList(value)];
+  if (field != BadgeField.name &&
+      !(field == BadgeField.url && value.length > 20)) {
+    return [Uint8List.fromList(value)];
+  }
   return [
     for (var offset = 0; offset < value.length; offset += 18)
       Uint8List.fromList([

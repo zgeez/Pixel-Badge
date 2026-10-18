@@ -22,7 +22,7 @@ class MotionLink extends StudioLink {
 }
 
 void main() {
-  testWidgets('motion mounting survives scrolling and returning to Badge', (
+  testWidgets('motion controls omit mounting and survive returning to Badge', (
     tester,
   ) async {
     final badge = BadgeController(), link = MotionLink();
@@ -31,15 +31,21 @@ void main() {
       capabilities: const BadgeCapabilities(2, hasAudio: true, hasMotion: true),
     );
     await showApp(tester, controller: badge);
-    await visible(tester, find.text('Sensor mounting'));
-    await tester.tap(find.text('Sensor mounting'));
-    await tester.pump(const Duration(milliseconds: 400));
-    await visible(tester, find.text('Panel right'));
+    await tester.tap(find.byTooltip('Motion settings'));
+    await tester.pumpAndSettle();
+    await visible(tester, find.text('Fluid amount'));
+    expect(find.text('Sensor mounting'), findsNothing);
+    expect(find.text('Panel right'), findsNothing);
+    expect(find.text('Create'), findsNothing);
+    await tester.tapAt(const Offset(5, 5));
+    await tester.pumpAndSettle();
     await page(tester, 'Links');
     await page(tester, 'Badge');
-    await visible(tester, find.text('Panel right'));
+    await tester.tap(find.byTooltip('Motion settings'));
+    await tester.pumpAndSettle();
+    await visible(tester, find.text('Apply motion'));
     expect(tester.takeException(), isNull);
-    expect(find.byType(DropdownButtonFormField<int>), findsNWidgets(2));
+    expect(find.byType(DropdownButtonFormField<int>), findsNothing);
     await tester.pumpWidget(const SizedBox());
     badge.dispose();
     await link.dispose();
@@ -125,7 +131,7 @@ void main() {
         home: Scaffold(
           body: SingleChildScrollView(
             child: MotionPanel(
-              value: MotionDesign().encode(),
+              value: MotionDesign(right: 5, down: 0).encode(),
               status: const MotionStatus(7, 0, 0, 0, 9807, 0),
               enabled: true,
               apply: (value) async => sent = value,
@@ -147,7 +153,7 @@ void main() {
     await tester.ensureVisible(find.text('Apply motion'));
     await tester.tap(find.text('Apply motion'));
     await tester.pump();
-    expect(sent, [1, 0, 0, 2, 5, 144, 1, 0]);
+    expect(sent, [1, 0, 5, 0, 5, 144, 1, 0]);
     await tester.pumpWidget(const SizedBox());
   });
 }

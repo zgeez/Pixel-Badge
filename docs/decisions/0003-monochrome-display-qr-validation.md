@@ -45,3 +45,5 @@ adjustable values while optical evidence is gathered.
 - [QR validation methodology](../validation.md#1-qr-scan-reliability)
 - [Prototype and final hardware](../hardware.md)
 - [DENSO WAVE QR dimensions and quiet zone](../references.md#standards)
+
+2026-10-16: [ADR0018](0018-grayscale-studio-recording-view.md) amends per-pixel intensity and/or the recording display. Historical acceptance does not validate the new grayscale scan or recording-view visibility.

@@ -52,15 +52,15 @@ bool syntax_valid(const char *text, size_t length)
 
 bool encode_url(const char *text, size_t length, Frame &output)
 {
-	if (!syntax_valid(text, length)) {
+	if (!valid_url(text, length)) {
 		return false;
 	}
 	char terminated[kPayloadMax + 1]{};
 	memcpy(terminated, text, length);
 	uint8_t scratch[qrcodegen_BUFFER_LEN_FOR_VERSION(1)];
 	uint8_t symbol[qrcodegen_BUFFER_LEN_FOR_VERSION(1)];
-	if (!qrcodegen_encodeText(terminated, scratch, symbol, qrcodegen_Ecc_MEDIUM, 1, 1,
-				  qrcodegen_Mask_AUTO, false)) {
+	if (!qrcodegen_encodeText(terminated, scratch, symbol, qrcodegen_Ecc_LOW, 1, 1,
+				  qrcodegen_Mask_AUTO, true)) {
 		return false;
 	}
 	Frame next;
@@ -76,7 +76,17 @@ bool encode_url(const char *text, size_t length, Frame &output)
 
 bool valid_url(const char *text, size_t length)
 {
-	Frame unused;
-	return encode_url(text, length, unused);
+	if (!syntax_valid(text, length)) {
+		return false;
+	}
+	/* encodeText uses one alphanumeric or byte segment for HTTP(S) URLs.
+	 * Capacity validation needs no mask search or temporary QR frame. */
+	constexpr char alphabet[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:";
+	for (size_t i = 0; i < length; ++i) {
+		if (strchr(alphabet, text[i]) == nullptr) {
+			return length <= 17;
+		}
+	}
+	return true; // syntax_valid already enforces the 25-character maximum.
 }
 } // namespace badge

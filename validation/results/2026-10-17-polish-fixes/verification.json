@@ -1,0 +1,38 @@
+{
+  "date": "2026-10-17",
+  "branch": "app/prototype-polish",
+  "base": "39593e809052e5ba664e6a0f761738b41cdaadcc",
+  "flutter_cases": 142,
+  "firmware_cases": 147,
+  "firmware_configurations": 21,
+  "android_cases": 21,
+  "android_suites": 7,
+  "qr_config_cases": 8,
+  "app_define_cases": 3,
+  "nfc_host_cases": 17,
+  "analyzer": "pass",
+  "repo_checks": "pass",
+  "dk_builds": [
+    "p3-normal",
+    "p3-recording",
+    "p4-nfc-setup"
+  ],
+  "recording_link_allocation": {
+    "flash_bytes": 206568,
+    "ram_bytes": 104497
+  },
+  "apk": {
+    "version": "0.10.3",
+    "build": 31,
+    "sha256": "9054348f3476d06f005baf384fdb10632b23b9ef33acc9b17897ab34fa5868aa",
+    "installed": false
+  },
+  "commit_script_checks": [
+    "preview passes",
+    "wrong StartAt rejected",
+    "changed fingerprint rejected",
+    "index unchanged"
+  ],
+  "deployment_performed": false,
+  "optical_acceptance_performed": false
+}

@@ -1,0 +1,12 @@
+/* SPDX-License-Identifier: MIT */
+/* Match the prototype settings capacity without moving its target partition. */
+&storage_partition { reg = <0xfc000 0x8000>; };
+
+&flash0 {
+    partitions {
+        artwork_storage: partition@110000 {
+            label = "artwork_storage";
+            reg = <0x110000 0x42000>;
+        };
+    };
+};

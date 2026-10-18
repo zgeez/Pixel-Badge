@@ -34,10 +34,10 @@ def normalize_url(value: str, key: str) -> str:
     if re.search(r"%(?![0-9A-Fa-f]{2})", value):
         raise ValueError(f"{key}: invalid percent escape")
     # Nayuki encodeText chooses numeric, alphanumeric or byte encoding for
-    # the entire payload. These are its V1-M limits for HTTP(S) URLs.
-    limit = 20 if all(c in ALPHANUMERIC for c in value) else 14
+    # the entire payload. These are its V1-L maximum limits for HTTP(S) URLs.
+    limit = 25 if all(c in ALPHANUMERIC for c in value) else 17
     if len(value) > limit:
-        raise ValueError(f"{key}: URL does not fit Version 1-M")
+        raise ValueError(f"{key}: URL does not fit Version 1 (automatic correction)")
     return value
 
 
@@ -97,7 +97,7 @@ def main() -> int:
         # Parsing errors name keys, never values or unrelated .env lines.
         print(f"QR configuration failed: {error}", file=sys.stderr)
         return 1
-    print(f"QR default configured: {args.link} (Version 1-M)")
+    print(f"QR default configured: {args.link} (Version 1 (automatic correction))")
     return 0
 
 
