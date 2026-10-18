@@ -131,8 +131,46 @@ ZTEST(display_health, test_intentional_disarm_outlives_watchdog_and_healthy_boot
 		health.report(physical_result, now, true);
 		zassert_false(health.recovering());
 		zassert_false(health.restart_required(now));
+		zassert_equal(health.acknowledge_boot(guard, false, true, now),
+			      now == BootGuard::kHealthyMs);
 	}
-	zassert_true(guard.healthy(health.healthy_ms(31000)));
+}
+
+ZTEST(display_health, test_healthy_disarmed_runs_clear_separated_watchdog_resets)
+{
+	uint8_t retained = 0xa0;
+	for (unsigned boot = 0; boot < 5; ++boot) {
+		BootGuard guard;
+		DisplayHealth health;
+		retained = guard.start(retained, true);
+		zassert_equal(retained, 0xa1);
+		zassert_false(guard.safe_mode());
+		health.report(-EPERM, 0, true);
+		zassert_false(
+			health.acknowledge_boot(guard, false, true, BootGuard::kHealthyMs - 1));
+		if (health.acknowledge_boot(guard, false, true, BootGuard::kHealthyMs)) {
+			retained = 0xa0; // Same retained write as the main loop.
+		}
+		zassert_equal(retained, 0xa0);
+		zassert_false(health.acknowledge_boot(guard, false, true, 60000));
+	}
+}
+
+ZTEST(display_health, test_boot_acknowledgement_requires_ready_or_intentional_disarm_and_health)
+{
+	BootGuard guard;
+	DisplayHealth health;
+	guard.start(0xa1, true);
+	health.report(0, 0);
+	zassert_false(health.acknowledge_boot(guard, false, false, BootGuard::kHealthyMs));
+	zassert_true(health.acknowledge_boot(guard, true, false, BootGuard::kHealthyMs));
+
+	BootGuard faulty_guard;
+	DisplayHealth faulty;
+	faulty_guard.start(0xa1, true);
+	faulty.report(-EIO, 0, true);
+	zassert_false(faulty.acknowledge_boot(faulty_guard, false, true, BootGuard::kHealthyMs));
+	zassert_false(faulty.acknowledge_boot(faulty_guard, true, false, BootGuard::kHealthyMs));
 }
 
 ZTEST(display_health, test_disarm_exemption_does_not_hide_real_driver_failures)

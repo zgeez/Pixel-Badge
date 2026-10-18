@@ -21,6 +21,8 @@ image keeps LED_EN/ARM low and BLANK high; display availability, new passkey
 pairing and recording visibility intentionally cannot succeed in that state.
 The intentional disarm does not trigger display recovery or watchdog resets:
 the service loop, BLE advertising/readback and local NFC startup remain active.
+After 30 healthy seconds, this state also clears the retained watchdog-reset
+counter without marking the physical display ready.
 Display-dependent writes, new pairing and capture remain unavailable; a blank
 matrix is never acknowledged as a physically visible frame. Actual driver
 initialization errors still follow bounded recovery and restart policy.

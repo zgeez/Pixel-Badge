@@ -140,3 +140,31 @@ remain unchanged. Local logs: `build/pr28-disarmed-{safe,matrix,prototype}.log`,
 `build/pr28-disarmed-native.log` and `build/pr28-disarmed-native/twister.json`.
 No flash or physical reset-loop/visibility test was performed. Sources are a
 local correction on top of27277c4 until owner signing and push.
+
+## Healthy disarmed boot acknowledgement - PR28 follow-up
+
+Correction on top of `12f016f`: the production boot-acknowledgement gate now
+accepts either physical display readiness or intentional matrix disarm, after
+the same 30-second uninterrupted healthy interval. It clears the retained
+watchdog-reset counter once per boot. Physical display readiness stays false
+while disarmed; visibility-dependent write, pairing and capture gates remain
+closed. Real display faults still prevent acknowledgement and retain recovery
+and watchdog escalation.
+
+Eleven display-health/boot-guard cases across two native configurations passed.
+They exercise the production acknowledgement gate, the 30-second boundary,
+one-shot acknowledgement, five watchdog boots separated by healthy disarmed
+runs, missing readiness without intentional disarm, and actual driver faults.
+Time and retention are simulated; no physical reset-loop test was performed.
+
+Default disarmed Rev A, enabled matrix/recording Rev A and nRF5340 recording
+builds passed. Both Rev A compiled pin/flash contracts and wrong-GPIO/overlap
+negative checks passed, as did C/C++ formatting, hygiene and whitespace.
+Current flash/RAM allocations in bytes: safe Rev A254136/100869, enabled Rev A
+254512/100869, nRF5340 application206648/104497. Bootloader, radio and partition
+allocations are unchanged. Local evidence is
+`build/pr28-boot-health-native/twister.json`, `build/pr28-boot-health-native.log`
+and `build/pr28-boot-health-{safe,matrix,prototype}.log`.
+
+No firmware was flashed or phone/peripheral test repeated. Physical acceptance
+remains deferred to board bring-up. This correction awaits owner signing/push.

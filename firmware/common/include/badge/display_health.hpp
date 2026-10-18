@@ -5,6 +5,8 @@
 
 namespace badge
 {
+class BootGuard;
+
 /* Main-loop policy: a delayed frame is retried; an uninterrupted failure
  * interval eventually stops watchdog feeding. Success restarts health timing. */
 class DisplayHealth
@@ -29,6 +31,10 @@ public:
 		return failed_;
 	}
 	uint32_t healthy_ms(uint32_t now) const;
+	/* Intentional disarm can acknowledge boot health without asserting physical
+	 * readiness for pairing, capture or QR visibility. */
+	bool acknowledge_boot(BootGuard &guard, bool display_ready, bool intentionally_disarmed,
+			      uint32_t now) const;
 
 private:
 	bool failed_ = false;

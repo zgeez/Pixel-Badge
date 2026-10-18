@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: MIT */
 #include "badge/display_health.hpp"
+#include "badge/boot_guard.hpp"
 #include <errno.h>
 
 namespace badge
@@ -34,5 +35,11 @@ bool DisplayHealth::restart_required(uint32_t now)
 uint32_t DisplayHealth::healthy_ms(uint32_t now) const
 {
 	return failed_ || restart_ ? 0 : now - healthy_since_;
+}
+
+bool DisplayHealth::acknowledge_boot(BootGuard &guard, bool display_ready,
+				     bool intentionally_disarmed, uint32_t now) const
+{
+	return (display_ready || intentionally_disarmed) && guard.healthy(healthy_ms(now));
 }
 } // namespace badge

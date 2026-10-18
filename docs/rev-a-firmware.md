@@ -73,7 +73,8 @@ for either backend. Recording still requires a submitted visible frame. The
 new backend is disarmed by default; an explicit matrix bench fragment enables
 it. The intentional disarmed result is excluded from watchdog failure tracking,
 while physical display readiness remains false. BLE/NFC service startup can
-continue without permitting invisible pairing codes or capture; other driver
+continue, and 30 healthy seconds clear the retained watchdog-reset counter,
+without permitting invisible pairing codes or capture; other driver
 errors retain the recovery/restart policy. This implementation does not establish
 refresh rate, optical intensity
 steps, row/column orientation, current limits or monostable protection.

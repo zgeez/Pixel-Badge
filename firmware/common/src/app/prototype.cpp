@@ -441,7 +441,8 @@ void run_prototype()
 		if (channel >= 0) {
 			wdt_feed(watchdog, channel);
 		}
-		if (display_ready && guard.healthy(display_health.healthy_ms(completed))) {
+		if (display_health.acknowledge_boot(guard, display_ready, display_disarmed,
+						    completed)) {
 			retain_boot_count(0xa0);
 			LOG_INF("healthy boot; reset-loop counter cleared");
 		}
