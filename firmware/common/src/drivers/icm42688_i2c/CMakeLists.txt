@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: MIT
 
-zephyr_library()
+zephyr_library_named(badge_icm42688)
 zephyr_library_sources(icm42688_i2c.c)
 
 # Register map shared with Zephyr's (SPI-only) ICM4268x driver.

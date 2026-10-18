@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: MIT */
 #include "badge/audio_runtime.hpp"
+#include "badge/audio_capture.hpp"
 #if defined(CONFIG_APP_BLE)
 #include "badge/ble.hpp"
 #endif
@@ -36,14 +37,17 @@ atomic_t revoked;
 atomic_t completion_token;
 bool closing;
 int64_t closing_deadline;
-constexpr uint32_t kBlockMs = 20, kRate = 32000, kChannels = 2;
-constexpr size_t kBlockBytes = kAudioBlockSamples * kChannels * sizeof(int16_t), kBuffers = 4;
+constexpr auto kCapture = audio_capture_profile(IS_ENABLED(CONFIG_SOC_NRF52840));
+constexpr uint32_t kBlockMs = 20, kRate = kCapture.rate, kChannels = 2;
+constexpr size_t kCaptureSamples = kRate * kBlockMs / 1000;
+BUILD_ASSERT(kCaptureSamples >= kAudioFftSize && kCaptureSamples <= kAudioBlockSamples);
+constexpr size_t kBlockBytes = kCaptureSamples * kChannels * sizeof(int16_t), kBuffers = 4;
 K_MEM_SLAB_DEFINE_STATIC(capture_slab, kBlockBytes, kBuffers, 4);
 const device *const microphone = DEVICE_DT_GET(DT_NODELABEL(pdm0));
 AudioAnalyzer analyzer;
 RecordingProcessor recording_processor;
 AudioAnalysis analysis{};
-int16_t mono[kAudioBlockSamples]{}, voice[320]{};
+int16_t mono[kCaptureSamples]{}, voice[320]{};
 /* 31-tap FIR low-pass before 2:1 decimation; history is reset at every start. */
 int16_t history[31]{};
 unsigned history_cursor;
@@ -302,8 +306,8 @@ int start_capture()
 	stream.pcm_width = 16;
 	stream.block_size = kBlockBytes;
 	stream.mem_slab = &capture_slab;
-	config.io.min_pdm_clk_freq = 1800000;
-	config.io.max_pdm_clk_freq = 3250000;
+	config.io.min_pdm_clk_freq = kCapture.min_clock;
+	config.io.max_pdm_clk_freq = kCapture.max_clock;
 	config.io.min_pdm_clk_dc = 40;
 	config.io.max_pdm_clk_dc = 60;
 	config.streams = &stream;
@@ -625,28 +629,34 @@ void audio_tick(bool display_healthy, bool visual, bool spectrum)
 			release(buffer);
 		} else {
 			const auto *pcm = static_cast<const int16_t *>(buffer);
-			for (size_t i = 0; i < kAudioBlockSamples; ++i) {
+			for (size_t i = 0; i < kCaptureSamples; ++i) {
 				mono[i] = pcm[2 * i + CONFIG_APP_AUDIO_CHANNEL];
 			}
 			release(buffer);
-			analyzer.analyze(mono, kAudioBlockSamples, analysis);
+			analyzer.analyze(mono, kCaptureSamples, analysis);
 			if (recording) {
-				for (unsigned i = 0; i < kAudioBlockSamples; ++i) {
-					history[history_cursor] = mono[i];
-					history_cursor = (history_cursor + 1) % 31;
-					if (i & 1) {
-						int64_t sum = 0;
-						for (unsigned j = 0; j < 31; ++j) {
-							sum += static_cast<int32_t>(
-								       history[(history_cursor +
-										j) %
-									       31]) *
-							       filter[j];
+				if constexpr (kRate == 16000) {
+					static_assert(kCaptureSamples == kRecordingSamples ||
+						      kRate != 16000);
+					memcpy(voice, mono, sizeof(voice));
+				} else {
+					for (unsigned i = 0; i < kCaptureSamples; ++i) {
+						history[history_cursor] = mono[i];
+						history_cursor = (history_cursor + 1) % 31;
+						if (i & 1) {
+							int64_t sum = 0;
+							for (unsigned j = 0; j < 31; ++j) {
+								sum += static_cast<int32_t>(
+									       history[(history_cursor +
+											j) %
+										       31]) *
+								       filter[j];
+							}
+							int64_t value = sum / 32768;
+							voice[i / 2] = value < -32768  ? -32768
+								       : value > 32767 ? 32767
+										       : value;
 						}
-						int64_t value = sum / 32768;
-						voice[i / 2] = value < -32768  ? -32768
-							       : value > 32767 ? 32767
-									       : value;
 					}
 				}
 				rc = recording_processor.process(voice, kRecordingSamples)

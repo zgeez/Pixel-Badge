@@ -3,7 +3,7 @@
     Windows developer commands for smart-led-badge (equivalent to the Makefile).
 
 .DESCRIPTION
-    build   Build the firmware for the nRF5340 DK application core.
+    build   Build Prototype (nRF5340 DK) or RevA (E73 nRF52840).
     test    Run the Twister host tests in the CI toolchain container (Docker).
     format  Format application C/C++ sources in place with clang-format.
     check   Check formatting, lint YAML, and check repository hygiene.
@@ -22,10 +22,10 @@
     .\scripts\dev.ps1 build -Pristine
 
 .EXAMPLE
-    .\scripts\dev.ps1 build -Board smart_led_badge/nrf5340/cpuapp -BuildDir build/badge -ExtraConfFile firmware/configs/rev-a-peripherals.conf
+    .\scripts\dev.ps1 build -Board smart_led_badge/nrf5340/cpuapp -BuildDir build/badge -ExtraConfFile firmware/nrf5340_prototype/configs/rev-a-peripherals.conf
 
 .EXAMPLE
-    .\scripts\dev.ps1 build -App firmware/bench/matrix_timing -BuildDir build/matrix_timing
+    .\scripts\dev.ps1 build -App firmware/nrf5340_prototype/bench/matrix_timing -BuildDir build/matrix_timing
 #>
 [CmdletBinding()]
 param(
@@ -33,12 +33,14 @@ param(
     [ValidateSet('build', 'test', 'format', 'check', 'hardware', 'clean')]
     [string] $Command = 'build',
 
-    [string] $Board = 'nrf5340dk/nrf5340/cpuapp',
-    [string] $BuildDir = 'build/nrf5340dk',
+    [ValidateSet('Prototype', 'RevA')]
+    [string] $Target = 'Prototype',
+    [string] $Board,
+    [string] $BuildDir,
     # Application directory relative to the repository root.
-    [string] $App = 'firmware',
+    [string] $App,
     # Optional Kconfig fragment added to the application image.
-    [string] $ExtraConfFile,
+    [string[]] $ExtraConfFile,
     # Optional sysbuild-only fragment (for example the P2 BLE controller).
     [string] $SysbuildConfFile,
     # Selects the local .env build default; stored settings still take precedence.
@@ -53,6 +55,9 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $RepoRoot = Split-Path -Parent $PSScriptRoot
+if (-not $App) { $App = if ($Target -eq 'RevA') { 'firmware/rev_a_nrf52840' } else { 'firmware/nrf5340_prototype' } }
+if (-not $Board) { $Board = if ($Target -eq 'RevA') { 'pixel_badge_reva/nrf52840' } else { 'nrf5340dk/nrf5340/cpuapp' } }
+if (-not $BuildDir) { $BuildDir = if ($Target -eq 'RevA') { 'build/rev_a_nrf52840' } else { 'build/nrf5340dk' } }
 
 # Keep in sync with .github/workflows/ci.yml.
 $ToolchainImage = 'ghcr.io/nrfconnect/sdk-nrf-toolchain:v3.4.1@sha256:45b97cad97a9967c52d77d1d1a0f7dd8fe027edd17c05c3eda2eeadc23729418'
@@ -156,27 +161,27 @@ function Get-SourceFiles {
     $files = & git -C $RepoRoot ls-files --cached --others --exclude-standard -- `
         '*.c' '*.h' '*.cpp' '*.hpp'
     if ($LASTEXITCODE -ne 0) { throw 'git ls-files failed' }
-    @($files | Where-Object { $_ } | ForEach-Object { Join-Path $RepoRoot $_ })
+    @($files | Where-Object { $_ -and (Test-Path -LiteralPath (Join-Path $RepoRoot $_) -PathType Leaf) } | ForEach-Object { Join-Path $RepoRoot $_ })
 }
 
 function Invoke-Build {
     Initialize-NcsEnvironment
     $pristineArg = if ($Pristine) { 'always' } else { 'auto' }
-    # BOARD_ROOT makes the Rev A board (firmware/boards) visible to sysbuild too.
-    $boardRoot = (Join-Path $RepoRoot 'firmware').Replace('\', '/')
+    # Each application owns its chip-specific board root, also visible to MCUboot.
+    $boardRoot = (Join-Path $RepoRoot $App).Replace('\', '/')
     $cmakeArgs = @("-DBOARD_ROOT=$boardRoot")
     if ($SysbuildConfFile) {
         $sbConf = (Resolve-Path -LiteralPath $SysbuildConfFile).Path.Replace('\', '/')
         $cmakeArgs += "-DSB_EXTRA_CONF_FILE=$sbConf"
     }
-    if ($App -eq 'firmware') {
+    if ($App -in @('firmware/nrf5340_prototype', 'firmware/rev_a_nrf52840')) {
         $cmakeArgs += "-DBADGE_QR_LINK=$($QrLink.ToUpperInvariant())"
     }
     if ($ExtraConfFile) {
-        $conf = (Resolve-Path -LiteralPath $ExtraConfFile).Path.Replace('\', '/')
+        $conf = (@($ExtraConfFile | ForEach-Object { (Resolve-Path -LiteralPath $_).Path.Replace('\', '/') }) -join ';')
         # Application fragments must not reach MCUboot through sysbuild.
-        $confKey = if ($App -eq 'firmware' -and $Board -like '*/cpuapp') {
-            'firmware_EXTRA_CONF_FILE'
+        $confKey = if ($App -in @('firmware/nrf5340_prototype', 'firmware/rev_a_nrf52840')) {
+            (Split-Path -Leaf $App) + '_EXTRA_CONF_FILE'
         } else {
             'EXTRA_CONF_FILE'
         }
@@ -187,7 +192,7 @@ function Invoke-Build {
     try {
         Remove-Item Env:EXTRA_CONF_FILE -ErrorAction SilentlyContinue
         Remove-Item Env:SB_EXTRA_CONF_FILE -ErrorAction SilentlyContinue
-        Invoke-Native west (@('build', "--pristine=$pristineArg", '-b', $Board,
+        Invoke-Native west (@('build', '--sysbuild', "--pristine=$pristineArg", '-b', $Board,
             '-d', (Join-Path $RepoRoot $BuildDir), (Join-Path $RepoRoot $App),
             '--') + $cmakeArgs)
     } finally {

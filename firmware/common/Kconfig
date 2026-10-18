@@ -2,6 +2,10 @@
 
 menu "Smart LED Badge application"
 
+config BADGE_DISPLAY_SYNC
+	bool
+	default y if HUB75_DISPLAY || REVA_MATRIX
+
 module = APP
 module-str = Application
 source "subsys/logging/Kconfig.template.log_config"
@@ -43,7 +47,7 @@ config APP_AUDIO_CHANNEL
 config APP_AUDIO
  bool "P3 local visualization and authenticated audio service"
  default y if APP_BLE
-	depends on APP_BLE && AUDIO_DMIC && HUB75_DISPLAY && !DEBUG_COREDUMP
+	depends on APP_BLE && AUDIO_DMIC && DISPLAY && BADGE_DISPLAY_SYNC && !DEBUG_COREDUMP
 
 config APP_AUDIO_RECORDING_BENCH
  bool "Bench-only recording before REC visibility acceptance"
@@ -62,7 +66,7 @@ config APP_MOTION
 
 config APP_PROTOTYPE
 	bool "Prototype badge application"
-	default y if BOARD_NRF5340DK_NRF5340_CPUAPP
+	default y if BOARD_NRF5340DK_NRF5340_CPUAPP || BOARD_PIXEL_BADGE_REVA
 	depends on DISPLAY && !APP_QR_SCREENING
 	select FLASH
 	select FLASH_MAP
@@ -122,5 +126,3 @@ config APP_BLE
 	  applied asynchronously and read back before reporting success.
 
 endmenu
-
-source "Kconfig.zephyr"

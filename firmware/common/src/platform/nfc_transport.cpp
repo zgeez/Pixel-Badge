@@ -31,6 +31,10 @@ const gpio_dt_spec fd = GPIO_DT_SPEC_GET(NFC_USER, nfc_fd_gpios);
 gpio_callback callback;
 atomic_t edges;
 bool prepared;
+#if DT_NODE_HAS_PROP(NFC_USER, nfc_pwr_gpios)
+const gpio_dt_spec power = GPIO_DT_SPEC_GET(NFC_USER, nfc_pwr_gpios);
+bool powered;
+#endif
 
 void on_field(const device *, gpio_callback *, uint32_t)
 {
@@ -90,6 +94,21 @@ int prepare_nfc_transport()
 		return rc;
 	}
 	if (!prepared) {
+#if DT_NODE_HAS_PROP(NFC_USER, nfc_pwr_gpios)
+		if (!powered) {
+			rc = gpio_is_ready_dt(&power)
+				     ? gpio_pin_configure_dt(&power, GPIO_OUTPUT_ACTIVE)
+				     : -ENODEV;
+			if (rc != 0) {
+				bench_bus_unlock();
+				return rc;
+			}
+			/* Conservative initial bring-up guard, not a measured power-on time.
+			 * Keep VCC on while the runtime owns FD and the session registers. */
+			k_msleep(10);
+			powered = true;
+		}
+#endif
 		if (!device_is_ready(bus) || !gpio_is_ready_dt(&fd)) {
 			rc = -ENODEV;
 		} else {

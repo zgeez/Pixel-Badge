@@ -12,6 +12,14 @@ class DisplayHealth
 public:
 	static constexpr uint32_t kRetryMs = 100;
 	static constexpr uint32_t kFailureMs = 2000;
+	/* Recovery must clear a driver's latched fault, then prove scanning resumed.
+	 * An accepted initialization alone must not reset the failure deadline. */
+	template <typename Submit, typename ConfirmVisible>
+	int present(bool ready, Submit submit, ConfirmVisible confirm_visible) const
+	{
+		const int result = submit(!ready || recovering());
+		return result == 0 && recovering() ? confirm_visible() : result;
+	}
 	void report(int result, uint32_t now);
 	bool restart_required(uint32_t now);
 	bool recovering() const

@@ -560,6 +560,19 @@ void open_ble_pairing()
 	}
 	k_mutex_unlock(&ble_mutex);
 }
+#if defined(CONFIG_BADGE_USB_BENCH)
+bool ble_bench_passkey(uint32_t &passkey)
+{
+	k_mutex_lock(&ble_mutex, K_FOREVER);
+	const bool visible = writable && enabled && passkey_visible &&
+			     pairing_deadline > static_cast<uint64_t>(k_uptime_get());
+	if (visible) {
+		passkey = displayed_passkey;
+	}
+	k_mutex_unlock(&ble_mutex);
+	return visible;
+}
+#endif
 bool ble_config_busy()
 {
 	k_mutex_lock(&ble_mutex, K_FOREVER);

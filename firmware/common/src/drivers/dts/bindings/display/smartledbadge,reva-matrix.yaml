@@ -1,0 +1,28 @@
+# SPDX-License-Identifier: MIT
+description: Rev A TLC59283 columns and active-low HC595 row chain
+compatible: "smartledbadge,reva-matrix"
+include: display-controller.yaml
+properties:
+  spi:
+    type: phandle
+    required: true
+    description: Dedicated Zephyr SPIM3 bus; no chip select, mode 0 at 8 MHz
+  timer:
+    type: phandle
+    required: true
+    description: Dedicated one-shot TIMER3, not owned by the Bluetooth controller
+  lat-gpios:
+    type: phandle-array
+    required: true
+  blank-gpios:
+    type: phandle-array
+    required: true
+  arm-gpios:
+    type: phandle-array
+    required: true
+  safe-gpios:
+    type: phandle-array
+    required: true
+  enable-gpios:
+    type: phandle-array
+    required: true

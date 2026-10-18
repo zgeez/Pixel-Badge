@@ -288,7 +288,7 @@ static int hub75_write(const struct device *dev, const uint16_t x, const uint16_
 	return 0;
 }
 
-int badge_hub75_wait_visible(const struct device *dev, unsigned timeout_ms)
+int badge_display_wait_visible(const struct device *dev, unsigned timeout_ms)
 {
 	struct hub75_data *data = dev->data;
 	int64_t deadline = k_uptime_get() + timeout_ms;

@@ -12,7 +12,9 @@
 #endif
 #if defined(CONFIG_APP_AUDIO)
 #include "badge/audio_runtime.hpp"
-#include "badge/hub75_sync.h"
+#endif
+#if defined(CONFIG_BADGE_DISPLAY_SYNC)
+#include "badge/display_sync.h"
 #endif
 #if defined(CONFIG_APP_BLE)
 #include "badge/ble.hpp"
@@ -60,7 +62,10 @@ int initialize_display(const device *display, const Frame &frame, uint8_t bright
 	if (!device_is_ready(display)) {
 		return -ENODEV;
 	}
-	int rc = display_set_pixel_format(display, PIXEL_FORMAT_MONO01);
+	int rc = display_blanking_on(display);
+	if (rc == 0) {
+		rc = display_set_pixel_format(display, PIXEL_FORMAT_MONO01);
+	}
 	if (rc == 0) {
 		rc = display_set_brightness(display, brightness);
 	}
@@ -360,15 +365,30 @@ void run_prototype()
 				rotate(frame, frame, modes.display_rotation());
 			}
 #endif
-			int rc = brightness_rc != 0 ? brightness_rc
-				 : display_ready
-					 ? present(display, frame)
-					 : initialize_display(display, frame,
-							      safe ? kDefaultSettings.brightness
-								   : settings.values().brightness);
+			int rc = brightness_rc;
+			if (rc == 0) {
+				auto submit = [&](bool initialize) {
+					if (initialize) {
+						const uint8_t level =
+							safe ? kDefaultSettings.brightness
+							     : settings.values().brightness;
+						return initialize_display(display, frame, level);
+					}
+					return present(display, frame);
+				};
+				auto confirm_visible = [&]() {
+#if defined(CONFIG_BADGE_DISPLAY_SYNC)
+					return badge_display_wait_visible(display, 50);
+#else
+					return 0;
+#endif
+				};
+				rc = display_health.present(display_ready, submit, confirm_visible);
+			}
 #if defined(CONFIG_APP_AUDIO)
-			if (rc == 0 && audio_ui_busy()) {
-				rc = badge_hub75_wait_visible(display, 50);
+			/* Recovery already confirmed the submitted frame above. */
+			if (rc == 0 && audio_ui_busy() && !display_health.recovering()) {
+				rc = badge_display_wait_visible(display, 50);
 			}
 			audio_display_result(audio_recording() && !recording_indicator ? -EAGAIN
 										       : rc);

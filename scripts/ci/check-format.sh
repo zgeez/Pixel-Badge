@@ -11,6 +11,13 @@ cd "$(dirname "$0")/../.."
 mapfile -d '' files < <(git ls-files -z --cached --others --exclude-standard -- \
 	'*.c' '*.h' '*.cpp' '*.hpp')
 
+# Unstaged renames leave deleted tracked paths in git ls-files until staging.
+present=()
+for file in "${files[@]}"; do
+    if [ -f "${file}" ]; then present+=("${file}"); fi
+done
+files=("${present[@]}")
+
 if [ "${#files[@]}" -eq 0 ]; then
 	echo "No C/C++ sources found."
 	exit 0

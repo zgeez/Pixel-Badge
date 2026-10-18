@@ -12,6 +12,7 @@
  */
 
 #include "badge/bringup.hpp"
+#include "badge/audio_capture.hpp"
 #include "badge/nfc_platform.hpp"
 
 #include <stdint.h>
@@ -190,7 +191,8 @@ void ntag_log_field()
 
 #if HAVE_MIC
 const struct device *const mic = DEVICE_DT_GET(PDM_NODE);
-constexpr uint32_t kRate = 32000;
+constexpr auto kCapture = audio_capture_profile(IS_ENABLED(CONFIG_SOC_NRF52840));
+constexpr uint32_t kRate = kCapture.rate;
 constexpr uint32_t kBlockMs = 100;
 constexpr uint32_t kChannels = 2;
 constexpr uint32_t kBlockBytes = kRate * kBlockMs / 1000 * kChannels * sizeof(int16_t);
@@ -210,8 +212,8 @@ int mic_configure()
 	 * DocID026514 Rev 3). At 16 kHz the driver chose 1.25 MHz and the quiet
 	 * level was over 3 times higher than at about 2 MHz (bench, 2026-10-11),
 	 * so the clock is kept near 2 MHz with a 32 kHz output rate. */
-	cfg.io.min_pdm_clk_freq = 1800000;
-	cfg.io.max_pdm_clk_freq = 3250000;
+	cfg.io.min_pdm_clk_freq = kCapture.min_clock;
+	cfg.io.max_pdm_clk_freq = kCapture.max_clock;
 	cfg.io.min_pdm_clk_dc = 40;
 	cfg.io.max_pdm_clk_dc = 60;
 	cfg.streams = &stream;

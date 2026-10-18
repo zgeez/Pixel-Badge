@@ -248,7 +248,7 @@ def normalize_url(url):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("action", choices=["status", "sync", "set-url", "configure", "provision"])
-    parser.add_argument("--elf", default="build/p1-provisioning/firmware/zephyr/zephyr.elf")
+    parser.add_argument("--elf", default="build/nfc-provisioning/nrf5340_prototype/zephyr/zephyr.elf")
     parser.add_argument("--jlink-serial", type=int)
     parser.add_argument("--url")
     parser.add_argument("--android-serial")
