@@ -68,9 +68,9 @@ lane. Screening starts local capture on boot and has no BLE recording.
 ```powershell
 Set-Location E:\Embedded\Nordic\smart-led-badge\build\prototype-audio
 # Default P3, recording disabled:
-.\scripts\dev.ps1 build -BuildDir build/p3-normal -SysbuildConfFile firmware/configs/ble-sysbuild.conf
+.\scripts\dev.ps1 build -BuildDir build/p3-normal -SysbuildConfFile firmware/nrf5340_prototype/configs/ble-sysbuild.conf
 # Explicit development recording bench:
-.\scripts\dev.ps1 build -BuildDir build/p3-recording -SysbuildConfFile firmware/configs/ble-sysbuild.conf -ExtraConfFile firmware/configs/audio-recording-bench.conf
+.\scripts\dev.ps1 build -BuildDir build/p3-recording -SysbuildConfFile firmware/nrf5340_prototype/configs/ble-sysbuild.conf -ExtraConfFile firmware/nrf5340_prototype/configs/audio-recording-bench.conf
 west flash -d build/p3-recording --runner jlink --no-erase
 .\scripts\app\dev.ps1 build
 adb install -r app/build/app/outputs/flutter-apk/app-debug.apk

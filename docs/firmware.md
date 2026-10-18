@@ -9,9 +9,11 @@ allows development tests. P0-P4 software is merged through PR26.
 
 The current cleanup adds automatic V1 QR correction selection, longer fitting
 links and smaller BLE staging buffers. Pixel Badge adds a named local library,
-image/GIF conversion and simpler connection/editor flows. Physical acceptance
-and the nRF52840/Rev A port remain separate. The old custom-board definition
-still targets nRF5340 and must not be flashed to Rev A's E73/nRF52840.
+image/GIF conversion and simpler connection/editor flows. Firmware now has separate
+`nrf5340_prototype` and `rev_a_nrf52840` application roots with shared code in
+`common`. The first [Rev A port](rev-a-firmware.md) builds application/controller
+and a disarmed matrix backend; power policy and board validation remain.
+The legacy nRF5340 custom-board definition is retained for regression only.
 
 Current behavior and evidence:
 - [BLE/Studio protocol](ble-protocol.md), [app](../app/README.md)
@@ -55,17 +57,17 @@ Dependencies point downward only.
 
 | Layer | Directory | Responsibility |
 |---|---|---|
-| Application | `firmware/src/app/` | Display modes, mode switching, top-level behavior |
-| Services | `firmware/src/services/` | Hardware-independent logic and protocol handling (for example display content generation, BLE/NFC service logic, sensor data processing) |
-| Drivers | `firmware/src/drivers/` | Project-specific device drivers (for example the LED matrix driver), using the Zephyr device model where it fits |
-| Platform | `firmware/src/platform/` | Board and Zephyr integration glue |
+| Application | `firmware/common/src/app/` | Display modes, mode switching, top-level behavior |
+| Services | `firmware/common/src/services/` | Hardware-independent logic and protocol handling (for example display content generation, BLE/NFC service logic, sensor data processing) |
+| Drivers | `firmware/common/src/drivers/` | Project-specific device drivers (for example the LED matrix driver), using the Zephyr device model where it fits |
+| Platform | `firmware/common/src/platform/` | Board and Zephyr integration glue |
 
 Pure logic in the services layer should not depend on hardware so it can be
 unit-tested on a host target. Public headers shared across layers go in
-`firmware/include/`. Board overlays and custom board definitions go in
-`firmware/boards/`.
+`firmware/common/include/`. Board overlays and custom board definitions go in
+each application root's `boards/` directory.
 
-`firmware/src/drivers/` is a Zephyr module (`zephyr/module.yml`) so the
+`firmware/common/src/drivers/` is a Zephyr module (`zephyr/module.yml`) so the
 application and the tests share its Kconfig, devicetree bindings and sources.
 It holds the ICM-42688-P I²C driver (compatible `invensense,icm42688p-i2c`):
 NCS v3.4.1's `icm4268x` driver supports SPI only. The project driver reuses
@@ -89,7 +91,7 @@ The application reaches the display only through Zephyr's display API
 (`zephyr,display` chosen node), as a 32 × 32 monochrome display
 (`PIXEL_FORMAT_MONO01`, rows packed most significant bit first). On the DK the
 backend is a HUB75 panel (below); the badge gets its own matrix driver behind
-the same API. Frames and test patterns live in `firmware/src/services/`
+the same API. Frames and test patterns live in `firmware/common/src/services/`
 (`badge/test_pattern.hpp`). `src/app/prototype.cpp` owns the main loop;
 `src/app/modes.cpp` selects content. Services `qr`, `settings`, `buttons`,
 `boot_guard`, `display_health` and `text` are independent of Zephyr and have
@@ -305,7 +307,7 @@ badge never automatically cycles destinations. App/BLE link selection is
 planned and is not implemented in P0.
 
 Flash output: **`build/nrf5340dk/merged.hex`**, containing MCUboot and the signed
-application. The unsigned `firmware/zephyr/zephyr.hex` cannot boot this layout.
+application. The unsigned `nrf5340_prototype/zephyr/zephyr.hex` cannot boot this layout.
 CI archives merged HEX, the signed application, ELF/map/config files and the
 resolved partition layout. Bench configurations also archive their merged HEX.
 
@@ -316,26 +318,28 @@ can otherwise retain its no-bootloader setting. CI builds fresh directories.
 ### MCUboot and static flash layout
 
 Sysbuild enables MCUboot and Partition Manager for both CPUAPP board targets.
-The 1 MiB application-core flash uses `firmware/pm_static.yml`:
+The 1 MiB application-core flash uses `firmware/nrf5340_prototype/pm_static.yml`:
 
 | Region | Start | Size | Reason |
 |---|---|---|---|
 | MCUboot | `0x00000` | 64 KiB | Space for the current bootloader with growth margin |
 | Primary slot | `0x10000` | 320 KiB | Application plus 512-byte header pad and upgrade/trailer allowance |
 | Secondary slot | `0x60000` | 320 KiB | Later application update staging; no DFU transport in P0 |
-| Network update reserve | `0xb0000` | 288 KiB | Space beyond the network core's 256 KiB flash size for a later update payload/header |
+| Artwork banks | `0xb0000` | 264 KiB | Two 132 KiB banks for verified flash-backed animation |
+| Reserve | `0xf2000` | 24 KiB | Unallocated |
 | Settings | `0xf8000` | 32 KiB | Eight 4 KiB NVS sectors for app settings, future bonds and a small key store |
 
 The app starts at `0x10200`. Slot size is not the maximum payload size: header,
 trailer and the selected swap-using-move algorithm also consume space. Future
 images must pass the build/signing size checks. Settings are deliberately
 larger than the few P0 records, providing garbage-collection and wear margin;
-future bonding/key capacity must be verified when those services exist.
-The network reserve is inert, not a configured network-core DFU partition.
-Adding radio-core boot/update support will need its SDK multi-image wiring.
+bonding/key endurance still needs physical acceptance. ADR0019 reused the old
+network-update reserve for artwork; no network-core update payload is reserved.
+Adding radio-core updates would require a new storage plan.
 
-Rev A CPUAPP uses the same boot layout for compatibility, with no P0 UI or
-Rev A hardware features enabled. The standalone CPUNET image and matrix timing
+The superseded nRF5340 custom-board CPUAPP uses this boot layout for compile
+compatibility. The current E73 target has its own [port](rev-a-firmware.md),
+with matching artwork/settings offsets and a combined app/controller image. The standalone CPUNET image and matrix timing
 bench application retain their original build/flash layout. Partition Manager
 is deprecated but supported on nRF53 in pinned NCS v3.4.1; see ADR 0012 for the
 explicit choice. P0 uses the SDK's publicly distributed
@@ -357,7 +361,7 @@ terminals, use RTT, and keep Buttons 3/4 untouched. In an NCS v3.4.1 terminal:
 west flash -d build/nrf5340dk --runner jlink
 ```
 
-Check `build/nrf5340dk/firmware/zephyr/runners.yaml` first: its HEX path must
+Check `build/nrf5340dk/nrf5340_prototype/zephyr/runners.yaml` first: its HEX path must
 resolve to the top-level `merged.hex`. The sysbuild flash command programs the
 merged image; if using J-Link Commander directly, select the nRF5340 application
 core and load that merged HEX. Do not erase the chip when checking persistence.
@@ -376,7 +380,7 @@ Open the J-Link RTT viewer and select the application-core device.
 5. Build/flash the forced-loop image:
 
    ```powershell
-   .\scripts\dev.ps1 build -BuildDir build/watchdog-loop -ExtraConfFile firmware/configs/watchdog-loop.conf -QrLink Representative
+   .\scripts\dev.ps1 build -BuildDir build/watchdog-loop -ExtraConfFile firmware/nrf5340_prototype/configs/watchdog-loop.conf -QrLink Representative
    west flash -d build/watchdog-loop --runner jlink
    ```
 
@@ -395,7 +399,7 @@ watchdog outcomes. Measured GPIO timing, interrupted physical flash writes,
 concurrent optional checks and broad optical acceptance remain unverified.
 The owner-reported functional pass is not a measurement of those properties.
 
-On the DK, `firmware/boards/nrf5340dk_nrf5340_cpuapp.overlay` puts the Rev A
+On the DK, `firmware/nrf5340_prototype/boards/nrf5340dk_nrf5340_cpuapp.overlay` puts the Rev A
 pin roles on the DK's pins where it can: SPIM4 on P0.08–P0.10, matrix LAT and
 BLANK on P0.11/P0.12, and I²C1 with SCL on P1.02 and SDA on P1.03. It also adds
 a frame marker on P0.26 for the logic analyzer and removes Buttons 3 and 4
@@ -409,7 +413,7 @@ Adding or changing an overlay needs a pristine build (`-Pristine`, or
 The overlay also makes a HUB75 RGB panel the DK's display, for bench work
 only: R1, G1, B1, CLK and LAT on P1.11–P1.15, OE on P1.08 and row address A–E
 on P0.04–P0.07 and P0.25, through 5 V buffers (SN74AHCT245). The driver
-(`firmware/src/drivers/hub75`, compatible `smartledbadge,hub75`) shows the
+(`firmware/common/src/drivers/hub75`, compatible `smartledbadge,hub75`) shows the
 32 × 32 window in the panel's top half in one colour. TIMER0 times each 160 µs
 row slot (195 Hz refresh): its interrupt latches the row shifted during the
 previous slot and shifts the next row while this one is lit, and a second
@@ -421,7 +425,7 @@ The DK overlay also puts the IMU (INT1 on P1.04), the PDM microphone (CLK P1.07,
 DATA P1.09) and the NFC tag's field-detect line (P1.06) on their Rev A pins. The
 tag shares the IMU's I²C1 bus on the DK, because its Rev A bus pins are the
 debugger's serial port. At start-up the application runs module checks
-(`firmware/src/app/bringup.cpp`) while the display test patterns run in their
+(`firmware/common/src/app/bringup.cpp`) while the display test patterns run in their
 own thread, then logs an IMU sample, the NFC field-detect level with its edge
 count, and the microphone level every 5 s:
 
@@ -461,7 +465,7 @@ reversible CC locks and no SRAM mirroring/pass-through. The `nfc/verified`
 NVS key stores no password. Factory reset removes it, so the external tag
 must be explicitly provisioned again; its old EEPROM URL is not erased.
 
-`firmware/configs/nfc-provisioning.conf` enables the temporary SWD mailbox and
+`firmware/nrf5340_prototype/configs/nfc-provisioning.conf` enables the temporary SWD mailbox and
 host/Android provisioning tools. It also permits a bench URL change that is
 persisted, rendered as QR and written/read back on the tag before success.
 URL changes preview the candidate QR without modifying settings. They persist
@@ -498,14 +502,17 @@ setup are in [app/README.md](../app/README.md). Native protocol and Flutter
 tests do not establish physical pairing or RF/QR acceptance. Audio streaming,
 firmware updates and iOS packaging are later work.
 
-### Rev A board
+### Current Rev A board
 
-**Out of date:** Rev A hardware now uses the Ebyte E73-2G4M08S1C (nRF52840,
-[ADR 0015](decisions/0015-nrf52840-e73-module.md)). The board definition below
-still describes the earlier MDBT53-P1M (nRF5340) schematic and its pin map; it
-builds, but does not match the Rev A hardware until the nRF52840 port.
+Use `./scripts/dev.ps1 build -Target RevA -Pristine` for the current E73 board.
+See [Rev A firmware](rev-a-firmware.md) for pins, variants, budgets and limits.
 
-`firmware/boards/smart_led_badge/` defines the Rev A board (Raytac
+### Superseded nRF5340 custom board
+
+The following definition describes the earlier MDBT53-P1M schematic. It is
+retained for regression builds and does not match the current E73 hardware.
+
+`firmware/nrf5340_prototype/boards/smart_led_badge/` defines the earlier board (Raytac
 MDBT53-P1M, nRF5340), based on Zephyr's `raytac_mdbt53_db_40` board. The
 application-core devicetree follows the earlier Rev A schematic:
 - SPIM4 for the matrix chain, with GPIOs for LAT, BLANK, ARM and SAFE.
@@ -530,7 +537,7 @@ BOARD=smart_led_badge/nrf5340/cpuapp BUILD_DIR=build/badge make build
 ```
 
 The application does not use most of these peripherals yet, so its own
-configuration leaves their drivers out. `firmware/configs/rev-a-peripherals.conf`
+configuration leaves their drivers out. `firmware/nrf5340_prototype/configs/rev-a-peripherals.conf`
 enables the I²C, SPI, ADC, PDM, sensor (IMU), input, LED, USB and watchdog
 drivers. CI builds the application core with it too, so driver and devicetree
 integration breaks the build rather than bring-up. It is a compile check, not
@@ -538,12 +545,12 @@ a product configuration. Pass it with `-ExtraConfFile` (path relative to the
 repository root) or `EXTRA_CONF_FILE`:
 
 ```powershell
-.\scripts\dev.ps1 build -Board smart_led_badge/nrf5340/cpuapp -BuildDir build/badge-periph -ExtraConfFile firmware/configs/rev-a-peripherals.conf
+.\scripts\dev.ps1 build -Board smart_led_badge/nrf5340/cpuapp -BuildDir build/badge-periph -ExtraConfFile firmware/nrf5340_prototype/configs/rev-a-peripherals.conf
 ```
 
 ```sh
 BOARD=smart_led_badge/nrf5340/cpuapp BUILD_DIR=build/badge-periph \
-  EXTRA_CONF_FILE="$PWD/firmware/configs/rev-a-peripherals.conf" make build
+  EXTRA_CONF_FILE="$PWD/firmware/nrf5340_prototype/configs/rev-a-peripherals.conf" make build
 ```
 
 The board files are modified from Zephyr's `raytac_mdbt53_db_40` board and
@@ -552,13 +559,13 @@ keep its Apache-2.0 license and copyright notices
 
 ## Bench tests
 
-Bench tests are separate applications under `firmware/bench/`, built for the
+Bench tests are separate applications under `firmware/nrf5340_prototype/bench/`, built for the
 DK with the same overlay. They are not part of the badge image. CI builds them
 so they keep compiling.
 
 ### Matrix scan timing
 
-`firmware/bench/matrix_timing` drives the matrix scan signals with the planned
+`firmware/nrf5340_prototype/bench/matrix_timing` drives the matrix scan signals with the planned
 hardware timing, without a matrix attached, so they can be checked on a logic
 analyzer. TIMER1 times each 160 µs row slot and drives SPIM4 and the LAT and
 BLANK pins through DPPI and GPIOTE. TIMER2 counts 32 rows and then stops TIMER1.
@@ -581,11 +588,11 @@ Measured results, with the setup and raw data, are in
 [validation.md](validation.md#result-scan-timing-on-the-nrf5340-dk-bench-no-matrix).
 
 ```powershell
-.\scripts\dev.ps1 build -App firmware/bench/matrix_timing -BuildDir build/matrix_timing
+.\scripts\dev.ps1 build -App firmware/nrf5340_prototype/bench/matrix_timing -BuildDir build/matrix_timing
 ```
 
 ```sh
-APP_DIR="$PWD/firmware/bench/matrix_timing" BUILD_DIR=build/matrix_timing make build
+APP_DIR="$PWD/firmware/nrf5340_prototype/bench/matrix_timing" BUILD_DIR=build/matrix_timing make build
 ```
 
 Analyzer channels: SCK P0.08, MOSI P0.09, LAT P0.11, BLANK P0.12, frame
@@ -597,14 +604,14 @@ the DK's COM ports (see above).
 
 ### QR screening
 
-Building the application with `firmware/configs/qr-screening.conf` replaces the
+Building the application with `firmware/nrf5340_prototype/configs/qr-screening.conf` replaces the
 display test patterns with QR test codes for the scan-reliability screening
 (validation plan, QR section). Each code is shown in normal and inverted
 polarity at brightness 255, 64 and 16; DK Button 1 steps to the next setting,
 Button 2 back, and RTT logs the setting number.
 
 ```powershell
-.\scripts\dev.ps1 build -BuildDir build/qr -ExtraConfFile firmware/configs/qr-screening.conf
+.\scripts\dev.ps1 build -BuildDir build/qr -ExtraConfFile firmware/nrf5340_prototype/configs/qr-screening.conf
 ```
 
 The codes come from `scripts/qr/gen_qr_test_codes.py` (segno to encode,
