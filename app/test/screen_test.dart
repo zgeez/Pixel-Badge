@@ -14,6 +14,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'controller_test.dart' show FakeLink;
+import 'package:badge_app/selection_control.dart';
 import 'studio_controller_test.dart' show StudioLink;
 
 class DelayedDraftStore implements DraftStore {
@@ -33,8 +34,9 @@ Future<void> showApp(
   DraftStore? store,
   Brightness brightness = Brightness.light,
   double width = 390,
+  double height = 844,
 }) async {
-  tester.view.physicalSize = Size(width, 844);
+  tester.view.physicalSize = Size(width, height);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
@@ -57,21 +59,31 @@ Future<void> showApp(
 }
 
 Future<void> page(WidgetTester tester, String label) async {
-  await tester.tap(
-    find
-        .descendant(of: find.byType(NavigationBar), matching: find.text(label))
-        .last,
-  );
+  final index = ['Badge', 'Links', 'Text', 'Studio', 'Audio'].indexOf(label);
+  if (find.byType(NavigationBar).evaluate().isNotEmpty) {
+    await tester.tap(find.byType(NavigationDestination).at(index));
+  } else {
+    await tester.tap(
+      find.descendant(
+        of: find.byType(NavigationRail),
+        matching: find.text(label),
+      ),
+    );
+  }
   await tester.pump();
-  await tester.pump(const Duration(milliseconds: 800));
+  await tester.pump(const Duration(milliseconds: 300));
 }
 
 Future<void> visible(WidgetTester tester, Finder target) async {
-  await tester.scrollUntilVisible(
-    target,
-    200,
-    scrollable: find.byType(Scrollable).first,
-  );
+  if (target.evaluate().isNotEmpty) {
+    await tester.ensureVisible(target);
+  } else {
+    await tester.scrollUntilVisible(
+      target,
+      150,
+      scrollable: find.byType(Scrollable).first,
+    );
+  }
   await tester.pump(const Duration(milliseconds: 200));
 }
 
@@ -90,565 +102,467 @@ Future<void> capture(WidgetTester tester, String name) async {
   });
 }
 
-void main() {
-  setUpAll(() async {
-    const fontRoot = String.fromEnvironment('UI_FONTS');
-    if (fontRoot.isNotEmpty) {
-      for (final entry in {
-        'Roboto': 'roboto-regular.ttf',
-        'MaterialIcons': 'materialicons-regular.otf',
-      }.entries) {
-        final loader = FontLoader(entry.key)
-          ..addFont(
-            File(
-              '$fontRoot/${entry.value}',
-            ).readAsBytes().then((bytes) => ByteData.sublistView(bytes)),
-          );
-        await loader.load();
-      }
+Future<void> loadUiFonts() async {
+  const fontRoot = String.fromEnvironment('UI_FONTS');
+  if (fontRoot.isNotEmpty) {
+    for (final entry in {
+      'Roboto': 'roboto-regular.ttf',
+      'MaterialIcons': 'materialicons-regular.otf',
+    }.entries) {
+      final loader = FontLoader(entry.key)
+        ..addFont(
+          File(
+            '$fontRoot/${entry.value}',
+          ).readAsBytes().then((bytes) => ByteData.sublistView(bytes)),
+        );
+      await loader.load();
     }
-  });
-  testWidgets(
-    'background keeps the badge link while audio capture stays foreground only',
-    (tester) async {
-      final link = FakeLink();
-      final controller = BadgeController();
-      await controller.attach(link);
-      await showApp(tester, controller: controller);
-      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
-      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
-      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
-      await tester.pump();
-      expect(controller.connected, true);
-      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
-      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
-      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
-      await tester.pump();
-      expect(controller.connected, true);
-      await tester.pumpWidget(const SizedBox());
-      controller.dispose();
-      await link.dispose();
-    },
-  );
+  }
+}
 
-  testWidgets(
-    'unsynchronized NFC allows link retry while text remains available',
-    (tester) async {
-      final link = StudioLink()..nfcVerified = false;
-      final controller = BadgeController();
-      await controller.attach(link, capabilities: BadgeCapabilities.studio);
-      final store = MemoryDraftStore();
-      await store.save(
-        StudioDraft(links: [SavedLink('My site', 'HTTPS://A.B/X')]),
-      );
-      await showApp(tester, controller: controller, store: store);
-      await page(tester, 'Links');
-      await visible(tester, find.text('Apply link'));
-      expect(
-        tester
-            .widget<FilledButton>(
-              find.ancestor(
-                of: find.text('Apply link'),
-                matching: find.byWidgetPredicate((w) => w is FilledButton),
-              ),
-            )
-            .onPressed,
-        isNotNull,
-      );
-      await page(tester, 'Text');
-      await visible(tester, find.text('Send text'));
-      expect(
-        tester
-            .widget<FilledButton>(
-              find.ancestor(
-                of: find.text('Send text'),
-                matching: find.byWidgetPredicate((w) => w is FilledButton),
-              ),
-            )
-            .onPressed,
-        isNotNull,
-      );
-      expect(tester.takeException(), isNull);
-      await tester.pumpWidget(const SizedBox());
-      controller.dispose();
-      await link.dispose();
-    },
-  );
-  testWidgets(
-    'NFC policy error explains setup repair instead of reader distance',
-    (tester) async {
-      final link = StudioLink()
-        ..nfcVerified = false
-        ..nfcError = -13;
-      final controller = BadgeController();
-      await controller.attach(link, capabilities: BadgeCapabilities.studio);
-      await showApp(tester, controller: controller);
-      await page(tester, 'Links');
-      await visible(tester, find.text('Setup needs repair'));
-      expect(find.text('Setup needs repair'), findsOneWidget);
-      expect(find.text(BadgeController.nfcSetupMessage), findsWidgets);
-      expect(find.text(BadgeController.nfcRequiredMessage), findsNothing);
-      await tester.pumpWidget(const SizedBox());
-      controller.dispose();
-      await link.dispose();
-    },
-  );
-
-  testWidgets('Text composer sends content without an Identity block', (
+void main() {
+  setUpAll(loadUiFonts);
+  testWidgets('background retains secure link without resuming capture', (
     tester,
   ) async {
-    final link = StudioLink();
-    final controller = BadgeController();
-    await controller.attach(link, capabilities: BadgeCapabilities.studio);
-    await showApp(tester, controller: controller);
+    final link = FakeLink(), badge = BadgeController();
+    await badge.attach(link);
+    await showApp(tester, controller: badge);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    await tester.pump();
+    expect(badge.connected, isTrue);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pump();
+    expect(badge.connected, isTrue);
+    await tester.pumpWidget(const SizedBox());
+    badge.dispose();
+    await link.dispose();
+  });
+  testWidgets('unverified NFC allows guarded retry and text send', (
+    tester,
+  ) async {
+    final link = StudioLink()..nfcVerified = false;
+    final badge = BadgeController();
+    await badge.attach(link, capabilities: BadgeCapabilities.studio);
+    final store = MemoryDraftStore();
+    await store.save(
+      StudioDraft(links: [SavedLink('My site', 'HTTPS://A.B/X')]),
+    );
+    await showApp(tester, controller: badge, store: store);
+    await page(tester, 'Links');
+    expect(
+      tester
+          .widget<IconButton>(
+            find.byWidgetPredicate(
+              (w) => w is IconButton && w.tooltip == 'Apply My site',
+            ),
+          )
+          .onPressed,
+      isNotNull,
+    );
+    expect(
+      tester
+          .widget<IconButton>(
+            find.byWidgetPredicate(
+              (w) => w is IconButton && w.tooltip == 'Sync again',
+            ),
+          )
+          .onPressed,
+      isNotNull,
+    );
+    await page(tester, 'Text');
+    expect(
+      tester
+          .widget<FilledButton>(
+            find.ancestor(
+              of: find.text('Send text'),
+              matching: find.byWidgetPredicate((w) => w is FilledButton),
+            ),
+          )
+          .onPressed,
+      isNotNull,
+    );
+    await tester.pumpWidget(const SizedBox());
+    badge.dispose();
+    await link.dispose();
+  });
+  testWidgets('NFC details retain the actual setup diagnostic', (tester) async {
+    final link = StudioLink()
+      ..nfcVerified = false
+      ..nfcError = -13;
+    final badge = BadgeController();
+    await badge.attach(link, capabilities: BadgeCapabilities.studio);
+    await showApp(tester, controller: badge);
+    await page(tester, 'Links');
+    await tester.tap(find.byTooltip('NFC details'));
+    await tester.pumpAndSettle();
+    expect(find.text(BadgeController.nfcSetupMessage), findsOneWidget);
+    expect(find.text(BadgeController.nfcRequiredMessage), findsNothing);
+    await tester.pumpWidget(const SizedBox());
+    badge.dispose();
+    await link.dispose();
+  });
+  testWidgets('composer sends text and mode without an identity editor', (
+    tester,
+  ) async {
+    final link = StudioLink(), badge = BadgeController();
+    await badge.attach(link, capabilities: BadgeCapabilities.studio);
+    await showApp(tester, controller: badge);
     await page(tester, 'Text');
     expect(find.text('Identity'), findsNothing);
     expect(find.text('Apply name'), findsNothing);
-    expect(find.widgetWithText(TextFormField, 'Display name'), findsNothing);
-    await tester.enterText(find.byType(TextFormField).first, 'Hello badge');
+    await tester.enterText(
+      find.byKey(const Key('text-message')),
+      'Hello badge',
+    );
     FocusManager.instance.primaryFocus?.unfocus();
-    await tester.pump(const Duration(milliseconds: 500));
-    await visible(tester, find.text('Send text'));
+    await tester.pump();
     await tester.tap(find.text('Send text'));
     await tester.pump(const Duration(seconds: 1));
     expect(
       TextDesign.decode(link.values[BadgeField.text.uuid]!).text,
       'Hello badge',
     );
-    expect(controller.mode, 1);
-    expect(controller.name, 'BADGE');
+    expect(badge.mode, 1);
     expect(link.applies, 2);
-    expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
-    controller.dispose();
+    badge.dispose();
     await link.dispose();
   });
-  testWidgets('empty text preview and send use the confirmed badge name', (
+  testWidgets('empty message preview and send use the confirmed badge name', (
     tester,
   ) async {
     final link = StudioLink();
     link.values[BadgeField.name.uuid] = Uint8List.fromList(
       ascii.encode('SAVED'),
     );
-    final controller = BadgeController();
-    await controller.attach(link, capabilities: BadgeCapabilities.studio);
-    await showApp(tester, controller: controller);
+    final badge = BadgeController();
+    await badge.attach(link, capabilities: BadgeCapabilities.studio);
+    await showApp(tester, controller: badge);
     await page(tester, 'Text');
-
-    Future<void> expectFallback(String name) async {
-      await visible(tester, find.byType(MatrixPreview));
-      final clock =
-          tester
-                  .widget<ValueListenableBuilder<int>>(
-                    find.ancestor(
-                      of: find.byType(MatrixPreview),
-                      matching: find.byType(ValueListenableBuilder<int>),
-                    ),
-                  )
-                  .valueListenable
-              as ValueNotifier<int>;
-      clock.value = 1;
-      await tester.pump();
-      clock.value = 0;
-      await tester.pump();
-      expect(
-        tester.widget<MatrixPreview>(find.byType(MatrixPreview)).frame,
-        const TextDesign().render(0, fallback: name),
-      );
-    }
-
-    await expectFallback('SAVED');
-    await visible(tester, find.text('Send text'));
+    final ticker =
+        tester
+                .widget<ValueListenableBuilder<int>>(
+                  find.ancestor(
+                    of: find.byType(MatrixPreview),
+                    matching: find.byType(ValueListenableBuilder<int>),
+                  ),
+                )
+                .valueListenable
+            as ValueNotifier<int>;
+    ticker.value = 0;
+    await tester.pump();
+    expect(
+      tester.widget<MatrixPreview>(find.byType(MatrixPreview)).frame,
+      const TextDesign().render(0, fallback: 'SAVED'),
+    );
     await tester.tap(find.text('Send text'));
     await tester.pump(const Duration(seconds: 1));
-    expect(link.applies, 2);
-    expect(controller.name, 'SAVED');
-    expect(link.values[BadgeField.text.uuid], const TextDesign().encode());
-    expect(link.values[BadgeField.name.uuid], ascii.encode('SAVED'));
-    await expectFallback('SAVED');
-
-    link.values[BadgeField.name.uuid] = Uint8List.fromList(
-      ascii.encode('REFRESHED'),
-    );
-    await controller.refresh();
-    await tester.pump();
-    await expectFallback('REFRESHED');
-    expect(
-      tester
-          .widget<TextFormField>(find.byType(TextFormField).first)
-          .controller!
-          .text,
-      '',
-    );
-
-    expect(tester.takeException(), isNull);
+    expect(badge.name, 'SAVED');
+    expect(TextDesign.decode(link.values[BadgeField.text.uuid]!).text, isEmpty);
     await tester.pumpWidget(const SizedBox());
-    controller.dispose();
+    badge.dispose();
     await link.dispose();
   });
-
-  testWidgets('offline custom links save locally and never appear active', (
-    tester,
-  ) async {
-    final store = MemoryDraftStore();
-    await showApp(tester, store: store);
-    await page(tester, 'Links');
-    await visible(tester, find.text('Add custom link'));
-    await tester.tap(find.text('Add custom link'));
-    await tester.pump(const Duration(milliseconds: 300));
-    final label = List.filled(32, '\u{1f469}\u200d\u{1f4bb}').join();
-    await tester.enterText(find.byType(TextFormField).first, label);
-    await tester.enterText(find.byType(TextFormField).last, 'https://A.B/x');
-    await tester.tap(find.text('Save link'));
-    await tester.pump(const Duration(seconds: 1));
-    expect((await store.load()).links.single.url, 'HTTPS://A.B/x');
-    expect((await store.load()).links.single.label, label);
-    expect(find.text('Active'), findsNothing);
-    expect(tester.takeException(), isNull);
-    await tester.pumpWidget(const SizedBox());
-  });
-  testWidgets('late draft load preserves a newer edit and its pending save', (
+  testWidgets('late draft load cannot replace a newer edit or save', (
     tester,
   ) async {
     final store = DelayedDraftStore();
     await showApp(tester, store: store);
     await page(tester, 'Text');
-    final chip = tester.widget<ChoiceChip>(
-      find.ancestor(
-        of: find.text('Word wrap'),
-        matching: find.byType(ChoiceChip),
-      ),
+    final input = tester.widget<TextField>(
+      find.byKey(const Key('text-message')),
     );
-    // Exercise a callback edit independently of the pointer-loading gate.
-    chip.onSelected!(true);
-    await tester.pump();
+    input.controller!.text = 'NEW';
+    input.onChanged!('NEW');
     store.result.complete(
-      StudioDraft(text: const TextDesign(text: 'Stored', layout: 2)),
+      StudioDraft(text: const TextDesign(text: 'OLD', scale: 3)),
     );
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 600));
-    expect(store.saved.single.text.layout, 1);
-    expect(store.saved.single.text.text, '');
-    expect(
-      tester
-          .widget<TextFormField>(find.byType(TextFormField).last)
-          .controller!
-          .text,
-      '',
-    );
-    expect(tester.takeException(), isNull);
+    await tester.pump(const Duration(seconds: 1));
+    expect(input.controller!.text, 'NEW');
+    expect(store.saved.last.text.text, 'NEW');
     await tester.pumpWidget(const SizedBox());
   });
-
-  testWidgets('late draft load preserves canvas and frame edits', (
+  testWidgets('late load preserves an in-flight canvas and frame edit', (
     tester,
   ) async {
     final store = DelayedDraftStore();
     await showApp(tester, store: store);
     await page(tester, 'Studio');
-    for (final label in ['Invert', 'Add frame']) {
-      tester
-          .widget<TextButton>(
-            find.ancestor(
-              of: find.text(label),
-              matching: find.byWidgetPredicate(
-                (widget) => widget is TextButton,
-              ),
-            ),
-          )
-          .onPressed!();
-      await tester.pump();
-    }
+    final editor = tester.widget<MatrixEditor>(find.byType(MatrixEditor));
+    editor.design.paint(3, 4, 91);
+    editor.design.add(duplicate: true);
+    editor.onChanged();
     store.result.complete(StudioDraft());
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 600));
-    final saved = store.saved.single.matrix;
-    expect(saved.frames.length, 2);
-    expect(saved.frames.first.every((byte) => byte == 255), isTrue);
-    expect(saved.frames.last.every((byte) => byte == 0), isTrue);
-    expect(
-      tester.widget<MatrixEditor>(find.byType(MatrixEditor)).design.encode(),
-      saved.encode(),
-    );
-    expect(tester.takeException(), isNull);
+    await tester.pump(const Duration(seconds: 1));
+    expect(editor.design.frames.length, 2);
+    expect(pixelBrightness(editor.design.current, 3, 4), 91);
+    expect(store.saved.last.matrix.frames.length, 2);
     await tester.pumpWidget(const SizedBox());
   });
-
-  testWidgets('draft loading blocks touches until stored text is restored', (
-    tester,
-  ) async {
-    final store = DelayedDraftStore();
-    await showApp(tester, store: store);
-    await page(tester, 'Text');
-    await visible(tester, find.text('Word wrap'));
-    await tester.tap(find.text('Word wrap'), warnIfMissed: false);
-    await tester.pump(const Duration(milliseconds: 600));
-    expect(store.saved, isEmpty);
-    store.result.complete(
-      StudioDraft(text: const TextDesign(text: 'Stored', layout: 2)),
-    );
-    await tester.pump();
-    await tester.pump();
-    expect(
-      tester
-          .widget<TextFormField>(find.byType(TextFormField).last)
-          .controller!
-          .text,
-      'Stored',
-    );
-    expect(
-      tester
-          .widget<ChoiceChip>(
-            find.ancestor(
-              of: find.text('Scroll'),
-              matching: find.byType(ChoiceChip),
-            ),
-          )
-          .selected,
-      isTrue,
-    );
-    expect(tester.takeException(), isNull);
-    await tester.pumpWidget(const SizedBox());
-  });
-
-  testWidgets('text size follows delayed draft load and badge replacement', (
-    tester,
-  ) async {
-    final store = DelayedDraftStore();
-    final link = StudioLink();
-    link.values[BadgeField.text.uuid] = const TextDesign(
-      text: 'X',
-      scale: 3,
-    ).encode();
-    final controller = BadgeController();
-    await controller.attach(link, capabilities: BadgeCapabilities.studio);
-    await showApp(tester, store: store, controller: controller);
-    await page(tester, 'Text');
-    expect(
-      tester
-          .state<FormFieldState<int>>(find.byType(DropdownButtonFormField<int>))
-          .value,
-      0,
-    );
-    store.result.complete(
-      StudioDraft(text: const TextDesign(text: 'Hi', scale: 2)),
-    );
-    await tester.pump();
-    expect(
-      tester
-          .state<FormFieldState<int>>(find.byType(DropdownButtonFormField<int>))
-          .value,
-      2,
-    );
-    await visible(tester, find.text('Load from badge'));
-    await tester.tap(find.text('Load from badge'));
-    await tester.pump();
-    await tester.tap(find.text('Load draft'));
-    await tester.pump();
-    expect(
-      tester
-          .state<FormFieldState<int>>(find.byType(DropdownButtonFormField<int>))
-          .value,
-      3,
-    );
-    expect(tester.takeException(), isNull);
-    await tester.pumpWidget(const SizedBox());
-    controller.dispose();
-    await link.dispose();
-  });
-
   testWidgets(
-    'badge text can replace invalid local text without an async error',
+    'draft loading absorbs actual editor touches and restores selected size',
+    (tester) async {
+      final store = DelayedDraftStore();
+      await showApp(tester, store: store);
+      await page(tester, 'Text');
+      await tester.tap(find.byTooltip('Alignment'), warnIfMissed: false);
+      store.result.complete(
+        StudioDraft(
+          text: const TextDesign(text: 'LOADED', scale: 3, alignment: 0),
+        ),
+      );
+      await tester.pump(const Duration(seconds: 1));
+      expect(
+        tester
+            .widget<SelectionControl<int>>(find.byKey(const Key('text-size')))
+            .value,
+        3,
+      );
+      expect(
+        tester
+            .widget<TextField>(find.byKey(const Key('text-message')))
+            .controller!
+            .text,
+        'LOADED',
+      );
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+  testWidgets(
+    'badge text replaces invalid local text and updates visible size',
     (tester) async {
       final link = StudioLink();
-      final content = const TextDesign(text: 'From badge', scale: 2);
-      link.values[BadgeField.text.uuid] = content.encode();
-      final controller = BadgeController();
-      await controller.attach(link, capabilities: BadgeCapabilities.studio);
-      final store = MemoryDraftStore();
-      await showApp(tester, controller: controller, store: store);
+      link.values[BadgeField.text.uuid] = const TextDesign(
+        text: 'BADGE TEXT',
+        scale: 2,
+      ).encode();
+      final badge = BadgeController();
+      await badge.attach(link, capabilities: BadgeCapabilities.studio);
+      await showApp(tester, controller: badge);
       await page(tester, 'Text');
-      await tester.enterText(find.byType(TextFormField).last, '\u{1f600}');
+      await tester.enterText(
+        find.byKey(const Key('text-message')),
+        '\u{1f600}',
+      );
+      FocusManager.instance.primaryFocus?.unfocus();
       await tester.pump();
-      await visible(tester, find.text('Load from badge'));
-      await tester.tap(find.text('Load from badge'));
-      await tester.pump();
+      await tester.tap(find.byTooltip('Load from badge'));
+      await tester.pumpAndSettle();
       expect(find.text('Replace this draft?'), findsOneWidget);
       await tester.tap(find.text('Load draft'));
-      await tester.pump(const Duration(seconds: 1));
-      expect((await store.load()).text.encode(), content.encode());
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<TextField>(find.byKey(const Key('text-message')))
+            .controller!
+            .text,
+        'BADGE TEXT',
+      );
+      expect(
+        tester
+            .widget<SelectionControl<int>>(find.byKey(const Key('text-size')))
+            .value,
+        2,
+      );
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox());
-      controller.dispose();
+      badge.dispose();
       await link.dispose();
     },
   );
-
-  testWidgets(
-    'short multiline and scaled text preview advances through pages',
-    (tester) async {
-      for (final design in [
-        const TextDesign(
+  testWidgets('short wrapped text preview advances through all pages', (
+    tester,
+  ) async {
+    final store = MemoryDraftStore();
+    await store.save(
+      StudioDraft(
+        text: const TextDesign(
           text: 'A\nb\nc\nD\nE',
-          layout: 1,
           scale: 1,
-          interval: 100,
+          layout: 1,
+          interval: 50,
         ),
-        const TextDesign(text: 'ABCDEF', layout: 1, scale: 2, interval: 100),
-        const TextDesign(text: 'AB', layout: 1, scale: 3, interval: 100),
-      ]) {
-        final store = MemoryDraftStore();
-        await store.save(StudioDraft(text: design));
-        await showApp(tester, store: store);
-        await page(tester, 'Text');
-        await visible(tester, find.byType(MatrixPreview));
-        final clock =
-            tester
-                    .widget<ValueListenableBuilder<int>>(
-                      find.ancestor(
-                        of: find.byType(MatrixPreview),
-                        matching: find.byType(ValueListenableBuilder<int>),
-                      ),
-                    )
-                    .valueListenable
-                as ValueNotifier<int>;
-        clock.value = 0;
-        await tester.pump();
-        final before = List<int>.from(
-          tester.widget<MatrixPreview>(find.byType(MatrixPreview)).frame,
-        );
-        clock.value = 2000;
-        await tester.pump();
-        final after = tester
-            .widget<MatrixPreview>(find.byType(MatrixPreview))
-            .frame;
-        expect(after, isNot(orderedEquals(before)));
-        expect(tester.takeException(), isNull);
-        await tester.pumpWidget(const SizedBox());
-      }
-    },
-  );
-
-  for (final brightness in Brightness.values) {
-    testWidgets('five pages fit a narrow ${brightness.name} phone', (
-      tester,
-    ) async {
-      final store = MemoryDraftStore();
-      final matrix = MatrixDesign();
-      matrix.rectangle(9, 9, 22, 22);
-      matrix.add(duplicate: true);
-      await store.save(
-        StudioDraft(
-          links: [SavedLink('My site', 'HTTPS://A.B/X')],
-          text: TextDesign(text: 'Hi!'),
-          matrix: matrix,
-        ),
-      );
-      await showApp(tester, store: store, brightness: brightness);
-      await capture(tester, 'badge-${brightness.name}');
-      for (final label in ['Links', 'Text', 'Studio', 'Audio']) {
-        await page(tester, label);
-        if (label == 'Studio') {
-          expect(
-            pixel(
-              tester
-                  .widget<MatrixEditor>(find.byType(MatrixEditor))
-                  .design
-                  .current,
-              9,
-              9,
+      ),
+    );
+    await showApp(tester, store: store);
+    await page(tester, 'Text');
+    final ticker =
+        tester
+                .widget<ValueListenableBuilder<int>>(
+                  find.ancestor(
+                    of: find.byType(MatrixPreview),
+                    matching: find.byType(ValueListenableBuilder<int>),
+                  ),
+                )
+                .valueListenable
+            as ValueNotifier<int>;
+    ticker.value = 0;
+    await tester.pump();
+    final before = Uint8List.fromList(
+      tester.widget<MatrixPreview>(find.byType(MatrixPreview)).frame,
+    );
+    ticker.value = 1000;
+    await tester.pump();
+    expect(
+      tester.widget<MatrixPreview>(find.byType(MatrixPreview)).frame,
+      isNot(before),
+    );
+    await tester.pumpWidget(const SizedBox());
+  });
+  for (final brightness in [Brightness.dark, Brightness.light]) {
+    for (final size in [
+      (390.0, 844.0, 1.0),
+      (320.0, 640.0, 1.0),
+      (390.0, 700.0, 2.0),
+      (1024.0, 844.0, 1.6),
+    ]) {
+      testWidgets(
+        'fixed pages fit ${brightness.name} ${size.$1}x${size.$2} scale ${size.$3}',
+        (tester) async {
+          tester.platformDispatcher.textScaleFactorTestValue = size.$3;
+          addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+          final store = MemoryDraftStore();
+          final design = MatrixDesign();
+          design.paint(9, 9, 120);
+          design.add(duplicate: true);
+          await store.save(
+            StudioDraft(
+              text: const TextDesign(text: 'Hello'),
+              matrix: design,
+              links: [SavedLink('Work', 'HTTPS://A.B/X')],
             ),
-            isTrue,
           );
-        }
-        if (label == 'Audio') {
-          expect(
-            tester.widget<Text>(find.byKey(const Key('page-heading'))).data,
-            'Audio',
+          await showApp(
+            tester,
+            store: store,
+            brightness: brightness,
+            width: size.$1,
+            height: size.$2,
           );
-          expect(find.text('Level meter'), findsOneWidget);
-        }
-        await capture(tester, '${label.toLowerCase()}-${brightness.name}');
-        expect(tester.takeException(), isNull);
-      }
-      await tester.pumpWidget(const SizedBox());
-    });
+          for (final label in ['Badge', 'Links', 'Text', 'Studio', 'Audio']) {
+            await page(tester, label);
+            expect(find.byKey(const Key('page-heading')), findsNothing);
+            for (final element in find.byType(Scrollable).evaluate()) {
+              if (element.findAncestorWidgetOfExactType<EditableText>() !=
+                  null) {
+                continue;
+              }
+              expect(
+                (element.widget as Scrollable).axisDirection,
+                anyOf(AxisDirection.left, AxisDirection.right),
+              );
+            }
+            expect(tester.takeException(), isNull, reason: label);
+            if (size.$1 == 390 && size.$2 == 844) {
+              await capture(
+                tester,
+                'compact-${label.toLowerCase()}-${brightness.name}',
+              );
+            }
+          }
+          await tester.pumpWidget(const SizedBox());
+        },
+      );
+    }
   }
-  testWidgets('large text and tablet navigation remain usable', (tester) async {
+  testWidgets('text entry fits with the keyboard and large type', (
+    tester,
+  ) async {
     tester.platformDispatcher.textScaleFactorTestValue = 1.6;
     addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
-    await showApp(tester, width: 1024);
-    expect(find.byType(NavigationRail), findsOneWidget);
-    await tester.tap(
-      find.descendant(
-        of: find.byType(NavigationRail),
-        matching: find.text('Studio'),
-      ),
-    );
-    await tester.pump(const Duration(milliseconds: 200));
-    await capture(tester, 'studio-tablet');
-    expect(tester.takeException(), isNull);
-    await tester.tap(
-      find.descendant(
-        of: find.byType(NavigationRail),
-        matching: find.text('Audio'),
-      ),
-    );
-    await tester.pump(const Duration(milliseconds: 200));
-    expect(
-      tester.widget<Text>(find.byKey(const Key('page-heading'))).data,
-      'Audio',
-    );
-    expect(find.text('Level meter'), findsOneWidget);
+    await showApp(tester, width: 320, height: 640);
+    await page(tester, 'Text');
+    tester.view.viewInsets = const FakeViewPadding(bottom: 280);
+    addTearDown(tester.view.resetViewInsets);
+    await tester.enterText(find.byKey(const Key('text-message')), 'Hello');
+    await tester.pump();
+    expect(find.text('Send text'), findsOneWidget);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
   });
-  testWidgets('pairing guidance includes direct bonded reconnect', (
+  testWidgets('pairing help stays available without cluttering the homepage', (
     tester,
   ) async {
     await showApp(tester);
-    await tester.tap(find.text('Find badge'));
-    await tester.pump(const Duration(milliseconds: 400));
+    await tester.tap(find.byTooltip('Badge options'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Pairing help'));
+    await tester.pumpAndSettle();
     expect(
       find.textContaining('A paired phone can reconnect directly'),
       findsOneWidget,
     );
+    await tester.pumpWidget(const SizedBox());
+  });
+  testWidgets('canvas strokes stay in the fixed workspace and undo together', (
+    tester,
+  ) async {
+    await showApp(tester);
+    await page(tester, 'Studio');
+    final box = tester.getRect(find.byType(MatrixEditor));
+    final gesture = await tester.startGesture(
+      Offset(box.left + box.width * .25, box.top + box.height * .25),
+    );
+    await gesture.moveBy(Offset(0, box.height * .3));
+    await gesture.up();
+    await tester.pump();
+    final design = tester
+        .widget<MatrixEditor>(find.byType(MatrixEditor))
+        .design;
+    expect(design.current.any((v) => v != 0), isTrue);
+    await tester.tap(find.byTooltip('Undo'));
+    await tester.pump();
+    expect(design.current.every((v) => v == 0), isTrue);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
   });
-  testWidgets('vertical canvas strokes stay on the canvas and undo together', (
-    tester,
-  ) async {
-    final design = MatrixDesign();
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: ListView(
-            children: [
-              MatrixEditor(
-                design: design,
-                tool: PixelTool.pen,
-                onChanged: () {},
-              ),
-              const SizedBox(height: 1000),
-            ],
-          ),
+  for (final scale in [1.0, 2.0]) {
+    testWidgets('connected controls fit a small phone at scale $scale', (
+      tester,
+    ) async {
+      tester.platformDispatcher.textScaleFactorTestValue = scale;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      final link = StudioLink(), badge = BadgeController();
+      await badge.attach(link, capabilities: BadgeCapabilities.studio);
+      await showApp(tester, controller: badge, width: 320, height: 640);
+      for (final label in ['Badge', 'Links', 'Text', 'Studio', 'Audio']) {
+        await page(tester, label);
+        expect(tester.takeException(), isNull, reason: label);
+      }
+      await tester.pumpWidget(const SizedBox());
+      badge.dispose();
+      await link.dispose();
+    });
+  }
+  testWidgets(
+    '128-frame timeline and every tool sheet fit a narrow large-text phone',
+    (tester) async {
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      final design = MatrixDesign(
+        frames: List.generate(
+          128,
+          (f) => Uint8List.fromList(List.generate(1024, (p) => (f + p) % 256)),
         ),
-      ),
-    );
-    final origin = tester.getTopLeft(find.byType(MatrixEditor));
-    final width = tester.getSize(find.byType(MatrixEditor)).width;
-    final cell = width / 34;
-    final gesture = await tester.startGesture(
-      origin + Offset(10.5 * cell, 5.5 * cell),
-    );
-    await gesture.moveBy(Offset(0, 10 * cell));
-    await gesture.up();
-    await tester.pump();
-    expect(pixel(design.current, 9, 14), isTrue);
-    design.undo();
-    expect(design.current.every((v) => v == 0), isTrue);
-    expect(design.canUndo, isFalse);
-    await tester.pumpWidget(const SizedBox());
-  });
+      );
+      final store = MemoryDraftStore();
+      await store.save(StudioDraft(matrix: design));
+      await showApp(tester, store: store, width: 320, height: 640);
+      await page(tester, 'Studio');
+      tester.widget<MatrixEditor>(find.byType(MatrixEditor)).design.selected =
+          127;
+      await tester.tap(find.byTooltip('Pick brightness'));
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+      for (final tool in ['Brush', 'Actions', 'Media']) {
+        await tester.tap(find.byTooltip(tool));
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull, reason: tool);
+        await tester.tapAt(const Offset(2, 2));
+        await tester.pumpAndSettle();
+      }
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
 }

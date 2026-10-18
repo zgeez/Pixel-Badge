@@ -22,6 +22,39 @@ class SmartBadgeApp extends StatelessWidget {
             : const Color(0xfff4f7f5),
         scrolledUnderElevation: 0,
       ),
+      dialogTheme: DialogThemeData(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      ),
+      popupMenuTheme: PopupMenuThemeData(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: colors.outlineVariant.withValues(alpha: .6)),
+        ),
+        color: colors.surfaceContainerHigh,
+        shadowColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        menuPadding: const EdgeInsets.all(6),
+        elevation: 0,
+      ),
+      bottomSheetTheme: const BottomSheetThemeData(
+        constraints: BoxConstraints(maxWidth: 760),
+        showDragHandle: true,
+      ),
+      segmentedButtonTheme: SegmentedButtonThemeData(
+        style: ButtonStyle(
+          shape: WidgetStatePropertyAll(
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+          side: WidgetStatePropertyAll(
+            BorderSide(color: colors.outlineVariant),
+          ),
+        ),
+      ),
+      sliderTheme: const SliderThemeData(
+        trackHeight: 4,
+        thumbShape: RoundSliderThumbShape(enabledThumbRadius: 8),
+      ),
       cardTheme: CardThemeData(
         elevation: 0,
         color: colors.surface,

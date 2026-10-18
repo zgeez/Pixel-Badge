@@ -44,9 +44,16 @@ class StudioLink extends FakeLink {
   Future<void> write(String uuid, Uint8List data) async {
     if (uuid == BadgeField.text.uuid || uuid == BadgeField.artwork.uuid) {
       fragments++;
-      final header = uuid == BadgeField.artwork.uuid ? 5 : 4;
-      final start = header == 5 ? 1 : 0;
-      final offset = data[start] | data[start + 1] << 8;
+      final wide = uuid == BadgeField.artwork.uuid && data[0] == 2;
+      final header = wide
+          ? 9
+          : uuid == BadgeField.artwork.uuid
+          ? 5
+          : 4;
+      final start = header == 4 ? 0 : 1;
+      final offset = wide
+          ? ByteData.sublistView(data).getUint32(1, Endian.little)
+          : data[start] | data[start + 1] << 8;
       expect(offset, offset == 0 ? 0 : staged[uuid]!.length);
       staged[uuid] = Uint8List.fromList([
         if (offset != 0) ...staged[uuid]!,
@@ -59,7 +66,103 @@ class StudioLink extends FakeLink {
   }
 }
 
+class BulkStudioLink extends StudioLink implements BulkArtworkLink {
+  int invalidations = 0;
+  @override
+  Future<int> artworkPayloadSize() async => 244;
+  @override
+  void invalidateArtworkCache() {
+    invalidations++;
+  }
+}
+
+class ReadSetupLink extends BulkStudioLink implements ArtworkReadProgressLink {
+  bool negotiated = false;
+  void Function(double)? progress;
+  @override
+  Future<int> artworkPayloadSize() async {
+    negotiated = true;
+    return 244;
+  }
+
+  @override
+  void setArtworkReadProgress(void Function(double)? listener) =>
+      progress = listener;
+  @override
+  Future<Uint8List> read(String uuid) async {
+    if (uuid == BadgeField.artwork.uuid) {
+      expect(
+        negotiated,
+        isTrue,
+        reason: 'Initial reconnect must negotiate before artwork reads',
+      );
+      progress?.call(0.5);
+      progress?.call(1);
+    }
+    return super.read(uuid);
+  }
+}
+
 void main() {
+  test(
+    'initial large-artwork read negotiates first and exposes read progress',
+    () async {
+      final link = ReadSetupLink(), badge = BadgeController();
+      final values = <double>[];
+      badge.addListener(() {
+        if (badge.busy) values.add(badge.uploadProgress);
+      });
+      await badge.attach(
+        link,
+        capabilities: BadgeCapabilities.decode([2, 25, 32, 4, 4, 3, 128, 103]),
+      );
+      expect(badge.confirmed, isTrue);
+      expect(values, containsAllInOrder([0.5, 1.0]));
+      expect(link.progress, isNull);
+      badge.dispose();
+      await link.dispose();
+    },
+  );
+
+  test(
+    '128 raw grayscale frames cross 64 KiB with exact confirmed bulk readback',
+    () async {
+      final link = BulkStudioLink(), badge = BadgeController();
+      final caps = BadgeCapabilities.decode([2, 25, 32, 4, 4, 3, 128, 103]);
+      await badge.attach(link, capabilities: caps);
+      final design = MatrixDesign(
+        frames: List.generate(
+          128,
+          (frame) =>
+              Uint8List.fromList(List.generate(1024, (p) => (p + frame) % 256)),
+        ),
+      );
+      final value = design.encode(forBadge: true);
+      expect(value.length, 131718);
+      await badge.apply(BadgeField.artwork, value);
+      expect(badge.values[BadgeField.artwork], value);
+      expect(badge.confirmed, isTrue);
+      expect(link.fragments, (131718 / 235).ceil());
+      expect(link.invalidations, 1);
+      badge.dispose();
+      await link.dispose();
+    },
+  );
+  test('older badges reject large projects before staging', () async {
+    final link = StudioLink(), badge = BadgeController();
+    await badge.attach(
+      link,
+      capabilities: BadgeCapabilities.decode([2, 25, 32, 4, 4, 3, 32, 39]),
+    );
+    final value = MatrixDesign(
+      frames: List.generate(128, (_) => Uint8List(128)),
+    ).encode();
+    await expectLater(badge.apply(BadgeField.artwork, value), throwsStateError);
+    expect(link.fragments, 0);
+    badge.dispose();
+    await link.dispose();
+  });
+
   for (final error in [-13, -19]) {
     for (final explicitDisconnect in [false, true]) {
       test(

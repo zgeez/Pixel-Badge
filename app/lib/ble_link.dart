@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 import 'dart:async';
+import 'dart:typed_data' show Endian;
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, TargetPlatform, kIsWeb;
@@ -7,14 +8,41 @@ import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:universal_ble/universal_ble.dart';
 import 'badge_controller.dart';
 import 'protocol.dart';
+import 'artwork_codec.dart';
 import 'audio_controller.dart';
 
-class UniversalBadgeLink implements BadgeLink, AudioTransport {
+class UniversalBadgeLink
+    implements
+        BadgeLink,
+        AudioTransport,
+        BulkArtworkLink,
+        ArtworkTransferLink,
+        ArtworkReadProgressLink {
   UniversalBadgeLink._(this.device, this.result, this.capabilities);
   final BleDevice device;
   final BleCharacteristic result;
   final BadgeCapabilities capabilities;
   BleCharacteristic? _audio;
+  Uint8List? _artworkBytes, _artworkKey;
+  bool _closed = false;
+  Future<void>? _closing;
+  Future<int>? _artworkMtu;
+  void Function(double)? _readProgress;
+  @override
+  void setArtworkReadProgress(void Function(double)? listener) {
+    _readProgress = listener;
+  }
+
+  void _checkOpen() {
+    if (_closed) throw StateError("Badge disconnected.");
+  }
+
+  @override
+  void invalidateArtworkCache() {
+    _artworkBytes = null;
+    _artworkKey = null;
+  }
+
   StreamSubscription<bool>? _connection;
   static int _nextOwner = 0;
   final int _owner = ++_nextOwner;
@@ -75,7 +103,10 @@ class UniversalBadgeLink implements BadgeLink, AudioTransport {
     _audio = null;
   }
 
-  static Future<UniversalBadgeLink> connect(BleDevice device) async {
+  static Future<UniversalBadgeLink> connect(
+    BleDevice device, {
+    void Function(bool? paired)? onBondState,
+  }) async {
     try {
       await device.connect();
       await device.discoverServices();
@@ -84,6 +115,15 @@ class UniversalBadgeLink implements BadgeLink, AudioTransport {
         service: serviceUuid,
       )).read();
       final capabilities = BadgeCapabilities.decode(info);
+      // OS bond state is a UI hint only. Always perform the existing pairing
+      // and authenticated read, regardless of this result.
+      bool? paired;
+      if (onBondState != null && BleCapabilities.hasSystemPairingApi) {
+        try {
+          paired = await device.isPaired();
+        } catch (_) {}
+      }
+      onBondState?.call(paired);
       await device.pair(
         pairingCommand: BleCommand(
           service: serviceUuid,
@@ -116,17 +156,124 @@ class UniversalBadgeLink implements BadgeLink, AudioTransport {
     }
   }
 
+  int _priorityUsers = 0;
+  @override
+  Future<void> transferPriority(bool active) async {
+    if (active) {
+      _priorityUsers++;
+    } else {
+      _priorityUsers = (_priorityUsers - 1).clamp(0, 100);
+    }
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android || _closed) {
+      return;
+    }
+    if ((active && _priorityUsers == 1) || (!active && _priorityUsers == 0)) {
+      try {
+        await UniversalBle.requestConnectionPriority(
+          device.deviceId,
+          active
+              ? BleConnectionPriority.highPerformance
+              : BleConnectionPriority.balanced,
+        );
+      } catch (_) {
+        /* Priority is an optional OS hint; transfers still work. */
+      }
+    }
+  }
+
+  @override
+  Future<int> artworkPayloadSize() => _artworkMtu ??= _negotiateArtworkMtu();
+  Future<int> _negotiateArtworkMtu() async {
+    try {
+      final mtu = await device.requestMtu(247);
+      assert(() {
+        debugPrint('Pixel Badge artwork MTU: $mtu');
+        return true;
+      }());
+      return (mtu - 3).clamp(20, 244);
+    } catch (_) {
+      return 20;
+    }
+  }
+
   @override
   Future<Uint8List> read(String uuid) async {
+    _checkOpen();
     if (uuid == BadgeField.artwork.uuid) {
+      if (capabilities.hasLargeArtwork) {
+        await artworkPayloadSize();
+        _checkOpen();
+      }
       final characteristic = await device.getCharacteristic(
         uuid,
         service: serviceUuid,
       );
-      return readArtworkPages(
-        (cursor) => characteristic.write(cursor, withResponse: true),
-        characteristic.read,
-      );
+      _checkOpen();
+      Future<void> writeCursor(Uint8List value) async {
+        _checkOpen();
+        await characteristic.write(value, withResponse: true);
+        _checkOpen();
+      }
+
+      Future<Uint8List> readPage() async {
+        _checkOpen();
+        final value = await characteristic.read();
+        _checkOpen();
+        return value;
+      }
+
+      Uint8List? key;
+      if (capabilities.hasLargeArtwork) {
+        await writeCursor(Uint8List.fromList([3]));
+        key = await readPage();
+        if (key.length != 8) {
+          throw const FormatException('Malformed artwork metadata.');
+        }
+        if (_artworkBytes != null &&
+            _artworkKey != null &&
+            sameBytes(key, _artworkKey!)) {
+          _readProgress?.call(1);
+          return _artworkBytes!;
+        }
+      }
+      await transferPriority(true);
+      try {
+        final readWatch = Stopwatch()..start();
+        final bytes = await readArtworkPages(
+          writeCursor,
+          readPage,
+          wide: capabilities.hasLargeArtwork,
+          sequential: capabilities.hasEditorV2,
+          onProgress: (value) => _readProgress?.call(value),
+        );
+        assert(() {
+          debugPrint(
+            'Pixel Badge artwork read: ${bytes.length} bytes / ${readWatch.elapsedMilliseconds} ms',
+          );
+          return true;
+        }());
+        if (key != null) {
+          final metadata = ByteData.sublistView(key);
+          if (metadata.getUint32(0, Endian.little) != bytes.length ||
+              metadata.getUint32(4, Endian.little) != artworkCrc32(bytes)) {
+            throw const FormatException(
+              "Artwork checksum mismatch. Refresh again.",
+            );
+          }
+          await writeCursor(Uint8List.fromList([3]));
+          final after = await readPage();
+          if (!sameBytes(key, after)) {
+            throw const FormatException(
+              'Artwork changed during readback. Refresh again.',
+            );
+          }
+          _artworkBytes = bytes;
+          _artworkKey = key;
+        }
+        return bytes;
+      } finally {
+        await transferPriority(false);
+      }
     }
     final bytes = await (await device.getCharacteristic(
       uuid,
@@ -152,7 +299,12 @@ class UniversalBadgeLink implements BadgeLink, AudioTransport {
   @override
   Stream<bool> get connections => device.connectionStream;
   @override
-  Future<void> close() async {
+  Future<void> close() {
+    _closed = true;
+    return _closing ??= _close();
+  }
+
+  Future<void> _close() async {
     await _connection?.cancel();
     await _stopBackground();
     try {

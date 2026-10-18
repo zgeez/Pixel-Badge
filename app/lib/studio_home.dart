@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 import 'dart:async';
-import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:universal_ble/universal_ble.dart';
 import 'badge_controller.dart';
@@ -12,6 +12,13 @@ import 'studio_model.dart';
 import 'audio_controller.dart';
 import 'audio_page.dart';
 import 'motion_panel.dart';
+import 'link_editor.dart';
+import 'image_import.dart';
+import 'artwork_codec.dart';
+import 'studio_import.dart';
+import 'selection_control.dart';
+
+part 'compact_home.dart';
 
 const modeLabels = [
   'QR link',
@@ -53,19 +60,112 @@ class _BadgeHomeState extends State<BadgeHome> with WidgetsBindingObserver {
       (widget.controller == null ? DeviceDraftStore() : MemoryDraftStore());
   StudioDraft draft = StudioDraft();
   final textEditor = TextEditingController();
+  final textFocus = FocusNode();
   final devices = <String, BleDevice>{};
   final scanState = ValueNotifier<int>(0), clock = ValueNotifier<int>(0);
   final watch = Stopwatch()..start();
   StreamSubscription<BleDevice>? scanSubscription;
   Timer? scanTimer, previewTimer, saveTimer;
   Future<void> saves = Future.value();
+  final libraryChanges = ValueNotifier<int>(0);
   int page = 0;
+  int studioToolPage = 0;
+  int _budgetRevision = -1, _budgetBytes = 132;
+  MatrixDesign? _budgetDesign;
+  final _framePresence = <bool>[];
+  bool _artworkHasPixels = false, drawing = false, strokeEdit = false;
+  bool disposed = false;
+  Timer? budgetTimer;
+  Uint8List? _appliedArtworkBytes;
+  MatrixDesign? _appliedArtwork;
+  MatrixDesign? get appliedArtwork {
+    final value = badge.values[BadgeField.artwork];
+    if (!identical(value, _appliedArtworkBytes)) {
+      _appliedArtworkBytes = value;
+      _appliedArtwork = value == null ? null : MatrixDesign.decode(value);
+    }
+    return _appliedArtwork;
+  }
+
+  bool get artworkHasPixels {
+    artworkBudgetBytes;
+    return _artworkHasPixels;
+  }
+
+  int get artworkBudgetBytes {
+    if (_budgetRevision != draftRevision ||
+        !identical(_budgetDesign, draft.matrix)) {
+      final matrix = draft.matrix;
+      if (strokeEdit &&
+          identical(_budgetDesign, matrix) &&
+          _framePresence.length == matrix.frames.length) {
+        _framePresence[matrix.selected] = matrix.current.any((v) => v != 0);
+      } else {
+        _framePresence
+          ..clear()
+          ..addAll(matrix.frames.map((f) => f.any((v) => v != 0)));
+      }
+      _artworkHasPixels = _framePresence.any((v) => v);
+      // Conservative raw size until the settled draft is compressed off-thread.
+      // Build/pointer updates never encode the whole animation.
+      _budgetBytes = 6 + matrix.frames.fold<int>(0, (n, f) => n + 5 + f.length);
+      _budgetRevision = draftRevision;
+      _budgetDesign = matrix;
+      if (!drawing) scheduleBudget();
+    }
+    return _budgetBytes;
+  }
+
+  void scheduleBudget() {
+    budgetTimer?.cancel();
+    budgetTimer = Timer(const Duration(milliseconds: 150), () async {
+      if (!mounted || drawing) return;
+      final revision = draftRevision, matrix = draft.matrix;
+      final snapshot = MatrixDesign(
+        frames: matrix.frames,
+        durations: List.of(matrix.durations),
+        interval: matrix.interval,
+        playback: matrix.playback,
+      );
+      final int size;
+      try {
+        size = await compute(_artworkSize, snapshot);
+      } catch (_) {
+        // The conservative raw budget remains valid if compression fails.
+        return;
+      }
+      if (mounted &&
+          !drawing &&
+          revision == draftRevision &&
+          identical(matrix, draft.matrix)) {
+        setState(() => _budgetBytes = size);
+      }
+    });
+  }
+
+  void finishStroke() {
+    if (disposed) return;
+    drawing = false;
+    scheduleBudget();
+    scheduleSave();
+  }
+
+  void update(VoidCallback work) {
+    if (mounted) setState(work);
+  }
+
   int draftRevision = 0;
   bool scanning = false,
       connecting = false,
       loadingDraft = true,
       playing = false,
-      navigateCanvas = false;
+      navigateCanvas = false,
+      importing = false,
+      foreground = true;
+  bool onionSkin = false;
+  double onionOpacity = .25;
+  int playEpoch = 0;
+  bool? connectionBond;
   PixelTool tool = PixelTool.pen;
   String? draftMessage, scanError;
   bool get ready =>
@@ -80,6 +180,7 @@ class _BadgeHomeState extends State<BadgeHome> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    textFocus.addListener(changed);
     badge.addListener(changed);
     audio.addListener(changed);
     unawaited(audio.refreshLibrary().catchError((Object _) {}));
@@ -92,7 +193,7 @@ class _BadgeHomeState extends State<BadgeHome> with WidgetsBindingObserver {
       }
     });
     previewTimer = Timer.periodic(const Duration(milliseconds: 50), (_) {
-      clock.value = watch.elapsedMilliseconds;
+      if (foreground) clock.value = watch.elapsedMilliseconds;
     });
     unawaited(loadDraft());
   }
@@ -122,10 +223,32 @@ class _BadgeHomeState extends State<BadgeHome> with WidgetsBindingObserver {
     }
   }
 
-  void editDraft() {
+  void moveCursor(int direction) {
+    final selection = textEditor.selection;
+    final next = !selection.isValid
+        ? textEditor.text.length
+        : !selection.isCollapsed
+        ? (direction < 0 ? selection.start : selection.end)
+        : (selection.extentOffset + direction).clamp(0, textEditor.text.length);
+    textEditor.value = textEditor.value.copyWith(
+      selection: TextSelection.collapsed(offset: next),
+      composing: TextRange.empty,
+    );
+    textFocus.requestFocus();
+  }
+
+  void editDraft({bool pixelsOnly = false}) {
+    strokeEdit = pixelsOnly;
     if (!mounted) return;
     draftRevision++;
+    libraryChanges.value++;
     setState(() => draftMessage = 'Draft updated');
+    saveTimer?.cancel();
+    budgetTimer?.cancel();
+    if (!drawing) scheduleSave();
+  }
+
+  void scheduleSave() {
     saveTimer?.cancel();
     saveTimer = Timer(
       const Duration(milliseconds: 500),
@@ -154,7 +277,8 @@ class _BadgeHomeState extends State<BadgeHome> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) unawaited(audio.resume());
+    foreground = state == AppLifecycleState.resumed;
+    if (foreground) unawaited(audio.resume());
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.inactive) {
       audio.background();
@@ -176,7 +300,7 @@ class _BadgeHomeState extends State<BadgeHome> with WidgetsBindingObserver {
     if (text.contains('pair') || text.contains('bond')) {
       return 'Pairing failed. Hold Action on the badge, reconnect and enter the code shown on its display.';
     }
-    return 'Couldn’t reach the badge. Reconnect and refresh before trying again.';
+    return 'Could not reach the badge. Reconnect and refresh before trying again.';
   }
 
   Future<void> action(Future<void> Function() work) async {
@@ -184,9 +308,7 @@ class _BadgeHomeState extends State<BadgeHome> with WidgetsBindingObserver {
       await work();
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(friendly(error))));
+        notice(friendly(error));
       }
     }
   }
@@ -229,13 +351,21 @@ class _BadgeHomeState extends State<BadgeHome> with WidgetsBindingObserver {
 
   Future<void> connect(BleDevice device) async {
     if (connecting) return;
-    setState(() => connecting = true);
+    setState(() {
+      connecting = true;
+      connectionBond = null;
+    });
     try {
       await stopScan();
       // Dispose the old GATT client before reconnecting the same device ID.
       await audio.detach();
       await badge.disconnect();
-      final link = await UniversalBadgeLink.connect(device);
+      final link = await UniversalBadgeLink.connect(
+        device,
+        onBondState: (paired) {
+          if (mounted) setState(() => connectionBond = paired);
+        },
+      );
       if (!mounted) {
         await link.close();
         return;
@@ -248,6 +378,21 @@ class _BadgeHomeState extends State<BadgeHome> with WidgetsBindingObserver {
   }
 
   Future<void> findBadge() async {
+    if (connecting || scanning) return;
+    await scan();
+    if (mounted) setState(() {});
+    if (!scanning) {
+      if (mounted && scanError != null) notice(scanError!);
+      return;
+    }
+    await Future<void>.delayed(const Duration(seconds: 4));
+    if (!mounted || !scanning || !foreground) return;
+    await stopScan();
+    if (!mounted) return;
+    if (devices.length == 1) {
+      await action(() => connect(devices.values.single));
+      return;
+    }
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -296,7 +441,7 @@ class _BadgeHomeState extends State<BadgeHome> with WidgetsBindingObserver {
                     padding: const EdgeInsets.symmetric(vertical: 20),
                     child: Text(
                       scanning
-                          ? 'Looking for nearby badges…'
+                          ? 'Looking for nearby badges...'
                           : 'Your badge will appear here. Keep it nearby and Bluetooth on.',
                     ),
                   ),
@@ -315,7 +460,7 @@ class _BadgeHomeState extends State<BadgeHome> with WidgetsBindingObserver {
                                 ? device.name!
                                 : 'Smart LED Badge',
                           ),
-                          subtitle: Text('Signal ${device.rssi ?? '—'} dBm'),
+                          subtitle: Text('Signal ${device.rssi ?? '-'} dBm'),
                           trailing: const Icon(Icons.chevron_right),
                           onTap: () {
                             Navigator.pop(sheetContext);
@@ -347,332 +492,27 @@ class _BadgeHomeState extends State<BadgeHome> with WidgetsBindingObserver {
               : MatrixPreview(frame: render(0)),
         ),
       );
-  Widget offlineNote() => Padding(
-    padding: const EdgeInsets.only(bottom: 12),
-    child: Row(
-      children: [
-        Icon(
-          badge.connected ? Icons.phone_android : Icons.cloud_off_outlined,
-          size: 16,
+  void notice(String text, {SnackBarAction? action}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(text),
+          action: action,
+          persist: false,
+          duration: const Duration(seconds: 4),
+          showCloseIcon: true,
         ),
-        const SizedBox(width: 6),
-        Text(
-          badge.connected ? 'Local draft' : 'Offline draft',
-          style: Theme.of(context).textTheme.labelMedium,
-        ),
-        const Spacer(),
-        IconButton(
-          tooltip: 'Draft help',
-          icon: const Icon(Icons.help_outline, size: 20),
-          onPressed: () => showDialog<void>(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: const Text('Your drafts'),
-              content: Text(
-                !badge.connected
-                    ? 'Design and save on this phone. Connect to send your design to the badge.'
-                    : !badge.capabilities.hasStudio
-                    ? 'Update badge firmware to send Studio designs.'
-                    : 'Drafts stay on this phone. Send a design to save and display it on the badge.',
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Done'),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    ),
-  );
-  Widget button(
-    String label,
-    IconData icon,
-    VoidCallback? tap, {
-    bool primary = true,
-  }) => primary
-      ? FilledButton.icon(onPressed: tap, icon: Icon(icon), label: Text(label))
-      : FilledButton.tonalIcon(
-          onPressed: tap,
-          icon: Icon(icon),
-          label: Text(label),
-        );
-
-  Widget dashboard() {
-    final mode = badge.mode.clamp(0, modeLabels.length - 1);
-    final colors = Theme.of(context).colorScheme;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (!badge.connected)
-          StudioPanel(
-            title: 'Ready when you are',
-            child: Column(
-              children: [
-                Icon(Icons.badge_outlined, size: 72, color: colors.primary),
-                const SizedBox(height: 16),
-                button(
-                  'Find badge',
-                  Icons.bluetooth_searching,
-                  connecting ? null : () => unawaited(findBadge()),
-                ),
-              ],
-            ),
-          ),
-        if (connecting || badge.busy)
-          StudioPanel(
-            title: connecting ? 'Connecting' : 'Saving to badge',
-            subtitle: connecting
-                ? 'Enter the code on your badge in the phone pairing dialog.'
-                : badge.uploadProgress < 1
-                ? 'Uploading… ${(badge.uploadProgress * 100).round()}%'
-                : 'Verifying the applied setting…',
-            child: LinearProgressIndicator(
-              value: connecting || badge.uploadProgress == 1
-                  ? null
-                  : badge.uploadProgress,
-            ),
-          ),
-        if (badge.connected)
-          StudioPanel(
-            title: 'On your badge',
-            subtitle: badge.confirmed
-                ? modeLabels[mode]
-                : 'Refresh to confirm the active display',
-            trailing: IconButton(
-              tooltip: 'Disconnect',
-              onPressed: badge.busy
-                  ? null
-                  : () => unawaited(action(badge.disconnect)),
-              icon: const Icon(Icons.bluetooth_disabled),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (mode == 0)
-                  Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        children: [
-                          Icon(
-                            Icons.qr_code_2,
-                            size: 104,
-                            color: colors.primary,
-                          ),
-                          const SizedBox(height: 12),
-                          SelectableText(
-                            badge.url,
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
-                else if (mode == 1 &&
-                    badge.capabilities.hasStudio &&
-                    badge.values[BadgeField.text] != null)
-                  preview(
-                    (t) => TextDesign.decode(
-                      badge.values[BadgeField.text]!,
-                    ).render(t, fallback: badge.name),
-                    animate: true,
-                  )
-                else if (mode >= 4)
-                  Padding(
-                    padding: const EdgeInsets.all(40),
-                    child: Icon(
-                      mode == 6
-                          ? Icons.water
-                          : mode == 4
-                          ? Icons.graphic_eq
-                          : Icons.equalizer,
-                      size: 104,
-                      color: colors.primary,
-                    ),
-                  )
-                else if (mode >= 2 && badge.values[BadgeField.artwork] != null)
-                  preview((t) {
-                    final art = MatrixDesign.decode(
-                      badge.values[BadgeField.artwork]!,
-                    );
-                    return art.frames[mode == 3
-                        ? t ~/ art.interval % art.frames.length
-                        : 0];
-                  }, animate: mode == 3)
-                else
-                  preview((t) => TextDesign(text: badge.name).render(t)),
-                const SizedBox(height: 20),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    for (var i = 0; i < badge.capabilities.modeCount; i++)
-                      ChoiceChip(
-                        label: Text(modeLabels[i]),
-                        selected: badge.confirmed && badge.mode == i,
-                        onSelected: ready
-                            ? (_) => unawaited(
-                                action(() => badge.apply(BadgeField.mode, [i])),
-                              )
-                            : null,
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                const Text('Brightness'),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    for (var i = 0; i < brightnessLevels.length; i++)
-                      ChoiceChip(
-                        label: Text(['Low', 'Medium', 'High', 'Full'][i]),
-                        selected:
-                            badge.confirmed &&
-                            badge.brightness == brightnessLevels[i],
-                        onSelected: ready
-                            ? (_) => unawaited(
-                                action(
-                                  () => badge.apply(BadgeField.brightness, [
-                                    brightnessLevels[i],
-                                  ]),
-                                ),
-                              )
-                            : null,
-                      ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        if (badge.connected &&
-            badge.capabilities.hasMotion &&
-            badge.values[BadgeField.motion] != null)
-          MotionPanel(
-            value: badge.values[BadgeField.motion]!,
-            status: badge.motionStatus,
-            enabled: ready && !audio.recording && !audio.stopping,
-            apply: (value) =>
-                action(() => badge.apply(BadgeField.motion, value)),
-            refresh: () => action(badge.refresh),
-          ),
-        StudioPanel(
-          title: 'Create',
-          child: Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              for (var i = 1; i < pageLabels.length; i++)
-                button(
-                  pageLabels[i],
-                  pageIcons[i],
-                  () => setState(() => page = i),
-                  primary: false,
-                ),
-            ],
-          ),
-        ),
-      ],
-    );
+      );
   }
 
-  Widget aboutButton() => TextButton.icon(
-    icon: const Icon(Icons.info_outline),
-    label: const Text('About Pixel Badge'),
-    onPressed: () => showAboutDialog(
-      context: context,
-      applicationName: 'Pixel Badge',
-      applicationVersion: '0.5.4 · Motion',
-      applicationIcon: const Icon(Icons.grid_view_rounded, size: 40),
-      children: const [
-        Text(
-          'Create on your phone. Save to your badge. Phone drafts stay in app-private storage and are deleted when you uninstall.',
-        ),
-      ],
-    ),
-  );
-
   Future<void> editLink({int? index}) async {
-    final original = index == null ? null : draft.links[index];
-    final label = TextEditingController(text: original?.label ?? ''),
-        url = TextEditingController(text: original?.url ?? 'https://');
-    final key = GlobalKey<FormState>();
     final result = await showDialog<SavedLink>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(index == null ? 'Add a custom link' : 'Edit link'),
-        content: SizedBox(
-          width: 420,
-          child: Form(
-            key: key,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextFormField(
-                  controller: label,
-                  maxLength: 32,
-                  decoration: const InputDecoration(
-                    labelText: 'Label',
-                    hintText: 'My portfolio',
-                  ),
-                  validator: (v) => v == null || v.trim().isEmpty
-                      ? 'Give this link a label.'
-                      : null,
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: url,
-                  keyboardType: TextInputType.url,
-                  autocorrect: false,
-                  decoration: const InputDecoration(
-                    labelText: 'URL',
-                    hintText: 'https://EXAMPLE.COM',
-                  ),
-                  validator: (v) {
-                    try {
-                      validateValue(
-                        BadgeField.url,
-                        encodeAscii(normalizeUrl((v ?? '').trim())),
-                      );
-                      return null;
-                    } catch (error) {
-                      return friendly(error);
-                    }
-                  },
-                ),
-                const SizedBox(height: 12),
-                const Text(
-                  'The 32 × 32 QR needs a short link. Letter case in the path stays exactly as entered.',
-                ),
-              ],
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () {
-              if (key.currentState!.validate()) {
-                Navigator.pop(
-                  context,
-                  SavedLink(label.text.trim(), normalizeUrl(url.text.trim())),
-                );
-              }
-            },
-            child: const Text('Save link'),
-          ),
-        ],
-      ),
+      builder: (_) =>
+          LinkEditorDialog(original: index == null ? null : draft.links[index]),
     );
-    label.dispose();
-    url.dispose();
     if (result == null || !mounted) return;
     if (index == null) {
       if (draft.links.length >= 32) {
@@ -692,206 +532,41 @@ class _BadgeHomeState extends State<BadgeHome> with WidgetsBindingObserver {
     editDraft();
   }
 
-  Widget linksPage() {
-    final presets = [
-      for (var i = 0; i < configuredLinks.length; i++)
-        if (configuredLinks[i].isNotEmpty)
-          SavedLink(linkLabels[i], normalizeUrl(configuredLinks[i])),
-    ];
-    Widget linkRow(SavedLink link, {int? index}) => Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  link.label,
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-              ),
-              if (badge.confirmed && badge.nfcVerified && badge.url == link.url)
-                const Chip(
-                  label: Text('Active'),
-                  avatar: Icon(Icons.check, size: 16),
-                ),
-              if (index != null)
-                IconButton(
-                  tooltip: 'Edit ${link.label}',
-                  onPressed: () => unawaited(editLink(index: index)),
-                  icon: const Icon(Icons.edit_outlined),
-                ),
-              if (index != null)
-                IconButton(
-                  tooltip: 'Remove ${link.label}',
-                  onPressed: () {
-                    final removed = draft.links.removeAt(index);
-                    editDraft();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('${removed.label} removed'),
-                        action: SnackBarAction(
-                          label: 'Undo',
-                          onPressed: () {
-                            if (draft.links.length < 32) {
-                              draft.links.insert(
-                                index.clamp(0, draft.links.length),
-                                removed,
-                              );
-                              editDraft();
-                            }
-                          },
-                        ),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.delete_outline),
-                ),
-            ],
-          ),
-          SelectableText(link.url),
-          const SizedBox(height: 8),
-          button(
-            'Apply link',
-            Icons.send_outlined,
-            ready
-                ? () => unawaited(
-                    action(
-                      () => badge.apply(BadgeField.url, encodeAscii(link.url)),
-                    ),
-                  )
-                : null,
-          ),
-          const SizedBox(height: 12),
-          const Divider(height: 1),
-        ],
-      ),
-    );
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        offlineNote(),
-        StudioPanel(
-          title: 'Contact link',
-          help: 'Your QR code and NFC tap always share the same destination.',
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                badge.connected
-                    ? badge.confirmed && badge.nfcVerified
-                          ? 'Confirmed active link'
-                          : 'Last read link · not verified'
-                    : 'Connect to read the active link',
-              ),
-              if (badge.connected) ...[
-                const SizedBox(height: 8),
-                SelectableText(badge.url),
-              ],
-              if (badge.connected && !badge.nfcVerified) ...[
-                const SizedBox(height: 12),
-                Text(badge.nfcMessage),
-              ],
-            ],
-          ),
-        ),
-        StudioPanel(
-          title: 'Your links',
-          help: 'Save a short link once, then choose it whenever you need it.',
-          trailing: IconButton(
-            tooltip: 'Add a custom link',
-            onPressed: loadingDraft ? null : () => unawaited(editLink()),
-            icon: const Icon(Icons.add),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (draft.links.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.only(bottom: 16),
-                  child: Text(
-                    'Add your portfolio, social profile or any custom destination.',
-                  ),
-                ),
-              for (var i = 0; i < draft.links.length; i++)
-                linkRow(draft.links[i], index: i),
-              button(
-                'Add custom link',
-                Icons.add_link,
-                loadingDraft ? null : () => unawaited(editLink()),
-                primary: false,
-              ),
-            ],
-          ),
-        ),
-        if (presets.isNotEmpty)
-          StudioPanel(
-            title: 'Quick links',
-            child: Column(children: presets.map(linkRow).toList()),
-          ),
-        StudioPanel(
-          title: 'NFC settings',
-          help:
-              'Passive taps work from the tag’s saved link, even when the badge is off.',
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: Icon(
-                  badge.nfcVerified && badge.confirmed
-                      ? Icons.verified_outlined
-                      : Icons.nfc,
-                ),
-                title: Text(
-                  !badge.connected
-                      ? 'Connect to check NFC'
-                      : badge.nfcBusy
-                      ? 'Synchronizing'
-                      : badge.nfcVerified && badge.confirmed
-                      ? 'Link synchronized'
-                      : badge.nfcResult == -13
-                      ? 'Setup needs repair'
-                      : 'Sync needed',
-                ),
-                subtitle: Text(
-                  !badge.connected
-                      ? 'Read the tag’s status before changing a contact link.'
-                      : badge.nfcVerified
-                      ? 'QR + NFC synchronized'
-                      : badge.nfcMessage,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 10,
-                runSpacing: 10,
-                children: [
-                  button(
-                    'Sync again',
-                    Icons.sync,
-                    studioReady && !badge.nfcBusy
-                        ? () => unawaited(
-                            action(() => badge.apply(BadgeField.nfcSync, [1])),
-                          )
-                        : null,
-                  ),
-                  button(
-                    'Refresh status',
-                    Icons.refresh,
-                    badge.connected && !badge.busy
-                        ? () => unawaited(action(badge.refresh))
-                        : null,
-                    primary: false,
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
+  Future<void> importStudioSource({
+    bool text = false,
+    bool video = false,
+  }) async {
+    if (loadingDraft || importing) return;
+    final editorContext = context;
+    setState(() => importing = true);
+    try {
+      MatrixDesign? design;
+      if (text || video) {
+        ImportedRaster? image;
+        if (text) {
+          image = await showDialog<ImportedRaster>(
+            context: editorContext,
+            builder: (_) => const RasterTextDialog(),
+          );
+        } else {
+          image = await pickVideo(editorContext);
+        }
+        final source = image;
+        if (source == null || !editorContext.mounted) return;
+        design = await showDialog<MatrixDesign>(
+          context: editorContext,
+          builder: (_) => ImportDesignDialog(image: source),
+        );
+      } else {
+        design = await importStudioData(editorContext);
+      }
+      if (design == null || !mounted) return;
+      draft.matrix = design;
+      playing = false;
+      editDraft();
+    } finally {
+      if (mounted) setState(() => importing = false);
+    }
   }
 
   String? textError() {
@@ -945,675 +620,201 @@ class _BadgeHomeState extends State<BadgeHome> with WidgetsBindingObserver {
     editDraft();
   }
 
-  Widget textPage() {
-    final error = textError();
+  Future<void> saveToLibrary(bool text) async {
+    if (draft.library.length >= 64) {
+      throw StateError('Your library holds 64 items. Remove one first.');
+    }
+    final bytes = text ? draft.text.encode() : draft.matrix.encode();
+    final name = await showDialog<String>(
+      context: context,
+      builder: (_) =>
+          LibraryNameDialog(initial: text ? 'Text design' : 'Pixel design'),
+    );
+    if (name == null || !mounted) return;
+    draft.library.add(
+      SavedDesign(
+        id: DateTime.now().microsecondsSinceEpoch.toString(),
+        name: name,
+        isText: text,
+        bytes: bytes,
+      ),
+    );
+    editDraft();
+    await saveDraft();
+  }
+
+  Future<void> restoreDesign(SavedDesign item) async {
+    final replace = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Load ${item.name}?'),
+        content: const Text(
+          'This replaces the current editor. Saved library items stay unchanged.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Load'),
+          ),
+        ],
+      ),
+    );
+    if (replace != true || !mounted) return;
+    if (item.isText) {
+      draft.text = TextDesign.decode(item.bytes);
+      textEditor.text = draft.text.text;
+    } else {
+      draft.matrix = MatrixDesign.decode(item.bytes);
+      playing = false;
+    }
+    editDraft();
+  }
+
+  Future<void> renameDesign(SavedDesign item) async {
+    final name = await showDialog<String>(
+      context: context,
+      builder: (_) => LibraryNameDialog(initial: item.name, renaming: true),
+    );
+    if (name == null || !mounted) return;
+    final index = draft.library.indexOf(item);
+    if (index < 0) return;
+    draft.library[index] = SavedDesign(
+      id: item.id,
+      name: name,
+      isText: item.isText,
+      bytes: item.bytes,
+    );
+    editDraft();
+    await saveDraft();
+  }
+
+  Widget libraryPanel(bool text) {
+    final items = draft.library.where((item) => item.isText == text).toList();
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        offlineNote(),
-        StudioPanel(
-          title: 'Text composer',
-          help:
-              'Uppercase, lowercase, numbers and punctuation. Add line breaks for a deliberate layout.',
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              TextFormField(
-                controller: textEditor,
-                minLines: 2,
-                maxLines: 5,
-                maxLength: 96,
-                enabled: !loadingDraft,
-                decoration: InputDecoration(
-                  labelText: 'Message',
-                  hintText: 'Hello!\nI’m Ziad',
-                  helperText: 'Leave empty to use your badge name.',
-                  errorText: error,
-                ),
-                onChanged: (v) {
-                  draft.text = draft.text.copyWith(text: v);
-                  editDraft();
-                },
-              ),
-              const SizedBox(height: 16),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (var i = 0; i < 3; i++)
-                    ChoiceChip(
-                      label: Text(['Auto fit', 'Word wrap', 'Scroll'][i]),
-                      selected: draft.text.layout == i,
-                      onSelected: (_) {
-                        draft.text = draft.text.copyWith(layout: i);
-                        editDraft();
-                      },
-                    ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<int>(
-                key: ValueKey('text-scale-${draft.text.scale}'),
-                isExpanded: true,
-                initialValue: draft.text.scale,
-                decoration: const InputDecoration(labelText: 'Text size'),
-                items: [
-                  for (var i = 0; i < 4; i++)
-                    DropdownMenuItem(
-                      value: i,
-                      child: Text(
-                        [
-                          'Automatic',
-                          'Small · 5 × 8',
-                          'Medium · 10 × 16',
-                          'Large · 15 × 24',
-                        ][i],
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                ],
-                onChanged: (v) {
-                  if (v != null) {
-                    draft.text = draft.text.copyWith(scale: v);
-                    editDraft();
-                  }
-                },
-              ),
-              const SizedBox(height: 16),
-              Wrap(
-                spacing: 8,
-                children: [
-                  for (var i = 0; i < 3; i++)
-                    ChoiceChip(
-                      label: Icon(
-                        [
-                          Icons.format_align_left,
-                          Icons.format_align_center,
-                          Icons.format_align_right,
-                        ][i],
-                      ),
-                      tooltip: ['Align left', 'Center', 'Align right'][i],
-                      selected: draft.text.alignment == i,
-                      onSelected: (_) {
-                        draft.text = draft.text.copyWith(alignment: i);
-                        editDraft();
-                      },
-                    ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Text(
-                draft.text.layout == 2
-                    ? 'Scroll pace · ${draft.text.interval} ms per pixel'
-                    : 'Page duration · ${(draft.text.interval * 20 / 1000).toStringAsFixed(1)} seconds',
-              ),
-              Slider(
-                min: 50,
-                max: 500,
-                divisions: 18,
-                value: draft.text.interval.toDouble(),
-                onChanged: (v) {
-                  draft.text = draft.text.copyWith(interval: v.round());
-                  editDraft();
-                },
-              ),
-            ],
+        if (items.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 16),
+            child: Text('Keep your favourites here.'),
           ),
-        ),
-        StudioPanel(
-          title: 'Live preview',
-          help: 'This uses the same bitmap font and layout as Studio firmware.',
-          child: Column(
-            children: [
-              error == null
-                  ? preview(
-                      (t) => draft.text.render(
-                        t,
+        for (final item in items)
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: SizedBox(
+              width: 52,
+              height: 52,
+              child: MatrixPreview(
+                frame: text
+                    ? item.textDesign.render(
+                        0,
                         fallback: badge.name.isEmpty ? 'BADGE' : badge.name,
-                      ),
-                      animate: true,
-                    )
-                  : preview((_) => Uint8List(frameBytes)),
-              const SizedBox(height: 20),
-              Wrap(
-                spacing: 10,
-                runSpacing: 10,
-                children: [
-                  button(
-                    'Send text',
-                    Icons.send_outlined,
-                    studioReady && error == null
-                        ? () => unawaited(
-                            action(() async {
-                              await badge.apply(
-                                BadgeField.text,
-                                draft.text.encode(),
-                              );
-                              await badge.apply(BadgeField.mode, [1]);
-                            }),
-                          )
-                        : null,
-                  ),
-                  button(
-                    'Load from badge',
-                    Icons.download_outlined,
-                    badge.confirmed &&
-                            badge.capabilities.hasStudio &&
-                            !badge.busy
-                        ? () => unawaited(
-                            action(() => loadBadgeDraft(text: true)),
-                          )
-                        : null,
-                    primary: false,
-                  ),
-                  button(
-                    'Save draft',
-                    Icons.save_outlined,
-                    error == null && !loadingDraft
-                        ? () => unawaited(saveDraft())
-                        : null,
-                    primary: false,
-                  ),
-                ],
+                      )
+                    : item.matrixDesign.frames.first,
               ),
-            ],
+            ),
+            title: Text(item.name),
+            subtitle: text
+                ? null
+                : Text(
+                    '${item.bytes[1]} frame${item.bytes[1] == 1 ? '' : 's'}',
+                  ),
+            onTap: () => unawaited(action(() => restoreDesign(item))),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  tooltip: 'Rename ${item.name}',
+                  icon: const Icon(Icons.edit_outlined),
+                  onPressed: () => unawaited(action(() => renameDesign(item))),
+                ),
+                IconButton(
+                  tooltip: 'Remove ${item.name}',
+                  icon: const Icon(Icons.delete_outline),
+                  onPressed: () {
+                    final index = draft.library.indexOf(item);
+                    draft.library.removeAt(index);
+                    editDraft();
+                    notice(
+                      '${item.name} removed',
+                      action: SnackBarAction(
+                        label: 'Undo',
+                        onPressed: () {
+                          if (draft.library.length < 64) {
+                            draft.library.insert(
+                              index.clamp(0, draft.library.length),
+                              item,
+                            );
+                            editDraft();
+                          }
+                        },
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
           ),
-        ),
+        if (items.isEmpty)
+          TextButton.icon(
+            onPressed: loadingDraft || (text && textError() != null)
+                ? null
+                : () => unawaited(action(() => saveToLibrary(text))),
+            icon: const Icon(Icons.bookmark_add_outlined),
+            label: const Text('Save to library'),
+          ),
       ],
     );
   }
 
-  Widget studioPage() {
-    final design = draft.matrix;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        offlineNote(),
-        StudioPanel(
-          title: 'Pixel canvas',
-          help:
-              '32 × 32 monochrome pixels. Draw directly or switch to Move to zoom.',
-          child: Column(
-            children: [
-              Wrap(
-                spacing: 4,
-                runSpacing: 6,
-                children: [
-                  for (var i = 0; i < PixelTool.values.length; i++)
-                    ChoiceChip(
-                      label: Icon(
-                        [
-                          Icons.edit_outlined,
-                          Icons.auto_fix_normal,
-                          Icons.show_chart,
-                          Icons.crop_square,
-                          Icons.format_color_fill,
-                        ][i],
-                      ),
-                      tooltip: [
-                        'Pen',
-                        'Eraser',
-                        'Line',
-                        'Rectangle',
-                        'Fill',
-                      ][i],
-                      selected: tool == PixelTool.values[i] && !navigateCanvas,
-                      onSelected: (_) => setState(() {
-                        tool = PixelTool.values[i];
-                        navigateCanvas = false;
-                        playing = false;
-                      }),
-                    ),
-                  ChoiceChip(
-                    label: const Icon(Icons.pan_tool_outlined),
-                    tooltip: 'Move and zoom',
-                    selected: navigateCanvas,
-                    onSelected: (v) => setState(() => navigateCanvas = v),
-                  ),
-                  IconButton(
-                    tooltip: 'Undo',
-                    onPressed: design.canUndo
-                        ? () {
-                            design.undo();
-                            editDraft();
-                          }
-                        : null,
-                    icon: const Icon(Icons.undo),
-                  ),
-                  IconButton(
-                    tooltip: 'Redo',
-                    onPressed: design.canRedo
-                        ? () {
-                            design.redo();
-                            editDraft();
-                          }
-                        : null,
-                    icon: const Icon(Icons.redo),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 460),
-                child: AspectRatio(
-                  aspectRatio: 1,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(20),
-                    child: InteractiveViewer(
-                      panEnabled: navigateCanvas,
-                      scaleEnabled: navigateCanvas,
-                      minScale: 1,
-                      maxScale: 4,
-                      child: playing
-                          ? ValueListenableBuilder<int>(
-                              valueListenable: clock,
-                              builder: (context, value, _) => MatrixPreview(
-                                frame:
-                                    design.frames[value ~/
-                                        design.interval %
-                                        design.frames.length],
-                              ),
-                            )
-                          : MatrixEditor(
-                              design: design,
-                              tool: tool,
-                              onChanged: editDraft,
-                              enabled: !navigateCanvas && !loadingDraft,
-                            ),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 14),
-              Wrap(
-                spacing: 4,
-                runSpacing: 4,
-                children: [
-                  TextButton.icon(
-                    onPressed: () {
-                      design.clear();
-                      editDraft();
-                    },
-                    icon: const Icon(Icons.clear),
-                    label: const Text('Clear'),
-                  ),
-                  TextButton.icon(
-                    onPressed: () {
-                      design.invert();
-                      editDraft();
-                    },
-                    icon: const Icon(Icons.contrast),
-                    label: const Text('Invert'),
-                  ),
-                  TextButton.icon(
-                    onPressed: () {
-                      design.flip(horizontal: true);
-                      editDraft();
-                    },
-                    icon: const Icon(Icons.flip),
-                    label: const Text('Flip H'),
-                  ),
-                  TextButton.icon(
-                    onPressed: () {
-                      design.flip(horizontal: false);
-                      editDraft();
-                    },
-                    icon: const Icon(Icons.flip_camera_android),
-                    label: const Text('Flip V'),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-        StudioPanel(
-          title: 'Animation timeline',
-          subtitle:
-              '${design.frames.length} of 16 frames · ${design.interval} ms per frame',
-          trailing: IconButton(
-            tooltip: playing ? 'Pause preview' : 'Play preview',
-            onPressed: () => setState(() => playing = !playing),
-            icon: Icon(
-              playing ? Icons.pause_circle_outline : Icons.play_circle_outline,
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(
-                height: 92,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: design.frames.length,
-                  separatorBuilder: (_, _) => const SizedBox(width: 8),
-                  itemBuilder: (context, index) => InkWell(
-                    onTap: () => setState(() {
-                      design.selected = index;
-                      playing = false;
-                    }),
-                    child: Container(
-                      width: 76,
-                      padding: const EdgeInsets.all(3),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: design.selected == index
-                              ? Theme.of(context).colorScheme.primary
-                              : Theme.of(context).colorScheme.outlineVariant,
-                          width: 2,
-                        ),
-                      ),
-                      child: Column(
-                        children: [
-                          Expanded(
-                            child: MatrixPreview(
-                              frame: design.frames[index],
-                              label: 'Frame ${index + 1}',
-                            ),
-                          ),
-                          Text('${index + 1}'),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 4,
-                runSpacing: 4,
-                children: [
-                  TextButton.icon(
-                    onPressed: design.frames.length < 16
-                        ? () {
-                            design.add();
-                            editDraft();
-                          }
-                        : null,
-                    icon: const Icon(Icons.add),
-                    label: const Text('Add frame'),
-                  ),
-                  TextButton.icon(
-                    onPressed: design.frames.length < 16
-                        ? () {
-                            design.add(duplicate: true);
-                            editDraft();
-                          }
-                        : null,
-                    icon: const Icon(Icons.copy),
-                    label: const Text('Duplicate'),
-                  ),
-                  IconButton(
-                    tooltip: 'Move frame earlier',
-                    onPressed: design.selected > 0
-                        ? () {
-                            design.reorder(-1);
-                            editDraft();
-                          }
-                        : null,
-                    icon: const Icon(Icons.chevron_left),
-                  ),
-                  IconButton(
-                    tooltip: 'Move frame later',
-                    onPressed: design.selected < design.frames.length - 1
-                        ? () {
-                            design.reorder(1);
-                            editDraft();
-                          }
-                        : null,
-                    icon: const Icon(Icons.chevron_right),
-                  ),
-                  IconButton(
-                    tooltip: 'Remove frame',
-                    onPressed: design.frames.length > 1
-                        ? () {
-                            design.remove();
-                            editDraft();
-                          }
-                        : null,
-                    icon: const Icon(Icons.delete_outline),
-                  ),
-                ],
-              ),
-              Text(
-                'Playback · ${(1000 / design.interval).toStringAsFixed(1)} frames per second',
-              ),
-              Slider(
-                min: 50,
-                max: 2000,
-                divisions: 39,
-                value: design.interval.toDouble(),
-                onChangeStart: (_) => design.checkpoint(),
-                onChanged: (v) {
-                  design.interval = v.round();
-                  editDraft();
-                },
-              ),
-            ],
-          ),
-        ),
-        StudioPanel(
-          title: 'Save and show',
-          subtitle:
-              'Sending saves this design on the badge. It keeps playing without your phone.',
-          child: Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              button(
-                design.frames.length > 1 ? 'Send animation' : 'Send drawing',
-                Icons.send_outlined,
-                studioReady
-                    ? () => unawaited(
-                        action(() async {
-                          final bytes = design.encode();
-                          await badge.apply(BadgeField.artwork, bytes);
-                          await badge.apply(BadgeField.mode, [
-                            bytes[1] > 1 ? 3 : 2,
-                          ]);
-                        }),
-                      )
-                    : null,
-              ),
-              button(
-                'Save draft',
-                Icons.save_outlined,
-                loadingDraft ? null : () => unawaited(saveDraft()),
-                primary: false,
-              ),
-              button(
-                'Load from badge',
-                Icons.download_outlined,
-                badge.confirmed && badge.capabilities.hasStudio && !badge.busy
-                    ? () => unawaited(action(() => loadBadgeDraft(text: false)))
-                    : null,
-                primary: false,
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
+  Future<void> importImage() async {
+    if (importing) return;
+    setState(() => importing = true);
+    try {
+      final image = await pickRaster();
+      if (image == null || !mounted) return;
+      final design = await showDialog<MatrixDesign>(
+        context: context,
+        useSafeArea: false,
+        builder: (_) => ImportDesignDialog(image: image),
+      );
+      if (design == null || !mounted) return;
+      draft.matrix = design;
+      playing = false;
+      editDraft();
+    } finally {
+      if (mounted) setState(() => importing = false);
+    }
   }
 
   @override
-  Widget build(BuildContext context) {
-    final wide = MediaQuery.sizeOf(context).width >= 850;
-    final body = ListView(
-      key: PageStorageKey('studio-page-$page'),
-      padding: const EdgeInsets.all(20),
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    [
-                      'Your badge',
-                      'Links',
-                      'Text',
-                      'Pixel Studio',
-                      'Audio',
-                    ][page],
-                    key: const Key('page-heading'),
-                    style: Theme.of(context).textTheme.headlineLarge,
-                  ),
-                ],
-              ),
-            ),
-            if (draftMessage != null && page != 0)
-              Tooltip(
-                message: draftMessage!,
-                child: Icon(
-                  draftMessage == 'Saved on this phone'
-                      ? Icons.check_circle_outline
-                      : Icons.save_outlined,
-                ),
-              ),
-          ],
-        ),
-        const SizedBox(height: 24),
-        if (loadingDraft && page != 0)
-          const Padding(
-            padding: EdgeInsets.only(bottom: 16),
-            child: LinearProgressIndicator(),
-          ),
-        if (badge.busy && page != 0)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 16),
-            child: LinearProgressIndicator(
-              value: badge.uploadProgress < 1 ? badge.uploadProgress : null,
-            ),
-          ),
-        if (draftMessage != null &&
-            (draftMessage!.startsWith('Draft not saved') ||
-                draftMessage!.startsWith('Your saved draft'))) ...[
-          MaterialBanner(
-            content: Text(draftMessage!),
-            actions: [
-              TextButton(
-                onPressed: loadingDraft ? null : () => unawaited(saveDraft()),
-                child: const Text('Save again'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-        ],
-        AbsorbPointer(
-          absorbing: loadingDraft && page != 0,
-          child: [
-            dashboard,
-            linksPage,
-            textPage,
-            studioPage,
-            () => AudioPage(
-              audio: audio,
-              selectVisualization: (mode) =>
-                  action(() => badge.apply(BadgeField.mode, [mode])),
-            ),
-          ][page](),
-        ),
-        if (page == 0) aboutButton(),
-        const SizedBox(height: 12),
-      ],
-    );
-    return Scaffold(
-      appBar: AppBar(
-        title: const Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.grid_view_rounded),
-            SizedBox(width: 10),
-            Flexible(
-              child: Text('Pixel Badge', overflow: TextOverflow.ellipsis),
-            ),
-          ],
-        ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: ActionChip(
-              avatar: Icon(
-                badge.connected ? Icons.bluetooth_connected : Icons.bluetooth,
-                size: 16,
-              ),
-              label: Text(
-                connecting
-                    ? 'Connecting…'
-                    : badge.connected
-                    ? 'Connected'
-                    : 'Connect',
-              ),
-              onPressed: connecting || badge.busy
-                  ? null
-                  : () => unawaited(
-                      badge.connected ? action(badge.refresh) : findBadge(),
-                    ),
-            ),
-          ),
-        ],
-      ),
-      body: SafeArea(
-        child: Row(
-          children: [
-            if (wide)
-              NavigationRail(
-                selectedIndex: page,
-                labelType: NavigationRailLabelType.all,
-                onDestinationSelected: (v) => setState(() => page = v),
-                destinations: [
-                  for (var i = 0; i < pageLabels.length; i++)
-                    NavigationRailDestination(
-                      icon: Icon(pageIcons[i]),
-                      label: Text(pageLabels[i]),
-                    ),
-                ],
-              ),
-            Expanded(
-              child: Align(
-                alignment: Alignment.topCenter,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 760),
-                  child: body,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-      bottomNavigationBar: wide
-          ? null
-          : NavigationBar(
-              selectedIndex: page,
-              onDestinationSelected: (v) => setState(() => page = v),
-              destinations: [
-                for (var i = 0; i < pageLabels.length; i++)
-                  NavigationDestination(
-                    icon: Icon(pageIcons[i]),
-                    label: pageLabels[i],
-                  ),
-              ],
-            ),
-    );
-  }
+  Widget build(BuildContext context) => compactBuild(context);
 
   @override
   void dispose() {
+    disposed = true;
     WidgetsBinding.instance.removeObserver(this);
     scanTimer?.cancel();
     previewTimer?.cancel();
+    budgetTimer?.cancel();
     saveTimer?.cancel();
     unawaited(scanSubscription?.cancel());
     if (scanning) unawaited(UniversalBle.stopScan());
     audio.removeListener(changed);
     audio.dispose();
     badge.removeListener(changed);
+    textFocus.removeListener(changed);
+    textFocus.dispose();
     textEditor.dispose();
     scanState.dispose();
     clock.dispose();
+    libraryChanges.dispose();
     if (widget.controller == null) badge.dispose();
     super.dispose();
   }
 }
+
+int _artworkSize(MatrixDesign design) => design.encode().length;
