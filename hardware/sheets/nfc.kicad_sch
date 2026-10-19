@@ -1272,16 +1272,6 @@
 	)
 	(wire
 		(pts
-			(xy 180.34 111.76) (xy 180.34 114.3)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "12d3ff65-aa13-4b13-81d0-3f5553ead435")
-	)
-	(wire
-		(pts
 			(xy 91.44 86.36) (xy 86.36 86.36)
 		)
 		(stroke
@@ -1302,16 +1292,6 @@
 	)
 	(wire
 		(pts
-			(xy 165.1 111.76) (xy 165.1 114.3)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "425fc042-3aca-4b1b-a071-616f80470739")
-	)
-	(wire
-		(pts
 			(xy 195.58 52.07) (xy 195.58 49.53)
 		)
 		(stroke
@@ -1322,16 +1302,6 @@
 	)
 	(wire
 		(pts
-			(xy 195.58 111.76) (xy 195.58 114.3)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "58245b80-befe-4b2f-b127-ad56a060cf16")
-	)
-	(wire
-		(pts
 			(xy 180.34 59.69) (xy 180.34 62.23)
 		)
 		(stroke
@@ -1339,16 +1309,6 @@
 			(type default)
 		)
 		(uuid "66ee3ff7-3103-425e-bd7a-dc6e6b06cdf5")
-	)
-	(wire
-		(pts
-			(xy 210.82 111.76) (xy 210.82 114.3)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "6893d15a-2a42-4e51-8ffb-287b946dedab")
 	)
 	(wire
 		(pts
@@ -1402,26 +1362,6 @@
 	)
 	(wire
 		(pts
-			(xy 226.06 52.07) (xy 226.06 49.53)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "abd582f0-97e4-44ff-82e2-10c9d627b54e")
-	)
-	(wire
-		(pts
-			(xy 66.04 115.57) (xy 66.04 118.11)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "ac0dae0f-44c2-44a3-82e0-8a64e88ff6a4")
-	)
-	(wire
-		(pts
 			(xy 210.82 59.69) (xy 210.82 62.23)
 		)
 		(stroke
@@ -1432,16 +1372,6 @@
 	)
 	(wire
 		(pts
-			(xy 81.28 115.57) (xy 81.28 118.11)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "b49ee916-8f7e-4b60-8476-f6eae737710a")
-	)
-	(wire
-		(pts
 			(xy 76.2 55.88) (xy 76.2 58.42)
 		)
 		(stroke
@@ -1449,16 +1379,6 @@
 			(type default)
 		)
 		(uuid "c6347066-aca2-433a-a588-e1f0a3dafd5e")
-	)
-	(wire
-		(pts
-			(xy 226.06 59.69) (xy 226.06 62.23)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "caa088f7-6f6e-4e2b-a54d-b41559ec6efb")
 	)
 	(wire
 		(pts
@@ -1502,26 +1422,6 @@
 	)
 	(wire
 		(pts
-			(xy 66.04 107.95) (xy 66.04 105.41)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "f3badf42-4fb4-42e4-8c08-2de4fc7099cc")
-	)
-	(wire
-		(pts
-			(xy 81.28 107.95) (xy 81.28 105.41)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "f9e999c6-8b8e-4d28-8572-b4c2b049ae8c")
-	)
-	(wire
-		(pts
 			(xy 111.76 86.36) (xy 116.84 86.36)
 		)
 		(stroke
@@ -1540,26 +1440,6 @@
 		)
 		(uuid "fd8a207c-6656-4f8f-b54d-feeb8d0af383")
 	)
-	(label "NFC_LA"
-		(at 81.28 105.41 90)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left bottom)
-		)
-		(uuid "07c84e1e-32e9-4692-88bc-6d971b1630a5")
-	)
-	(label "NFC_LA"
-		(at 66.04 105.41 90)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left bottom)
-		)
-		(uuid "0a1c12d8-b245-4b72-a4c6-83d76db8f105")
-	)
 	(label "NFC_LB"
 		(at 86.36 91.44 180)
 		(effects
@@ -1569,16 +1449,6 @@
 			(justify right bottom)
 		)
 		(uuid "1c4b3826-3c13-4a62-849c-52f3bff4b829")
-	)
-	(label "NFC_LB"
-		(at 66.04 118.11 270)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right bottom)
-		)
-		(uuid "27040c55-bd88-4f83-9dce-8d72a32422b2")
 	)
 	(label "NFC_LA"
 		(at 86.36 86.36 180)
@@ -1609,16 +1479,6 @@
 			(justify left bottom)
 		)
 		(uuid "c77995a8-903f-49aa-b659-ae360e4271b4")
-	)
-	(label "NFC_LB"
-		(at 81.28 118.11 270)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right bottom)
-		)
-		(uuid "e472ae85-63a3-444b-be03-354cbfcdac7a")
 	)
 	(global_label "NFC_SDA"
 		(shape passive)
@@ -1656,52 +1516,6 @@
 		(uuid "46e3a7cd-f3a4-445c-845e-d9049f0f4c4c")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
 			(at 180.34 62.23 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-	)
-	(global_label "NFC_PWR"
-		(shape passive)
-		(at 226.06 62.23 270)
-		(fields_autoplaced yes)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right)
-		)
-		(uuid "56c21e78-e4c9-4082-9b7c-5d1d8159da37")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 226.06 62.23 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-	)
-	(global_label "NFC_FD"
-		(shape passive)
-		(at 210.82 114.3 270)
-		(fields_autoplaced yes)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right)
-		)
-		(uuid "7280b167-7a01-47e0-9be9-e4453855ae6f")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 210.82 114.3 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1804,29 +1618,6 @@
 			)
 		)
 	)
-	(global_label "NFC_PWR"
-		(shape passive)
-		(at 165.1 114.3 270)
-		(fields_autoplaced yes)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right)
-		)
-		(uuid "9d58935e-0855-4432-b55a-528c7120f69a")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 165.1 114.3 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-	)
 	(global_label "NFC_FD"
 		(shape passive)
 		(at 116.84 91.44 0)
@@ -1840,29 +1631,6 @@
 		(uuid "9dc1017d-a34b-4ad2-ad2a-87fb0a9df5ca")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
 			(at 116.84 91.44 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-	)
-	(global_label "NFC_SCL"
-		(shape passive)
-		(at 195.58 114.3 270)
-		(fields_autoplaced yes)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right)
-		)
-		(uuid "9e4ceda5-6f3c-4e77-b02b-99780841adf9")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 195.58 114.3 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1965,29 +1733,6 @@
 			)
 		)
 	)
-	(global_label "NFC_SDA"
-		(shape passive)
-		(at 180.34 114.3 270)
-		(fields_autoplaced yes)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right)
-		)
-		(uuid "e34ae352-5d12-4f38-a62e-d4fbdfd0d184")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 180.34 114.3 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-	)
 	(global_label "NFC_PWR"
 		(shape passive)
 		(at 165.1 49.53 90)
@@ -2007,176 +1752,6 @@
 			(effects
 				(font
 					(size 1.27 1.27)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Connector:TestPoint")
-		(at 210.82 111.76 0)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp no)
-		(uuid "0329f343-a800-400a-b1a1-e4a3e69e89c8")
-		(property "Reference" "TP1104"
-			(at 212.09 106.68 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Value" "NFC_FD"
-			(at 212.09 109.22 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" "TestPoint:TestPoint_Pad_D1.0mm"
-			(at 210.82 111.76 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 210.82 111.76 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "test point"
-			(at 210.82 111.76 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "2a472b09-276b-469f-b7d3-9ecf05fa634e")
-		)
-		(instances
-			(project "smart-led-badge"
-				(path "/fefc8d4a-8637-4143-b210-9149e35f9884/277ab79e-b026-470c-8266-8fd48bcc6b2b"
-					(reference "TP1104")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Device:C")
-		(at 66.04 111.76 0)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp yes)
-		(uuid "0ce3f3be-0891-4b81-8670-ba122b46f251")
-		(property "Reference" "C1102"
-			(at 68.58 110.49 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Value" "DNP"
-			(at 68.58 113.03 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
-			(at 66.04 111.76 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 66.04 111.76 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "Unpolarized capacitor"
-			(at 66.04 111.76 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Note" "Tuning C0G 0402 across LA-LB (lowers f)"
-			(at 66.04 111.76 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "e425ab60-3371-4a57-b6c9-8e3d8807ee21")
-		)
-		(pin "2"
-			(uuid "4f31803d-503a-494b-8527-6677cf1fb291")
-		)
-		(instances
-			(project "smart-led-badge"
-				(path "/fefc8d4a-8637-4143-b210-9149e35f9884/277ab79e-b026-470c-8266-8fd48bcc6b2b"
-					(reference "C1102")
-					(unit 1)
 				)
 			)
 		)
@@ -2527,83 +2102,6 @@
 		)
 	)
 	(symbol
-		(lib_id "power:+3V3")
-		(at 226.06 49.53 0)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom no)
-		(on_board no)
-		(in_pos_files yes)
-		(dnp no)
-		(uuid "2931ce03-1626-47d0-9fee-1a6791c844f1")
-		(property "Reference" "#PWR1104"
-			(at 226.06 45.72 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "+3V3"
-			(at 226.06 53.34 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" ""
-			(at 226.06 49.53 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 226.06 49.53 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "Power symbol creates a global label with name \"+3V3\""
-			(at 226.06 49.53 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "fc054de6-c35c-492b-b859-8a0ac83cc951")
-		)
-		(instances
-			(project "smart-led-badge"
-				(path "/fefc8d4a-8637-4143-b210-9149e35f9884/277ab79e-b026-470c-8266-8fd48bcc6b2b"
-					(reference "#PWR1104")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
 		(lib_id "power:GND")
 		(at 101.6 104.14 0)
 		(unit 1)
@@ -2675,162 +2173,6 @@
 			(project "smart-led-badge"
 				(path "/fefc8d4a-8637-4143-b210-9149e35f9884/277ab79e-b026-470c-8266-8fd48bcc6b2b"
 					(reference "#PWR1101")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Connector:TestPoint")
-		(at 165.1 111.76 0)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp no)
-		(uuid "412a1769-a1be-4795-bd50-535b251a85a4")
-		(property "Reference" "TP1101"
-			(at 166.37 106.68 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Value" "NFC_PWR"
-			(at 166.37 109.22 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" "TestPoint:TestPoint_Pad_D1.0mm"
-			(at 165.1 111.76 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 165.1 111.76 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "test point"
-			(at 165.1 111.76 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "980e80c1-28d2-4c82-b7c2-172e5ac7105d")
-		)
-		(instances
-			(project "smart-led-badge"
-				(path "/fefc8d4a-8637-4143-b210-9149e35f9884/277ab79e-b026-470c-8266-8fd48bcc6b2b"
-					(reference "TP1101")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Connector:TestPoint")
-		(at 180.34 111.76 0)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp no)
-		(uuid "4fabb402-88d4-4e0c-9789-c9b90afe6f7c")
-		(property "Reference" "TP1102"
-			(at 181.61 106.68 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Value" "NFC_SDA"
-			(at 181.61 109.22 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" "TestPoint:TestPoint_Pad_D1.0mm"
-			(at 180.34 111.76 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 180.34 111.76 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "test point"
-			(at 180.34 111.76 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "a0b08b7c-876b-4dec-b62e-7176860ae3ee")
-		)
-		(instances
-			(project "smart-led-badge"
-				(path "/fefc8d4a-8637-4143-b210-9149e35f9884/277ab79e-b026-470c-8266-8fd48bcc6b2b"
-					(reference "TP1102")
 					(unit 1)
 				)
 			)
@@ -2962,98 +2304,6 @@
 		)
 	)
 	(symbol
-		(lib_id "Device:R")
-		(at 226.06 55.88 0)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp yes)
-		(uuid "5606fb12-ddf7-4ee2-96ad-47315f98efd1")
-		(property "Reference" "R1104"
-			(at 228.6 54.61 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Value" "DNP"
-			(at 228.6 57.15 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
-			(at 226.06 55.88 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 226.06 55.88 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "Resistor"
-			(at 226.06 55.88 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Note" "Option: NTAG always powered from 3V3; NFC_PWR GPIO must then stay an input"
-			(at 226.06 55.88 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "cc2dee5d-39d2-40d9-b48f-18f63f9ea382")
-		)
-		(pin "2"
-			(uuid "71b1b66f-117c-4c43-a7ee-3f6a3b87587d")
-		)
-		(instances
-			(project "smart-led-badge"
-				(path "/fefc8d4a-8637-4143-b210-9149e35f9884/277ab79e-b026-470c-8266-8fd48bcc6b2b"
-					(reference "R1104")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
 		(lib_id "Device:C")
 		(at 165.1 55.88 0)
 		(unit 1)
@@ -3179,98 +2429,6 @@
 		)
 	)
 	(symbol
-		(lib_id "Device:C")
-		(at 81.28 111.76 0)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp yes)
-		(uuid "a274443d-d7f7-4018-b1df-b984829f9927")
-		(property "Reference" "C1103"
-			(at 83.82 110.49 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Value" "DNP"
-			(at 83.82 113.03 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
-			(at 81.28 111.76 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 81.28 111.76 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "Unpolarized capacitor"
-			(at 81.28 111.76 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Note" "Second tuning position"
-			(at 81.28 111.76 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "7ddbde49-c4ac-4654-84ad-ac845b0ebf93")
-		)
-		(pin "2"
-			(uuid "2439164b-3b7d-4dd4-9395-c6d0ef6ced0f")
-		)
-		(instances
-			(project "smart-led-badge"
-				(path "/fefc8d4a-8637-4143-b210-9149e35f9884/277ab79e-b026-470c-8266-8fd48bcc6b2b"
-					(reference "C1103")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
 		(lib_id "power:GND")
 		(at 165.1 62.23 0)
 		(unit 1)
@@ -3342,84 +2500,6 @@
 			(project "smart-led-badge"
 				(path "/fefc8d4a-8637-4143-b210-9149e35f9884/277ab79e-b026-470c-8266-8fd48bcc6b2b"
 					(reference "#PWR1103")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Connector:TestPoint")
-		(at 195.58 111.76 0)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp no)
-		(uuid "ad1aa930-2b7e-4747-97a7-42071930cfd2")
-		(property "Reference" "TP1103"
-			(at 196.85 106.68 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Value" "NFC_SCL"
-			(at 196.85 109.22 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" "TestPoint:TestPoint_Pad_D1.0mm"
-			(at 195.58 111.76 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 195.58 111.76 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "test point"
-			(at 195.58 111.76 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "d4b0e447-3080-4da8-b7c0-7adce9155a68")
-		)
-		(instances
-			(project "smart-led-badge"
-				(path "/fefc8d4a-8637-4143-b210-9149e35f9884/277ab79e-b026-470c-8266-8fd48bcc6b2b"
-					(reference "TP1103")
 					(unit 1)
 				)
 			)
@@ -3637,6 +2717,138 @@
 			(project "smart-led-badge"
 				(path "/fefc8d4a-8637-4143-b210-9149e35f9884/277ab79e-b026-470c-8266-8fd48bcc6b2b"
 					(reference "L1101")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(wire
+		(pts
+			(xy 66.04 115.57) (xy 66.04 118.11)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "ac0dae0f-44c2-44a3-82e0-8a64e88ff6a4")
+	)
+	(wire
+		(pts
+			(xy 66.04 107.95) (xy 66.04 105.41)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "f3badf42-4fb4-42e4-8c08-2de4fc7099cc")
+	)
+	(label "NFC_LA"
+		(at 66.04 105.41 90)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "0a1c12d8-b245-4b72-a4c6-83d76db8f105")
+	)
+	(label "NFC_LB"
+		(at 66.04 118.11 270)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right bottom)
+		)
+		(uuid "27040c55-bd88-4f83-9dce-8d72a32422b2")
+	)
+	(symbol
+		(lib_id "Device:C")
+		(at 66.04 111.76 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp yes)
+		(uuid "0ce3f3be-0891-4b81-8670-ba122b46f251")
+		(property "Reference" "C1102"
+			(at 68.58 110.49 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "DNP"
+			(at 68.58 113.03 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
+			(at 66.04 111.76 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 66.04 111.76 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Unpolarized capacitor"
+			(at 66.04 111.76 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Note" "Tuning C0G 0402 across LA-LB (lowers f)"
+			(at 66.04 111.76 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "e425ab60-3371-4a57-b6c9-8e3d8807ee21")
+		)
+		(pin "2"
+			(uuid "4f31803d-503a-494b-8527-6677cf1fb291")
+		)
+		(instances
+			(project "smart-led-badge"
+				(path "/fefc8d4a-8637-4143-b210-9149e35f9884/277ab79e-b026-470c-8266-8fd48bcc6b2b"
+					(reference "C1102")
 					(unit 1)
 				)
 			)
