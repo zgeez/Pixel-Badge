@@ -1,4 +1,4 @@
-# 0016: Rev A board outline 118 × 76 mm
+# 0021: Rev A board outline 118 × 76 mm
 
 - Status: Accepted
 - Date: 2026-10-16

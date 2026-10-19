@@ -68,7 +68,7 @@ Test pads, mounting holes and the PCB coil have no model (nothing is assembled).
 Placed and routed for the Rev A order; the values below are the design, not
 validated.
 
-- 118 × 76 mm ([ADR 0016](../docs/decisions/0016-rev-a-board-outline.md)),
+- 118 × 76 mm ([ADR 0021](../docs/decisions/0021-rev-a-board-outline.md)),
   3 mm corner radius, 4 layers, 1.6 mm, JLC04161H-7628 stack-up; vias tented
   on both sides.
   All parts on the front; the rear carries only the battery and the J302 body.

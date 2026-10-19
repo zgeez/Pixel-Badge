@@ -4,7 +4,7 @@
   (edge-accessible buttons, LED-only front),
   [0009](0009-dual-orientation-dual-mounting.md) (magnetic and lanyard
   mounting), [0010](0010-single-sided-assembly.md) (single-sided assembly,
-  regional thickness targets) and [0016](0016-rev-a-board-outline.md)
+  regional thickness targets) and [0021](0021-rev-a-board-outline.md)
   (118 × 76 mm board maximum)
 - Date: 2026-10-04
 - Deciders: Project owner

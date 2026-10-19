@@ -39,7 +39,7 @@ scheme is not the badge design.
 ## Rev A architecture
 
 - **Size:** 108 × 72 mm nominal, **118 × 76 mm maximum**; Rev A uses the
-  118 × 76 mm maximum ([ADR 0016](decisions/0016-rev-a-board-outline.md));
+  118 × 76 mm maximum ([ADR 0021](decisions/0021-rev-a-board-outline.md));
   rounded corners; 4-layer PCB; black soldermask.
   Single-sided assembly ([ADR 0010](decisions/0010-single-sided-assembly.md)):
   the LEDs and all other components are on the front; the rear holds only
