@@ -97,8 +97,9 @@ GPIO. The tag is powered only while firmware updates or verifies it; NFC reads
 are passive either way. This keeps the power-up SCL/SDA glitch (§3) off the IMU
 bus, lets firmware perform the VCC reset in §4's recovery order, and limits RF
 transitions during I²C (§2.1) to update windows. VOUT (energy harvesting) is
-unused. Test points on the tag's VCC, SDA, SCL and FD allow bus and
-field-detect timing to be measured on Rev A.
+unused. Rev A has no dedicated NFC test pads; bus and field-detect timing
+are measured at the 0402 pads of C1101 (VCC), R1101 (SCL), R1102 (SDA) and
+R1103 (FD).
 
 Every I²C transaction follows the errata's procedure (§2.1.1.3.1–2.1.1.3.4):
 
