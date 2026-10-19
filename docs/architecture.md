@@ -71,7 +71,7 @@ flowchart LR
 | Power | Protected 1-cell LiPo pack (Adafruit 328, 2500 mAh); BQ25620 switching USB-C charger with NVDC power path (≈ 1 A charge, BC1.2 detection) and separate CC1/CC2 Rd; dedicated module USB VBUS supply; TPS63802 3.3 V logic rail powered by the switch or by USB (charging-only mode); switched VBAT-to-SAADC sensing; TPS61023 firmware-switchable LED rail with low-battery load shedding | Parts selected; charging works with switch off; thresholds and VLED provisional |
 | User interface | Two buttons (Mode/Next, Action/Select), physical power switch, one status LED; worn landscape or portrait with firmware-rotated content | Selected |
 | Debug | SWD, SEGGER RTT logging, rail and matrix-timing test points (no UART or spare GPIO pads: the module has no free GPIO) | Required on Rev A |
-| Mechanics | 4-layer PCB, Rev A outline 112 × 74 mm (the maximum; 108 × 72 mm nominal), black soldermask, single-sided assembly with all components on the front ([ADR 0010](decisions/0010-single-sided-assembly.md)), rear 3D-printed carrier with the battery, magnetic attachment and lanyard attachment points | Outline provisional within the maximum |
+| Mechanics | 4-layer PCB, Rev A outline 118 × 76 mm (the maximum; 108 × 72 mm nominal), black soldermask, single-sided assembly with all components on the front ([ADR 0010](decisions/0010-single-sided-assembly.md)), rear 3D-printed carrier with the battery, magnetic attachment and lanyard attachment points | Outline provisional within the maximum |
 
 ## Engineering priorities
 
@@ -132,7 +132,7 @@ and subsequent authorized MCU updates.
 ## Open decisions
 
 - LED matrix pitch, LED part, and drive current (after QR testing).
-- Board outline details: the layout uses 112 × 74 mm, 3 mm corners and three
+- Board outline details: the layout uses 118 × 76 mm, 3 mm corners and three
   M2 carrier holes; final at the PCB release.
 - NFC coil tuning and provisioning bytes (verified on a development tag; see
   [nfc.md](nfc.md)).

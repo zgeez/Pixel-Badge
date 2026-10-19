@@ -32,7 +32,7 @@ decision.
 | [0003](0003-monochrome-display-qr-validation.md) | 32×32 monochrome display and QR-first validation | Accepted |
 | [0004](0004-ble-passive-nfc.md) | BLE configuration and external passive NTAG NFC | Accepted |
 | [0005](0005-usb-c-charge-and-data.md) | USB-C charging and USB 2.0 data architecture | Accepted; partly superseded by 0007 |
-| [0006](0006-rev-a-mechanical-envelope.md) | Rev A PCB and mechanical constraints | Accepted; partly superseded by 0008, 0009 and 0010 |
+| [0006](0006-rev-a-mechanical-envelope.md) | Rev A PCB and mechanical constraints | Accepted; partly superseded by 0008, 0009, 0010 and 0021 |
 | [0007](0007-battery-charger-power-states.md) | 2500 mAh pack, BQ25620 switching charger, USB-powered charging state (amends 0005) | Accepted |
 | [0008](0008-landscape-front-buttons.md) | Landscape wear; buttons on the front below the LED field when they fit (amends 0006) | Accepted; partly superseded by 0009 and 0010 |
 | [0009](0009-dual-orientation-dual-mounting.md) | Portrait and landscape wear with firmware rotation; magnetic and lanyard mounting (amends 0006 and 0008) | Accepted |
@@ -47,3 +47,4 @@ decision.
 | [0018](0018-grayscale-studio-recording-view.md) | 8-bit Studio, bounded 32-frame artwork and recording visualizers | Accepted by owner 2026-10-16; hardware acceptance pending |
 | [0019](0019-large-artwork-fixed-workspaces.md) | 128-frame flash artwork and fixed app workspaces | Accepted by owner 2026-10-16; physical/port gates pending |
 | [0020](0020-separate-firmware-targets.md) | Separate nRF5340 prototype and nRF52840 Rev A applications with shared logic | Accepted by owner 2026-10-17; hardware acceptance pending |
+| [0021](0021-rev-a-board-outline.md) | Rev A board outline 118 × 76 mm (amends 0006) | Accepted 2026-10-16 |

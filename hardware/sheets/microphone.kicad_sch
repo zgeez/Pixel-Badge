@@ -1062,16 +1062,6 @@
 	)
 	(wire
 		(pts
-			(xy 162.56 120.65) (xy 162.56 118.11)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "6624af28-c44a-43db-93f7-fdb4d7ec6352")
-	)
-	(wire
-		(pts
 			(xy 147.32 80.01) (xy 147.32 77.47)
 		)
 		(stroke
@@ -1079,16 +1069,6 @@
 			(type default)
 		)
 		(uuid "6e9af5f1-835c-4d07-b259-e99e725d7c03")
-	)
-	(wire
-		(pts
-			(xy 162.56 128.27) (xy 162.56 130.81)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "6f619640-4f5d-410a-9278-0ea1a2b0e2f6")
 	)
 	(wire
 		(pts
@@ -1220,16 +1200,6 @@
 		)
 		(uuid "f8cdb471-a73f-47a5-9606-b68374a21ff3")
 	)
-	(label "MIC_VDD"
-		(at 162.56 130.81 270)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right bottom)
-		)
-		(uuid "1124bab6-2d44-4afc-861b-b74ea43dca3c")
-	)
 	(label "PDM_CLK_MIC"
 		(at 116.84 88.9 0)
 		(effects
@@ -1309,16 +1279,6 @@
 			(justify right bottom)
 		)
 		(uuid "cb4d187d-4f85-45cf-ba8f-dad26721ef98")
-	)
-	(label "MIC_SEL"
-		(at 162.56 118.11 90)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left bottom)
-		)
-		(uuid "cd5ea11b-de5d-4d0e-8345-fd50955067db")
 	)
 	(label "PDM_DIN_MIC"
 		(at 162.56 77.47 90)
@@ -2369,98 +2329,6 @@
 			(project "smart-led-badge"
 				(path "/fefc8d4a-8637-4143-b210-9149e35f9884/aa96d21e-cc37-4bd6-a260-2721aeab775d"
 					(reference "R1002")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Device:R")
-		(at 162.56 124.46 0)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp yes)
-		(uuid "b051a57e-1b8c-4b31-b667-192b037dd4e0")
-		(property "Reference" "R1005"
-			(at 165.1 123.19 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Value" "DNP"
-			(at 165.1 125.73 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
-			(at 162.56 124.46 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 162.56 124.46 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "Resistor"
-			(at 162.56 124.46 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Note" "SELECT high option (fit instead of R1004)"
-			(at 162.56 124.46 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "a7e80655-61f8-41cf-a6bb-344a0829bee9")
-		)
-		(pin "2"
-			(uuid "10503588-6cf7-4e0f-8c1c-f216cd8f46a6")
-		)
-		(instances
-			(project "smart-led-badge"
-				(path "/fefc8d4a-8637-4143-b210-9149e35f9884/aa96d21e-cc37-4bd6-a260-2721aeab775d"
-					(reference "R1005")
 					(unit 1)
 				)
 			)

@@ -38,8 +38,9 @@ scheme is not the badge design.
 
 ## Rev A architecture
 
-- **Size:** 108 × 72 mm nominal, **112 × 74 mm maximum**; Rev A uses the
-  112 × 74 mm maximum; rounded corners; 4-layer PCB; black soldermask.
+- **Size:** 108 × 72 mm nominal, **118 × 76 mm maximum**; Rev A uses the
+  118 × 76 mm maximum ([ADR 0021](decisions/0021-rev-a-board-outline.md));
+  rounded corners; 4-layer PCB; black soldermask.
   Single-sided assembly ([ADR 0010](decisions/0010-single-sided-assembly.md)):
   the LEDs and all other components are on the front; the rear holds only
   the battery, its connector body and the carrier.
@@ -54,11 +55,12 @@ scheme is not the badge design.
 - **NFC:** external passive tag (NXP NT3H2111W0FHKH, XQFN-8, NTAG I²C plus) so the
   link works with the badge off or the battery empty; on its own I²C bus with a
   firmware-switched supply. PCB coil about 30 × 25 mm, 6 turns, designed per NXP
-  AN11276 to resonate slightly above 14.5 MHz, with capacitor footprints to tune
-  it down once the battery, magnets and carrier are installed (not yet
+  AN11276 to resonate slightly above 14.5 MHz, with a capacitor footprint
+  (C1102, not fitted) to tune it down once the battery, magnets and carrier are installed (not yet
   measured). Public RF reads and protected RF writes must coexist with MCU/I²C
-  URL updates; provision per [nfc.md](nfc.md), not factory defaults. Test
-  access on the tag's VCC, SDA, SCL and FD.
+  URL updates; provision per [nfc.md](nfc.md), not factory defaults. No
+  dedicated NFC test pads fit on Rev A: probe VCC, SCL, SDA and FD at the
+  0402 pads of C1101, R1101, R1102 and R1103.
 - **USB-C:** charging and USB 2.0 data (5 V sink, no USB Power Delivery), ESD
   protected, on an edge. VBUS feeds both the charger input and the E73
   VBUS pin 27, with the module USB supply circuit described in

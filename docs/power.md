@@ -223,8 +223,8 @@ input limiting and thermal regulation; it is not stated until measured.
 
 **Temperature.** A 10 kΩ NTC (Murata NCP15XH103F03RC, B25/50 3380 K) on the
 PCB next to the battery feeds the charger's TS pin through RT1 = 10 kΩ from
-REGN, with the RT2 position left open. The TS comparators act from reset, with
-no firmware. TI's 5.23 kΩ / 30.1 kΩ network for a 103AT NTC would place them at
+REGN, with no RT2 (TS to GND) resistor. The TS comparators act from reset,
+with no firmware. TI's 5.23 kΩ / 30.1 kΩ network for a 103AT NTC would place them at
 0 °C and 60 °C, and the reset JEITA settings (REG0x1A/REG0x1B) keep full charge
 current up to 60 °C, outside the cell's 0–45 °C range. With the selected
 network the reset thresholds fall at these board temperatures (worst case over
@@ -239,8 +239,9 @@ the comparator limits, ±1% resistor, and the NTC's ±1% R25 and ±1% B):
 
 Firmware selects `TS_TH4_TH5_TH6 = 011`, which moves WARM to about 38–40 °C
 and leaves HOT unchanged. Only a power-on or register reset returns to the
-table above; the I²C watchdog does not. Fitting 30.1 kΩ at RT2 restores TI's 0–60 °C
-network if the board-to-cell offset proves it necessary. The charger's ADC
+table above; the I²C watchdog does not. Rev A has no RT2 footprint: a 30.1 kΩ resistor
+added across the NTC (TH301) restores TI's 0–60 °C network if the
+board-to-cell offset proves it necessary. The charger's ADC
 reports the reading. **Rev A has no direct cell-temperature sensing:** the NTC
 measures the board next to the cell, which charger heat can make warmer than
 the cell (conservative at HOT, optimistic at COLD). Charging is approved only
@@ -261,8 +262,10 @@ state. VLED is **PROVISIONAL** at 4.77 V typ (33 kΩ / 4.7 kΩ, VREF 580–610 m
 stops switching and passes the input through (SLVSF14B §7.3.5), so
 `VLED ≈ max(setting, SYS − drop)`. SYS reaches about VBAT + 50 mV with charging
 done or disabled (SLUSEG2D §8.3.4.1), about 4.25 V on a full pack, so settings
-below about 4.4 V are not regulated. The trim positions cover settings of about
-4.4–5.2 V once the LED is chosen. Coilcraft XGL4020-102MEC (1.0 µH ±20%,
+below about 4.4 V are not regulated. Rev A has no trim positions: another
+setting means replacing R210 (0402). With R211 at 4.7 kΩ, about 30–36.5 kΩ
+covers 4.4–5.2 V at the 595 mV typical reference (calculated).
+Coilcraft XGL4020-102MEC (1.0 µH ±20%,
 2.10 mm max; Isat 3.8 / 6.3 / 8.8 A at 10 / 20 / 30% inductance drop at
 25 °C, Coilcraft Document 1529-1).
 

@@ -46,7 +46,7 @@ Rev A scope:
 | MCU | Nordic nRF52840 on the badge (Ebyte E73-2G4M08S1C module, [ADR 0015](docs/decisions/0015-nrf52840-e73-module.md)); separate nRF5340 DK prototype and [Rev A port](docs/rev-a-firmware.md) |
 | Firmware | nRF Connect SDK v3.4.1 / Zephyr RTOS, C++17 |
 | Tests | Ztest, Twister (`native_sim`) |
-| Hardware | KiCad 10.0.6, 4-layer PCB (≤ 112 × 74 mm), JLCPCB assembly (provisional) |
+| Hardware | KiCad 10.0.6, 4-layer PCB (≤ 118 × 76 mm), JLCPCB assembly (provisional) |
 | CI | GitHub Actions with the nRF Connect SDK toolchain container |
 
 ## Repository layout

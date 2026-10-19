@@ -2342,7 +2342,7 @@
 		)
 		(uuid "d1a74cc0-209f-4b35-a4b8-59d4e3ece731")
 	)
-	(text "Regulators and power tree (Rev A) - design notes\n\nPower states: EN_3V3 = switch ON (SYS via R201) OR charger PG (Q203). OFF + battery only: EN low,\n3V3 off. OFF + valid USB: PG low -> 3V3 on for the charging-only firmware mode (display off).\nUSB removed with the switch OFF: PG releases, R202 pulls EN low, 3V3 shuts down in hardware.\nEN <= SYS (< 4.6 V) < 6 V abs max. PWR_SW_N (Q204, open drain) reports the switch to the MCU.\n\nTPS63802 (SLVSEU9D): L 0.37-0.57 uH effective. Boost peak at VIN 2.9 V, 0.5 A design load,\nL 0.37 uH, 1.4 MHz: 1.01 A; x1.2 = 1.21 A required. L201 Isat 5.5 A (Murata, -30% L).\n\nTPS61023 (SLVSF14B), calculated estimate, not a bound: VIN 2.9 V, VOUT 5.33 V, IOUT 0.66 A (32 x 19.4 mA +5 %, logic),\neta 0.8, L 0.72 uH (-20 % tol, -10 % sat), f 0.8 MHz assumed (TI: 1.0 MHz typ, no min): peak 2.94 A.\nCurrent-limit peaks are not bounded by the datasheet: measure at bring-up (release gate).\nL202 XGL4020-102MEC: Isat 3.8/6.3/8.8 A at 10/20/30 % drop, Irms 8.8 A (Coilcraft 1529-1).\nVLED setting is PROVISIONAL (LED testing): 4.77 V typ, VREF 580-610 mV; trims R212/R213.\nBoost only: VLED = max(setting, SYS - drop); SYS ~ VBAT + 50 mV, so useful settings are about 4.4-5.2 V.\nLED_EN low (R214) keeps the boost off with true load disconnect.\n\nVBAT measurement: Q201 off unless VBAT_MEAS_EN is high. Ratio 1/2 (4.2 V -> 2.1 V).\nMCU unpowered: AO3401A IDSS <= 5 uA (55 C) x R221 47k = 0.24 V max at VBAT_SENSE, and\nAO3400A IDSS x R218 = 0.24 V on Q201 gate, below the AO3401A 0.5 V minimum threshold.\n\nValues marked PROVISIONAL or DNP are not validated. Nothing on this sheet is measured."
+	(text "Regulators and power tree (Rev A) - design notes\n\nPower states: EN_3V3 = switch ON (SYS via R201) OR charger PG (Q203). OFF + battery only: EN low,\n3V3 off. OFF + valid USB: PG low -> 3V3 on for the charging-only firmware mode (display off).\nUSB removed with the switch OFF: PG releases, R202 pulls EN low, 3V3 shuts down in hardware.\nEN <= SYS (< 4.6 V) < 6 V abs max. PWR_SW_N (Q204, open drain) reports the switch to the MCU.\n\nTPS63802 (SLVSEU9D): L 0.37-0.57 uH effective. Boost peak at VIN 2.9 V, 0.5 A design load,\nL 0.37 uH, 1.4 MHz: 1.01 A; x1.2 = 1.21 A required. L201 Isat 5.5 A (Murata, -30% L).\n\nTPS61023 (SLVSF14B), calculated estimate, not a bound: VIN 2.9 V, VOUT 5.33 V, IOUT 0.66 A (32 x 19.4 mA +5 %, logic),\neta 0.8, L 0.72 uH (-20 % tol, -10 % sat), f 0.8 MHz assumed (TI: 1.0 MHz typ, no min): peak 2.94 A.\nCurrent-limit peaks are not bounded by the datasheet: measure at bring-up (release gate).\nL202 XGL4020-102MEC: Isat 3.8/6.3/8.8 A at 10/20/30 % drop, Irms 8.8 A (Coilcraft 1529-1).\nVLED setting is PROVISIONAL (LED testing): 4.77 V typ, VREF 580-610 mV; no trim positions: replace R210\n(R211 4.7k: about 30-36.5k gives 4.4-5.2 V at VREF 595 mV typ).\nBoost only: VLED = max(setting, SYS - drop); SYS ~ VBAT + 50 mV, so useful settings are about 4.4-5.2 V.\nLED_EN low (R214) keeps the boost off with true load disconnect.\n\nVBAT measurement: Q201 off unless VBAT_MEAS_EN is high. Ratio 1/2 (4.2 V -> 2.1 V).\nMCU unpowered: AO3401A IDSS <= 5 uA (55 C) x R221 47k = 0.24 V max at VBAT_SENSE, and\nAO3400A IDSS x R218 = 0.24 V on Q201 gate, below the AO3401A 0.5 V minimum threshold.\n\nValues marked PROVISIONAL or DNP are not validated. Nothing on this sheet is measured."
 		(exclude_from_sim no)
 		(at 299.72 152.4 0)
 		(effects
@@ -2566,16 +2566,6 @@
 			(type default)
 		)
 		(uuid "32b84069-a052-42ab-838c-a82633964023")
-	)
-	(wire
-		(pts
-			(xy 193.04 128.27) (xy 193.04 130.81)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "33a96009-6874-43f4-b99f-396085fe1a14")
 	)
 	(wire
 		(pts
@@ -2819,16 +2809,6 @@
 	)
 	(wire
 		(pts
-			(xy 193.04 120.65) (xy 193.04 118.11)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "6306f7d5-d073-4b0b-9fe7-cfc37572a98d")
-	)
-	(wire
-		(pts
 			(xy 111.76 127) (xy 114.3 127)
 		)
 		(stroke
@@ -2869,16 +2849,6 @@
 	)
 	(wire
 		(pts
-			(xy 182.88 228.6) (xy 182.88 231.14)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "6c98b44c-b474-49c0-af68-23a2ef030263")
-	)
-	(wire
-		(pts
 			(xy 68.58 57.15) (xy 68.58 54.61)
 		)
 		(stroke
@@ -2916,16 +2886,6 @@
 			(type default)
 		)
 		(uuid "7d1b2268-0067-4d88-8917-a9cd1bcd8552")
-	)
-	(wire
-		(pts
-			(xy 243.84 228.6) (xy 243.84 231.14)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "7e39d5f5-34ec-40cc-8423-ee205dc80943")
 	)
 	(wire
 		(pts
@@ -3319,16 +3279,6 @@
 	)
 	(wire
 		(pts
-			(xy 208.28 128.27) (xy 208.28 130.81)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "d79dfa3c-4bcc-41a0-951f-26af3f82662a")
-	)
-	(wire
-		(pts
 			(xy 111.76 55.88) (xy 114.3 55.88)
 		)
 		(stroke
@@ -3366,16 +3316,6 @@
 			(type default)
 		)
 		(uuid "e03733c4-d54f-414e-b723-4c2ba9bcd2cc")
-	)
-	(wire
-		(pts
-			(xy 208.28 120.65) (xy 208.28 118.11)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "e25eb833-a68f-443d-acd1-ecaabad3dd5b")
 	)
 	(wire
 		(pts
@@ -3787,16 +3727,6 @@
 		)
 		(uuid "78cfeb37-3464-4ccd-bd20-03db2493364e")
 	)
-	(label "FB_VLED"
-		(at 208.28 118.11 90)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left bottom)
-		)
-		(uuid "7d2d780b-6f3a-4af7-95a1-784c4bcc7756")
-	)
 	(label "L1_3V3"
 		(at 101.6 26.67 90)
 		(effects
@@ -3897,16 +3827,6 @@
 		)
 		(uuid "aec4a93e-1882-47e0-be24-b53ca5e8b5c8")
 	)
-	(label "VLED_REG"
-		(at 193.04 118.11 90)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left bottom)
-		)
-		(uuid "b3f5a3ca-1e0b-43df-b769-35097c2b616e")
-	)
 	(label "EN_3V3"
 		(at 88.9 60.96 180)
 		(effects
@@ -3946,16 +3866,6 @@
 			(justify left bottom)
 		)
 		(uuid "bf926c4e-b238-4faa-a307-dd7651d0ee6a")
-	)
-	(label "FB_VLED"
-		(at 193.04 130.81 270)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right bottom)
-		)
-		(uuid "c41d1862-fc5d-4e2a-b701-311a03a8ffdc")
 	)
 	(label "MODE_3V3"
 		(at 208.28 67.31 270)
@@ -4006,16 +3916,6 @@
 			(justify right bottom)
 		)
 		(uuid "dfc53262-7cef-4b85-a1cd-ab4904fcda05")
-	)
-	(label "SW_ON"
-		(at 243.84 231.14 270)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right bottom)
-		)
-		(uuid "e25b86c6-e850-408c-bada-412c05d57fce")
 	)
 	(label "SW_ON"
 		(at 15.24 54.61 90)
@@ -4625,29 +4525,6 @@
 		(uuid "c734d9f2-6882-478b-8689-64f107169d10")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
 			(at 88.9 185.42 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-	)
-	(global_label "LED_EN"
-		(shape passive)
-		(at 182.88 231.14 270)
-		(fields_autoplaced yes)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right)
-		)
-		(uuid "d1bdc000-ca5e-460b-879c-4ccfb0c820a5")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 182.88 231.14 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -6960,84 +6837,6 @@
 	)
 	(symbol
 		(lib_id "Connector:TestPoint")
-		(at 243.84 228.6 0)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp no)
-		(uuid "42011712-e265-468c-ab21-d46e9f09022a")
-		(property "Reference" "TP215"
-			(at 245.11 223.52 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Value" "SW_ON"
-			(at 245.11 224.79 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" "TestPoint:TestPoint_Pad_D1.0mm"
-			(at 243.84 228.6 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 243.84 228.6 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "test point"
-			(at 243.84 228.6 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "55d5e6be-0120-4dd3-8d6d-d2d11c2d778e")
-		)
-		(instances
-			(project "smart-led-badge"
-				(path "/fefc8d4a-8637-4143-b210-9149e35f9884/39c04143-b8b4-4779-a96f-137c6ab8396e"
-					(reference "TP215")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Connector:TestPoint")
 		(at 198.12 228.6 0)
 		(unit 1)
 		(body_style 1)
@@ -7311,84 +7110,6 @@
 			(project "smart-led-badge"
 				(path "/fefc8d4a-8637-4143-b210-9149e35f9884/39c04143-b8b4-4779-a96f-137c6ab8396e"
 					(reference "R203")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Connector:TestPoint")
-		(at 182.88 228.6 0)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp no)
-		(uuid "5869918d-f3ad-41d4-8bd7-1a5db891a82b")
-		(property "Reference" "TP211"
-			(at 184.15 223.52 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Value" "LED_EN"
-			(at 184.15 224.79 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" "TestPoint:TestPoint_Pad_D1.0mm"
-			(at 182.88 228.6 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 182.88 228.6 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "test point"
-			(at 182.88 228.6 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "6c57ebfb-28eb-49a7-91ee-c376aaa70abe")
-		)
-		(instances
-			(project "smart-led-badge"
-				(path "/fefc8d4a-8637-4143-b210-9149e35f9884/39c04143-b8b4-4779-a96f-137c6ab8396e"
-					(reference "TP211")
 					(unit 1)
 				)
 			)
@@ -9771,98 +9492,6 @@
 		)
 	)
 	(symbol
-		(lib_id "Device:R")
-		(at 193.04 124.46 0)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp yes)
-		(uuid "99423f04-292a-4cd6-9421-ce3804d15a73")
-		(property "Reference" "R212"
-			(at 195.58 123.19 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Value" "DNP"
-			(at 195.58 125.73 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
-			(at 193.04 124.46 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 193.04 124.46 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "Resistor"
-			(at 193.04 124.46 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Note" "Trim: parallel to R210 lowers VLED, only to about 4.4 V (below SYS max the boost passes SYS through)"
-			(at 193.04 124.46 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "be350272-9f4e-4906-9b4e-1fc214794a2b")
-		)
-		(pin "2"
-			(uuid "68c4305f-a0b5-408a-8ee3-0117a2d6f9bd")
-		)
-		(instances
-			(project "smart-led-badge"
-				(path "/fefc8d4a-8637-4143-b210-9149e35f9884/39c04143-b8b4-4779-a96f-137c6ab8396e"
-					(reference "R212")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
 		(lib_id "Device:C")
 		(at 167.64 185.42 0)
 		(unit 1)
@@ -11845,98 +11474,6 @@
 		)
 	)
 	(symbol
-		(lib_id "Device:R")
-		(at 208.28 124.46 0)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp yes)
-		(uuid "d102e715-68d3-4feb-951e-187f39fdbf65")
-		(property "Reference" "R213"
-			(at 210.82 123.19 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Value" "DNP"
-			(at 210.82 125.73 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
-			(at 208.28 124.46 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 208.28 124.46 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "Resistor"
-			(at 208.28 124.46 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Note" "Trim: parallel to R211 raises VLED"
-			(at 208.28 124.46 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "fa4fcc1d-730f-4ad5-b118-688e53782712")
-		)
-		(pin "2"
-			(uuid "7fd7f5fd-340e-4f2d-a07b-192378232547")
-		)
-		(instances
-			(project "smart-led-badge"
-				(path "/fefc8d4a-8637-4143-b210-9149e35f9884/39c04143-b8b4-4779-a96f-137c6ab8396e"
-					(reference "R213")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
 		(lib_id "power:+3V3")
 		(at 76.2 231.14 180)
 		(unit 1)
@@ -12162,83 +11699,6 @@
 			(project "smart-led-badge"
 				(path "/fefc8d4a-8637-4143-b210-9149e35f9884/39c04143-b8b4-4779-a96f-137c6ab8396e"
 					(reference "#PWR219")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "power:GND")
-		(at 208.28 130.81 0)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom no)
-		(on_board no)
-		(in_pos_files yes)
-		(dnp no)
-		(uuid "de431bed-659d-49bc-8708-0bfac50b8042")
-		(property "Reference" "#PWR214"
-			(at 208.28 127 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "GND"
-			(at 208.28 134.62 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" ""
-			(at 208.28 130.81 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 208.28 130.81 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
-			(at 208.28 130.81 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "600eb006-514e-4b96-9c2a-de918773f8d2")
-		)
-		(instances
-			(project "smart-led-badge"
-				(path "/fefc8d4a-8637-4143-b210-9149e35f9884/39c04143-b8b4-4779-a96f-137c6ab8396e"
-					(reference "#PWR214")
 					(unit 1)
 				)
 			)
