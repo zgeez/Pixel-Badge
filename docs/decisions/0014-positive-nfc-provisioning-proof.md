@@ -1,5 +1,9 @@
 # ADR 0014: positive NFC authentication for provisioning
 
+Superseded as an operational prerequisite by
+[ADR 0017](0017-local-nfc-synchronization.md), accepted 2026-10-15. The workflow
+below is retained as optional historical RF diagnostic methodology.
+
 Status: **Accepted** by explicit owner instruction on 2026-10-12.
 Local implementation/software checks and positive phone provisioning pass;
 broader protection, timing and end-to-end acceptance remain pending.

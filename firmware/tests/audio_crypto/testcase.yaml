@@ -1,0 +1,7 @@
+# SPDX-License-Identifier: MIT
+tests:
+  services.audio_crypto:
+    platform_allow: native_sim
+    tags:
+      - audio
+      - security

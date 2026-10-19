@@ -13,13 +13,13 @@ that URL or alter its interpretation through metadata/configuration writes.
 
 ## Protection policy
 
-Provisioning now uses proof version 3/helper v0.5 as accepted
-in [ADR 0014](decisions/0014-positive-nfc-provisioning-proof.md). It authenticates
-the generated non-factory PWD/PACK in two fresh RF sessions, with public reads
-and final firmware policy verification. Positive provisioning completed and
-the receipt survived normal BLE restoration; broader physical acceptance is pending. This
-amends ADR 0013's former separate factory-rejection rule. No
-communication error is counted as a successful check under either method.
+Current operation follows [ADR 0017](decisions/0017-local-nfc-synchronization.md):
+no phone verifier or RF-proof receipt gates boot, URL Apply or Sync again.
+Firmware checks readable protection policy and NDEF URL over guarded I?C.
+Fresh tags use explicit wired `configure` without the helper; existing tags
+retain their passwords. Masked PWD/PACK cannot be proven through I?C readback,
+so local synchronization does not establish RF authentication or write rejection.
+The older two-session proof3 method in ADR 0014 remains optional RF diagnostics.
 
 NXP **NT3H2111/NT3H2211 Rev.3.6 (2023-07-21)**, §8.3.11/Table 10 and §8.7,
 states that default `AUTH0 = FFh` disables password protection. The intended

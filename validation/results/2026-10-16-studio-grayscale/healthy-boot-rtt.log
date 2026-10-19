@@ -1,0 +1,6 @@
+[00:00:00.132,720] <inf> prototype: badge ready: name mode
+[00:00:00.133,728] <inf> badge_motion: IMU sample state 0
+[00:00:00.229,125] <inf> badge_ble: BLE ready: configuration service available
+[00:00:00.233,612] <inf> badge_ble: BLE advertising started
+[00:00:26.472,778] <inf> badge_ble: BLE security outcome: level 4 error 0
+[00:00:30.135,375] <inf> prototype: healthy boot; reset-loop counter cleared

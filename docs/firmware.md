@@ -1,39 +1,30 @@
 # Firmware
 
-Status: **prototype foundation**. The default nRF5340 DK application implements
-QR/name modes, persistent settings, two-button controls, a watchdog and
-reset-loop safe mode. On 2026-10-11 the owner reported all six foundation
-bench steps passed. A separate direct RTT capture confirms normal QR boot
-and healthy-counter clearing; it does not capture the earlier button,
-persistence, factory-reset or forced-watchdog tests. That pass predates the
-display, schema and settings-read recovery corrections; the revised image
-requires a new bench run.
-See the [foundation result](validation.md#result-prototype-foundation-on-the-dk).
-Peripheral bring-up checks and QR screening remain separate options. P1 NFC
-updates and explicit RF provisioning are implemented and host-tested. Provisioning
-has historical SWD/RTT confirmation, but helper v0.2 could mistake an RF I/O
-error for password rejection. The corrected v0.4 factory-password check was
-inconclusive. Owner accepted ADR0014's two positive RF authentication sessions;
-matching helper v0.5/proof3 completed both checks and firmware finalization.
-The receipt survived restoring normal BLE firmware; [positive-proof evidence](../validation/results/2026-10-12-dk-positive-nfc-proof/README.md).
-On 2026-10-12 the owner reported LinkedIn URL
-reads before power-off, while off and after restoration passed. Protection,
-timing and broader phone/content acceptance remain pending.
-See the [P1 procedure](nfc-prototype.md). P2 BLE configuration and the Flutter
-Android app are implemented as an opt-in development build, with software
-verification passed. Owner confirms GitHub/LinkedIn QR/NFC agreement after
-Pixel Badge Apply and LinkedIn off-state NFC plus QR/app retention after restart;
-direct restarted-DK status verified /L with no NFC error before the later reset.
-Identity/display, settings/bond persistence, fragmented names, interrupted
-connection agreement and pairing rejection/expiry checks are recorded in the
-[P2 bench result](../validation/results/2026-10-13-dk-p2-settings/README.md).
-The subsequent controlled reset cleared the NFC receipt. Recovery passed both
-phone checks but failed firmware finalization; normal firmware is restored with
-default settings and NFC unverified. Further bench testing ended at the owner's
-request. Unauthorized ATT writes, complete recovery and RF timing remain pending.
-Audio modes remain future work.
-Rev A remains a board
-compatibility build with no badge matrix backend.
+The nRF5340 DK prototype implements QR/text, persistent drawings/animations,
+BLE configuration through Pixel Badge, synchronized NFC links, microphone
+level/spectrum visualization, encrypted phone recording and IMU-driven
+Fluid/orientation. Recording stays disabled in default builds pending physical
+recording-view visibility/security/endurance acceptance; the explicit bench fragment
+allows development tests. P0-P4 software is merged through PR26.
+
+The current cleanup adds automatic V1 QR correction selection, longer fitting
+links and smaller BLE staging buffers. Pixel Badge adds a named local library,
+image/GIF conversion and simpler connection/editor flows. Firmware now has separate
+`nrf5340_prototype` and `rev_a_nrf52840` application roots with shared code in
+`common`. The first [Rev A port](rev-a-firmware.md) builds application/controller
+and a disarmed matrix backend; power policy and board validation remain.
+The legacy nRF5340 custom-board definition is retained for regression only.
+
+Current behavior and evidence:
+- [BLE/Studio protocol](ble-protocol.md), [app](../app/README.md)
+- [Local NFC synchronization](decisions/0017-local-nfc-synchronization.md)
+- [Audio and recording](audio-prototype.md), [motion](motion-prototype.md)
+- [Complete DK deployment and retention limits](../validation/results/2026-10-15-dk-complete-prototype/README.md)
+- [Prototype polish and firmware review](../validation/results/2026-10-16-prototype-polish/README.md)
+
+Historical foundation, pairing and NFC bench reports remain in validation/results.
+Owner functional reports and software tests do not establish complete RF,
+power, optical, timing or Rev A hardware acceptance.
 
 ## Platform
 
@@ -66,17 +57,17 @@ Dependencies point downward only.
 
 | Layer | Directory | Responsibility |
 |---|---|---|
-| Application | `firmware/src/app/` | Display modes, mode switching, top-level behavior |
-| Services | `firmware/src/services/` | Hardware-independent logic and protocol handling (for example display content generation, BLE/NFC service logic, sensor data processing) |
-| Drivers | `firmware/src/drivers/` | Project-specific device drivers (for example the LED matrix driver), using the Zephyr device model where it fits |
-| Platform | `firmware/src/platform/` | Board and Zephyr integration glue |
+| Application | `firmware/common/src/app/` | Display modes, mode switching, top-level behavior |
+| Services | `firmware/common/src/services/` | Hardware-independent logic and protocol handling (for example display content generation, BLE/NFC service logic, sensor data processing) |
+| Drivers | `firmware/common/src/drivers/` | Project-specific device drivers (for example the LED matrix driver), using the Zephyr device model where it fits |
+| Platform | `firmware/common/src/platform/` | Board and Zephyr integration glue |
 
 Pure logic in the services layer should not depend on hardware so it can be
 unit-tested on a host target. Public headers shared across layers go in
-`firmware/include/`. Board overlays and custom board definitions go in
-`firmware/boards/`.
+`firmware/common/include/`. Board overlays and custom board definitions go in
+each application root's `boards/` directory.
 
-`firmware/src/drivers/` is a Zephyr module (`zephyr/module.yml`) so the
+`firmware/common/src/drivers/` is a Zephyr module (`zephyr/module.yml`) so the
 application and the tests share its Kconfig, devicetree bindings and sources.
 It holds the ICM-42688-P I²C driver (compatible `invensense,icm42688p-i2c`):
 NCS v3.4.1's `icm4268x` driver supports SPI only. The project driver reuses
@@ -100,7 +91,7 @@ The application reaches the display only through Zephyr's display API
 (`zephyr,display` chosen node), as a 32 × 32 monochrome display
 (`PIXEL_FORMAT_MONO01`, rows packed most significant bit first). On the DK the
 backend is a HUB75 panel (below); the badge gets its own matrix driver behind
-the same API. Frames and test patterns live in `firmware/src/services/`
+the same API. Frames and test patterns live in `firmware/common/src/services/`
 (`badge/test_pattern.hpp`). `src/app/prototype.cpp` owns the main loop;
 `src/app/modes.cpp` selects content. Services `qr`, `settings`, `buttons`,
 `boot_guard`, `display_health` and `text` are independent of Zephyr and have
@@ -127,7 +118,7 @@ reappear. Future bonds/keys outside `badge/` are not erased by this recovery.
 
 - URL: bounded ASCII HTTP(S) URL with a nonempty authority, no whitespace,
   controls or user-info; percent escapes must have two hex digits. Maximum
-  20 characters, additionally required to fit V1-M. Encoding keeps all URL
+  25 QR alphanumeric characters or 17 ASCII bytes, required to fit V1. Encoding keeps all URL
   bytes and path case; it does not uppercase a link to make it fit.
 - Name: 1–32 printable ASCII bytes. The original 3 × 5 font renders lowercase
   as uppercase; common punctuation is supported and other glyphs show `?`.
@@ -219,7 +210,7 @@ and never stored on the badge:
 - It starts only from the paired app or a button long-press, and only when
   the phone is connected with an authenticated bond (LE Secure Connections
   with MITM protection; Just Works bonds are refused for audio), the
-  companion app is subscribed to the audio stream and has proved the app key
+  companion app is subscribed to the audio stream and has proved the automatic session key
   on this connection (a button start also waits for a fresh authenticated
   accept from the app), and the LED rail is on (not shed for low battery)
   with the matrix driver running. Otherwise nothing is captured for sending, and
@@ -237,21 +228,18 @@ and never stored on the badge:
   Bluetooth link to the paired app, which keeps recordings only in its
   private, encrypted storage, excluded from backups; a recording leaves the
   app only by an explicit export or share.
-- The companion app, not only the phone, is authenticated with an app key.
-  The key is enrolled only in a pairing window opened on the badge, after the
-  user confirms on the badge that the code it shows matches the app's (one
-  enrollment per window; a second attempt cancels it). It is kept with the
-  bond keys on the badge and in the phone's secure key store, and erased
-  with its counters when the badge is paired again or reset. Every
-  recording-control command from the app carries an authenticator with that
-  key and a fresh counter, and each recording is encrypted and authenticated
-  with its own freshly derived key, so other apps on the phone can neither
-  control nor read a recording.
+- The normal authenticated Bluetooth bond authorizes audio. Session keys are
+  exchanged automatically on connection, held only in RAM and cleared on
+  disconnect; no separate enrollment or code confirmation. Commands carry
+  replay counters/MACs and each recording has a fresh encryption key. This
+  trusts the phone rather than authenticating one distinct app on it, per
+  [ADR0016](decisions/0016-simple-audio-controls.md).
 - The user stops it with a button press or from the app. It also stops when
   the link drops or the app unsubscribes, when the display is turned off or
   blanked, when the LED rail is shed for low battery or the matrix driver
-  faults, or at the maximum length set in the settings (clamped to a ceiling
-  built into the firmware, with a safe default). Before REC leaves the
+  faults. The phone also stops at low storage (16MiB reserve) or its classic WAV
+  format boundary (~37.28hours); there is no selectable duration or five-minute
+  timeout. Before REC leaves the
   matrix or the LED rail turns off, capture stops and any audio not yet sent
   is discarded; on a matrix driver fault, capture stops at once and queued
   audio is discarded, not sent.
@@ -292,10 +280,10 @@ make build
 
 Prototype builds read the repository-root `.env` when it exists. The four
 `BADGE_URL_PORTFOLIO`, `BADGE_URL_LINKEDIN`, `BADGE_URL_GITHUB` and
-`BADGE_URL_RESUME` entries must all be valid V1-M URLs. Only the HTTP(S) scheme
+`BADGE_URL_RESUME` entries must all be valid V1 URLs. Only the HTTP(S) scheme
 is uppercased to allow alphanumeric encoding; every other byte, including path
-case, is preserved. Alphanumeric URLs fit up to 20 characters; URLs needing
-byte encoding fit up to 14. Unrelated `.env` entries are ignored and values
+case, is preserved. Alphanumeric URLs fit up to 25 characters; URLs needing
+byte encoding fit up to 17. Unrelated `.env` entries are ignored and values
 are never evaluated as commands or environment-variable substitutions.
 
 Portfolio is the local build default. To select another link before the phone
@@ -319,7 +307,7 @@ badge never automatically cycles destinations. App/BLE link selection is
 planned and is not implemented in P0.
 
 Flash output: **`build/nrf5340dk/merged.hex`**, containing MCUboot and the signed
-application. The unsigned `firmware/zephyr/zephyr.hex` cannot boot this layout.
+application. The unsigned `nrf5340_prototype/zephyr/zephyr.hex` cannot boot this layout.
 CI archives merged HEX, the signed application, ELF/map/config files and the
 resolved partition layout. Bench configurations also archive their merged HEX.
 
@@ -330,26 +318,28 @@ can otherwise retain its no-bootloader setting. CI builds fresh directories.
 ### MCUboot and static flash layout
 
 Sysbuild enables MCUboot and Partition Manager for both CPUAPP board targets.
-The 1 MiB application-core flash uses `firmware/pm_static.yml`:
+The 1 MiB application-core flash uses `firmware/nrf5340_prototype/pm_static.yml`:
 
 | Region | Start | Size | Reason |
 |---|---|---|---|
 | MCUboot | `0x00000` | 64 KiB | Space for the current bootloader with growth margin |
 | Primary slot | `0x10000` | 320 KiB | Application plus 512-byte header pad and upgrade/trailer allowance |
 | Secondary slot | `0x60000` | 320 KiB | Later application update staging; no DFU transport in P0 |
-| Network update reserve | `0xb0000` | 288 KiB | Space beyond the network core's 256 KiB flash size for a later update payload/header |
+| Artwork banks | `0xb0000` | 264 KiB | Two 132 KiB banks for verified flash-backed animation |
+| Reserve | `0xf2000` | 24 KiB | Unallocated |
 | Settings | `0xf8000` | 32 KiB | Eight 4 KiB NVS sectors for app settings, future bonds and a small key store |
 
 The app starts at `0x10200`. Slot size is not the maximum payload size: header,
 trailer and the selected swap-using-move algorithm also consume space. Future
 images must pass the build/signing size checks. Settings are deliberately
 larger than the few P0 records, providing garbage-collection and wear margin;
-future bonding/key capacity must be verified when those services exist.
-The network reserve is inert, not a configured network-core DFU partition.
-Adding radio-core boot/update support will need its SDK multi-image wiring.
+bonding/key endurance still needs physical acceptance. ADR0019 reused the old
+network-update reserve for artwork; no network-core update payload is reserved.
+Adding radio-core updates would require a new storage plan.
 
-Rev A CPUAPP uses the same boot layout for compatibility, with no P0 UI or
-Rev A hardware features enabled. The standalone CPUNET image and matrix timing
+The superseded nRF5340 custom-board CPUAPP uses this boot layout for compile
+compatibility. The current E73 target has its own [port](rev-a-firmware.md),
+with matching artwork/settings offsets and a combined app/controller image. The standalone CPUNET image and matrix timing
 bench application retain their original build/flash layout. Partition Manager
 is deprecated but supported on nRF53 in pinned NCS v3.4.1; see ADR 0012 for the
 explicit choice. P0 uses the SDK's publicly distributed
@@ -371,7 +361,7 @@ terminals, use RTT, and keep Buttons 3/4 untouched. In an NCS v3.4.1 terminal:
 west flash -d build/nrf5340dk --runner jlink
 ```
 
-Check `build/nrf5340dk/firmware/zephyr/runners.yaml` first: its HEX path must
+Check `build/nrf5340dk/nrf5340_prototype/zephyr/runners.yaml` first: its HEX path must
 resolve to the top-level `merged.hex`. The sysbuild flash command programs the
 merged image; if using J-Link Commander directly, select the nRF5340 application
 core and load that merged HEX. Do not erase the chip when checking persistence.
@@ -390,7 +380,7 @@ Open the J-Link RTT viewer and select the application-core device.
 5. Build/flash the forced-loop image:
 
    ```powershell
-   .\scripts\dev.ps1 build -BuildDir build/watchdog-loop -ExtraConfFile firmware/configs/watchdog-loop.conf -QrLink Representative
+   .\scripts\dev.ps1 build -BuildDir build/watchdog-loop -ExtraConfFile firmware/nrf5340_prototype/configs/watchdog-loop.conf -QrLink Representative
    west flash -d build/watchdog-loop --runner jlink
    ```
 
@@ -409,7 +399,7 @@ watchdog outcomes. Measured GPIO timing, interrupted physical flash writes,
 concurrent optional checks and broad optical acceptance remain unverified.
 The owner-reported functional pass is not a measurement of those properties.
 
-On the DK, `firmware/boards/nrf5340dk_nrf5340_cpuapp.overlay` puts the Rev A
+On the DK, `firmware/nrf5340_prototype/boards/nrf5340dk_nrf5340_cpuapp.overlay` puts the Rev A
 pin roles on the DK's pins where it can: SPIM4 on P0.08–P0.10, matrix LAT and
 BLANK on P0.11/P0.12, and I²C1 with SCL on P1.02 and SDA on P1.03. It also adds
 a frame marker on P0.26 for the logic analyzer and removes Buttons 3 and 4
@@ -423,7 +413,7 @@ Adding or changing an overlay needs a pristine build (`-Pristine`, or
 The overlay also makes a HUB75 RGB panel the DK's display, for bench work
 only: R1, G1, B1, CLK and LAT on P1.11–P1.15, OE on P1.08 and row address A–E
 on P0.04–P0.07 and P0.25, through 5 V buffers (SN74AHCT245). The driver
-(`firmware/src/drivers/hub75`, compatible `smartledbadge,hub75`) shows the
+(`firmware/common/src/drivers/hub75`, compatible `smartledbadge,hub75`) shows the
 32 × 32 window in the panel's top half in one colour. TIMER0 times each 160 µs
 row slot (195 Hz refresh): its interrupt latches the row shifted during the
 previous slot and shifts the next row while this one is lit, and a second
@@ -435,7 +425,7 @@ The DK overlay also puts the IMU (INT1 on P1.04), the PDM microphone (CLK P1.07,
 DATA P1.09) and the NFC tag's field-detect line (P1.06) on their Rev A pins. The
 tag shares the IMU's I²C1 bus on the DK, because its Rev A bus pins are the
 debugger's serial port. At start-up the application runs module checks
-(`firmware/src/app/bringup.cpp`) while the display test patterns run in their
+(`firmware/common/src/app/bringup.cpp`) while the display test patterns run in their
 own thread, then logs an IMU sample, the NFC field-detect level with its edge
 count, and the microphone level every 5 s:
 
@@ -475,7 +465,7 @@ reversible CC locks and no SRAM mirroring/pass-through. The `nfc/verified`
 NVS key stores no password. Factory reset removes it, so the external tag
 must be explicitly provisioned again; its old EEPROM URL is not erased.
 
-`firmware/configs/nfc-provisioning.conf` enables the temporary SWD mailbox and
+`firmware/nrf5340_prototype/configs/nfc-provisioning.conf` enables the temporary SWD mailbox and
 host/Android provisioning tools. It also permits a bench URL change that is
 persisted, rendered as QR and written/read back on the tag before success.
 URL changes preview the candidate QR without modifying settings. They persist
@@ -510,16 +500,19 @@ flash both sysbuild domains with `west flash`; app build and phone bench steps
 are in [ble-protocol.md](ble-protocol.md). Source, pinned dependency and Android
 setup are in [app/README.md](../app/README.md). Native protocol and Flutter
 tests do not establish physical pairing or RF/QR acceptance. Audio streaming,
-app-key enrollment, firmware updates and iOS packaging are later work.
+firmware updates and iOS packaging are later work.
 
-### Rev A board
+### Current Rev A board
 
-**Out of date:** Rev A hardware now uses the Ebyte E73-2G4M08S1C (nRF52840,
-[ADR 0015](decisions/0015-nrf52840-e73-module.md)). The board definition below
-still describes the earlier MDBT53-P1M (nRF5340) schematic and its pin map; it
-builds, but does not match the Rev A hardware until the nRF52840 port.
+Use `./scripts/dev.ps1 build -Target RevA -Pristine` for the current E73 board.
+See [Rev A firmware](rev-a-firmware.md) for pins, variants, budgets and limits.
 
-`firmware/boards/smart_led_badge/` defines the Rev A board (Raytac
+### Superseded nRF5340 custom board
+
+The following definition describes the earlier MDBT53-P1M schematic. It is
+retained for regression builds and does not match the current E73 hardware.
+
+`firmware/nrf5340_prototype/boards/smart_led_badge/` defines the earlier board (Raytac
 MDBT53-P1M, nRF5340), based on Zephyr's `raytac_mdbt53_db_40` board. The
 application-core devicetree follows the earlier Rev A schematic:
 - SPIM4 for the matrix chain, with GPIOs for LAT, BLANK, ARM and SAFE.
@@ -544,7 +537,7 @@ BOARD=smart_led_badge/nrf5340/cpuapp BUILD_DIR=build/badge make build
 ```
 
 The application does not use most of these peripherals yet, so its own
-configuration leaves their drivers out. `firmware/configs/rev-a-peripherals.conf`
+configuration leaves their drivers out. `firmware/nrf5340_prototype/configs/rev-a-peripherals.conf`
 enables the I²C, SPI, ADC, PDM, sensor (IMU), input, LED, USB and watchdog
 drivers. CI builds the application core with it too, so driver and devicetree
 integration breaks the build rather than bring-up. It is a compile check, not
@@ -552,12 +545,12 @@ a product configuration. Pass it with `-ExtraConfFile` (path relative to the
 repository root) or `EXTRA_CONF_FILE`:
 
 ```powershell
-.\scripts\dev.ps1 build -Board smart_led_badge/nrf5340/cpuapp -BuildDir build/badge-periph -ExtraConfFile firmware/configs/rev-a-peripherals.conf
+.\scripts\dev.ps1 build -Board smart_led_badge/nrf5340/cpuapp -BuildDir build/badge-periph -ExtraConfFile firmware/nrf5340_prototype/configs/rev-a-peripherals.conf
 ```
 
 ```sh
 BOARD=smart_led_badge/nrf5340/cpuapp BUILD_DIR=build/badge-periph \
-  EXTRA_CONF_FILE="$PWD/firmware/configs/rev-a-peripherals.conf" make build
+  EXTRA_CONF_FILE="$PWD/firmware/nrf5340_prototype/configs/rev-a-peripherals.conf" make build
 ```
 
 The board files are modified from Zephyr's `raytac_mdbt53_db_40` board and
@@ -566,13 +559,13 @@ keep its Apache-2.0 license and copyright notices
 
 ## Bench tests
 
-Bench tests are separate applications under `firmware/bench/`, built for the
+Bench tests are separate applications under `firmware/nrf5340_prototype/bench/`, built for the
 DK with the same overlay. They are not part of the badge image. CI builds them
 so they keep compiling.
 
 ### Matrix scan timing
 
-`firmware/bench/matrix_timing` drives the matrix scan signals with the planned
+`firmware/nrf5340_prototype/bench/matrix_timing` drives the matrix scan signals with the planned
 hardware timing, without a matrix attached, so they can be checked on a logic
 analyzer. TIMER1 times each 160 µs row slot and drives SPIM4 and the LAT and
 BLANK pins through DPPI and GPIOTE. TIMER2 counts 32 rows and then stops TIMER1.
@@ -595,11 +588,11 @@ Measured results, with the setup and raw data, are in
 [validation.md](validation.md#result-scan-timing-on-the-nrf5340-dk-bench-no-matrix).
 
 ```powershell
-.\scripts\dev.ps1 build -App firmware/bench/matrix_timing -BuildDir build/matrix_timing
+.\scripts\dev.ps1 build -App firmware/nrf5340_prototype/bench/matrix_timing -BuildDir build/matrix_timing
 ```
 
 ```sh
-APP_DIR="$PWD/firmware/bench/matrix_timing" BUILD_DIR=build/matrix_timing make build
+APP_DIR="$PWD/firmware/nrf5340_prototype/bench/matrix_timing" BUILD_DIR=build/matrix_timing make build
 ```
 
 Analyzer channels: SCK P0.08, MOSI P0.09, LAT P0.11, BLANK P0.12, frame
@@ -611,14 +604,14 @@ the DK's COM ports (see above).
 
 ### QR screening
 
-Building the application with `firmware/configs/qr-screening.conf` replaces the
+Building the application with `firmware/nrf5340_prototype/configs/qr-screening.conf` replaces the
 display test patterns with QR test codes for the scan-reliability screening
 (validation plan, QR section). Each code is shown in normal and inverted
 polarity at brightness 255, 64 and 16; DK Button 1 steps to the next setting,
 Button 2 back, and RTT logs the setting number.
 
 ```powershell
-.\scripts\dev.ps1 build -BuildDir build/qr -ExtraConfFile firmware/configs/qr-screening.conf
+.\scripts\dev.ps1 build -BuildDir build/qr -ExtraConfFile firmware/nrf5340_prototype/configs/qr-screening.conf
 ```
 
 The codes come from `scripts/qr/gen_qr_test_codes.py` (segno to encode,
@@ -629,6 +622,13 @@ with `--out-cpp` and selected with `CONFIG_APP_QR_CODES_FILE`; Version 2 and 3
 codes fit only with a reduced quiet zone and are experiments.
 
 ## Tests
+
+P4 adds bounded IMU-driven Fluid mode and four-way orientation to the full BLE
+DK configuration, with persistent sensor mapping and matching app controls.
+Native/Flutter tests and both DK builds pass; new physical behavior, frame time,
+stack peaks and combined-load I²C behavior remain unmeasured. This is still the
+nRF5340 prototype, not the nRF52840 port. Follow the
+[P4 guide](motion-prototype.md) and [software evidence](../validation/results/2026-10-15-dk-p4-motion/README.md).
 
 Tests use Ztest and run with Twister on the `native_sim` host target. They live
 under `firmware/tests/`. `native_sim` runs only on Linux, so on Windows
@@ -658,3 +658,73 @@ data-ready interrupt path. It proves
 the driver logic, not behavior on the real part.
 `firmware/tests/test_pattern` checks the frame bit layout and the test
 patterns.
+
+
+### Grayscale Studio extension (2026-10-16)
+
+[ADR0018](decisions/0018-grayscale-studio-recording-view.md) adds 0..255
+single-color intensity, 32-frame animations within an 8192-byte encoded limit,
+individual frame timing and playback direction. The DK HUB75 backend now uses
+eight weighted planes for all pixels, including binary QR/text, with timer/DPPI
+OE-on and OE-off edges and one-shot row slots. There is no content-dependent
+switch of white-pixel duty. This lowers binary-only nominal duty to the existing
+gray schedule; QR brightness and combined-load optics need fresh bench checks.
+Late interrupts extend blanking. The 250 ns base pulse is an implementation
+parameter; actual refresh and optical steps require
+scope/panel measurements, including audio/BLE/motion load. Rev A scanning is a
+separate backend and has not been ported by this change.
+
+Artwork uses two verified chunk banks and an atomic manifest in the unchanged
+32 KiB NVS partition; legacy binary records load on upgrade. There is no required
+factory reset. Large main-owned workspaces live in static RAM, and BLE queues
+carry a wake token rather than repeated 8 KiB artwork copies. Native interrupted
+write tests cover maximum artwork, both banks and repeated garbage collection.
+Target build memory is evidence of DK allocation only, not nRF52840 fit.
+
+
+### Dedicated artwork store (2026-10-16)
+
+[ADR0019](decisions/0019-large-artwork-fixed-workspaces.md) supersedes the prior
+8KiB/32-frame bound. Artwork is an immutable flash view. Two132KiB raw banks use
+264KiB of the DK's inert network-update reservation;24KiB remains reserved. Code,
+MCUboot/update slots and the32KiB settings partition do not move. This is not the
+nRF52840 layout and does not retain a full network-update reserve. The NVS
+format3 manifest selects one CRC-checked bank; old inline/chunk artwork loads on
+upgrade without erase. An interrupted inactive upload leaves the old bank active.
+
+The worker writes aligned bounded fragments and erases pages lazily. Main-owned
+playback uses a frame cache and indexed offsets rather than animation-size RAM
+copies; settings and BLE commands hold views. Upload/Apply excludes recording
+starts, rejects an already active recording/NFC transaction, and pauses local PDM
+before flash operations. Wide BLE transfer/readback and metadata caching are in
+[ble-protocol.md](ble-protocol.md). Existing display blanking/fault behavior and
+release recording gate remain. Measure upload/erase effects under combined load;
+software bounds alone do not establish timing, optical or Rev A acceptance.
+
+
+### Grayscale scheduling recovery (2026-10-17)
+
+HUB75 shifts the next row with its one-shot timer stopped and OE off, then starts
+both timed OE edges. Short grayscale compares cannot be retriggered while that
+GPIO shift is still executing. This prevents that path from starving the watchdog
+thread; scan period now explicitly includes shifting. A35-second RAM scan check
+and a93-frame imported animation stayed writable with advancing scan counters.
+See [recovery validation](../validation/results/2026-10-17-upload-recovery/README.md).
+Optical refresh/gray-step and combined-load acceptance remain open.
+
+### Editor and transfer update (2026-10-17)
+
+Matching Pixel Badge0.10.0/build28 adds per-line bouncing text, a5% global
+brightness preset and sequential artwork reads. Legacy stored16 brightness
+normalizes to13; accepted25/50/100% presets are unchanged. New capability bit7
+gates the extended client paths. Sequential short ATT responses remove the
+cursor-write round trip per page while retaining bounds, CRC, metadata and exact
+Apply readback checks. Uploads remain acknowledged and use the existing inactive
+bank/manifest transaction. Storage partitions and the schema are unchanged.
+
+Normal, recording and NFC-setup DK builds pass, as do51 targeted native cases.
+The recording image and app were installed without erase; persistent flash was
+byte-identical immediately after deployment, with bond/NFC/healthy boot retained.
+A fresh bonded artwork read transferred3551 bytes in786ms at MTU247. This does
+not validate maximum-size upload speed, optics, combined load or the nRF52840 port.
+See [evidence](../validation/results/2026-10-17-editor-transfer/README.md).

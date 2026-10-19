@@ -43,3 +43,11 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Owner release-signing credentials
+/android/key.properties
+*.jks
+*.keystore
+
+# Kotlin compiler session/cache artifacts
+/android/.kotlin/

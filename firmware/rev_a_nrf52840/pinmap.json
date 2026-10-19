@@ -1,0 +1,221 @@
+{
+  "source": "hardware/smart-led-badge.kicad_sch and MCU sheet, merged E73 design",
+  "component": "U401",
+  "pads": [
+    {
+      "module_pin": 1,
+      "pin_function": "P1.11_1",
+      "net": "VBAT_MEAS_EN"
+    },
+    {
+      "module_pin": 2,
+      "pin_function": "P1.10_2",
+      "net": "BTN_ACTION"
+    },
+    {
+      "module_pin": 3,
+      "pin_function": "P0.03/AIN1_3",
+      "net": "CC2_SENSE"
+    },
+    {
+      "module_pin": 4,
+      "pin_function": "P0.28/AIN4_4",
+      "net": "STATUS_LED"
+    },
+    {
+      "module_pin": 5,
+      "pin_function": "GND_5",
+      "net": "GND"
+    },
+    {
+      "module_pin": 6,
+      "pin_function": "P1.13_6",
+      "net": "PWR_SW_N"
+    },
+    {
+      "module_pin": 7,
+      "pin_function": "P0.02/AIN0_7",
+      "net": "CC1_SENSE"
+    },
+    {
+      "module_pin": 8,
+      "pin_function": "P0.29/AIN5_8",
+      "net": "VLED_SENSE"
+    },
+    {
+      "module_pin": 9,
+      "pin_function": "P0.31/AIN7_9",
+      "net": "CHG_EN"
+    },
+    {
+      "module_pin": 10,
+      "pin_function": "P0.30/AIN6_10",
+      "net": "VBAT_SENSE"
+    },
+    {
+      "module_pin": 11,
+      "pin_function": "P0.00/XL1_11",
+      "net": "XL1"
+    },
+    {
+      "module_pin": 12,
+      "pin_function": "P0.26_12",
+      "net": "MTX_SAFE_SENSE"
+    },
+    {
+      "module_pin": 13,
+      "pin_function": "P0.01/XL2_13",
+      "net": "XL2"
+    },
+    {
+      "module_pin": 14,
+      "pin_function": "P0.06_14",
+      "net": "MTX_ARM"
+    },
+    {
+      "module_pin": 15,
+      "pin_function": "P0.05/AIN3_15",
+      "net": "MTX_BLANK"
+    },
+    {
+      "module_pin": 16,
+      "pin_function": "P0.08_16",
+      "net": "MTX_MISO"
+    },
+    {
+      "module_pin": 17,
+      "pin_function": "P1.09_17",
+      "net": "MTX_LAT"
+    },
+    {
+      "module_pin": 18,
+      "pin_function": "P0.04/AIN2_18",
+      "net": "MTX_MOSI"
+    },
+    {
+      "module_pin": 19,
+      "pin_function": "VCC_19",
+      "net": "+3V3"
+    },
+    {
+      "module_pin": 20,
+      "pin_function": "P0.12_20",
+      "net": "MTX_SCK"
+    },
+    {
+      "module_pin": 21,
+      "pin_function": "GND_21",
+      "net": "GND"
+    },
+    {
+      "module_pin": 22,
+      "pin_function": "P0.07_22",
+      "net": "LED_EN"
+    },
+    {
+      "module_pin": 23,
+      "pin_function": "VDDH_23",
+      "net": "+3V3"
+    },
+    {
+      "module_pin": 24,
+      "pin_function": "GND_24",
+      "net": "GND"
+    },
+    {
+      "module_pin": 25,
+      "pin_function": "DCCH_25",
+      "net": "unconnected-(U401-DCCH-Pad25)"
+    },
+    {
+      "module_pin": 26,
+      "pin_function": "P0.18/RESET_26",
+      "net": "nRESET"
+    },
+    {
+      "module_pin": 27,
+      "pin_function": "VBUS_27",
+      "net": "VBUS_MOD"
+    },
+    {
+      "module_pin": 28,
+      "pin_function": "P0.15_28",
+      "net": "I2C1_SCL"
+    },
+    {
+      "module_pin": 29,
+      "pin_function": "D-_29",
+      "net": "USB_DN_MOD"
+    },
+    {
+      "module_pin": 30,
+      "pin_function": "P0.17_30",
+      "net": "I2C1_SDA"
+    },
+    {
+      "module_pin": 31,
+      "pin_function": "D+_31",
+      "net": "USB_DP_MOD"
+    },
+    {
+      "module_pin": 32,
+      "pin_function": "P0.20_32",
+      "net": "PDM_CLK"
+    },
+    {
+      "module_pin": 33,
+      "pin_function": "P0.13_33",
+      "net": "PDM_DIN"
+    },
+    {
+      "module_pin": 34,
+      "pin_function": "P0.22_34",
+      "net": "NFC_SCL"
+    },
+    {
+      "module_pin": 35,
+      "pin_function": "P0.24_35",
+      "net": "NFC_SDA"
+    },
+    {
+      "module_pin": 36,
+      "pin_function": "P1.00_36",
+      "net": "NFC_PWR"
+    },
+    {
+      "module_pin": 37,
+      "pin_function": "SWDIO_37",
+      "net": "SWDIO"
+    },
+    {
+      "module_pin": 38,
+      "pin_function": "P1.02_38",
+      "net": "NFC_FD"
+    },
+    {
+      "module_pin": 39,
+      "pin_function": "SWDCLK_39",
+      "net": "SWDCLK"
+    },
+    {
+      "module_pin": 40,
+      "pin_function": "P1.04_40",
+      "net": "CHG_INT"
+    },
+    {
+      "module_pin": 41,
+      "pin_function": "P0.09/NFC1_41",
+      "net": "IMU_INT1"
+    },
+    {
+      "module_pin": 42,
+      "pin_function": "P1.06_42",
+      "net": "BTN_MODE"
+    },
+    {
+      "module_pin": 43,
+      "pin_function": "P0.10/NFC2_43",
+      "net": "IMU_INT2"
+    }
+  ]
+}

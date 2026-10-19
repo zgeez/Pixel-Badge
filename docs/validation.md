@@ -10,6 +10,10 @@ reproduce them. Numerical acceptance thresholds are listed here only once they
 have been accepted; until then they are TBD. Required functional and privacy
 checks below come from the Rev A requirements; they are not completed tests.
 
+The [first Rev A firmware port record](../validation/results/2026-10-18-rev-a-port/README.md)
+contains deployment/software-build evidence only. Remaining final physical
+checks were deferred by the owner to board bring-up; they are not passed.
+
 ## Recording results
 
 Each result records:
@@ -76,7 +80,7 @@ test.
 |---|---|
 | Date | 2026-10-11 |
 | Hardware | nRF5340 DK v2.0.3; 64 × 64 P2 HUB75 panel (2.0 mm pitch, the badge's pitch) through two SN74AHCT245N at 5.00 V; 32 × 32 window, panel turned so the image reads upright |
-| Firmware | QR screening build (`firmware/configs/qr-screening.conf`) of the working tree before commit `b340b0db37b6`, which holds the QR mode (squash-merged to `main` as `414fbf5`; for the QR mode, the merge differs from it only in `hub75.c`, the later brightness fix). Differences in that commit: HUB75 blanking fixes (blanking is not used by the QR mode) and a run-time settings count. The owner-link codes came from a local code file (`CONFIG_APP_QR_CODES_FILE`), not in the repository |
+| Firmware | QR screening build (`firmware/nrf5340_prototype/configs/qr-screening.conf`) of the working tree before commit `b340b0db37b6`, which holds the QR mode (squash-merged to `main` as `414fbf5`; for the QR mode, the merge differs from it only in `hub75.c`, the later brightness fix). Differences in that commit: HUB75 blanking fixes (blanking is not used by the QR mode) and a run-time settings count. The owner-link codes came from a local code file (`CONFIG_APP_QR_CODES_FILE`), not in the repository |
 | Equipment | Nothing 4a Pro phone (owner's wording) with Google Lens; bench supply |
 | Settings | Run 1: Version 1 codes, levels L, M, Q, representative payloads (19 and 16 characters), full quiet zone (5 and 6 modules). Run 2: the owner's links, one Version 1 code at level L (uppercase, 24 characters, full quiet zone) and four Version 3 codes at levels H, M, M, L (24 to 44 characters) with a 1 to 2 module quiet zone. Each code in normal and inverted polarity at brightness 255, 64 and 16; 195 Hz refresh |
 | Method | Procedure in the result folders' README. Deviations: 3 tries per setting instead of 10, Google Lens instead of the native camera, distance adjusted per setting, decode times not recorded |
@@ -217,7 +221,7 @@ during BLE activity, is repeated on Rev A.
 |---|---|
 | Date | 2026-10-09 |
 | Hardware | nRF5340 DK v2.0.3 (nRF5340 QKAA). No matrix or driver ICs attached; Rev A pins mapped onto the DK by the bench overlay. |
-| Firmware | `firmware/bench/matrix_timing` at commit `d541e00880b3` (squash-merged to `main` as `f4c577f`, with identical firmware and scripts); nRF Connect SDK v3.4.1, board `nrf5340dk/nrf5340/cpuapp`. `zephyr.bin` SHA-256 `4c89e24ee02b8efc24603a943fdee9fcaf797bb62044e5425d7ec8292dc91b53`: the DK's flash read back after the captures and a pristine build of this commit both match it. |
+| Firmware | `firmware/nrf5340_prototype/bench/matrix_timing` at commit `d541e00880b3` (squash-merged to `main` as `f4c577f`, with identical firmware and scripts); nRF Connect SDK v3.4.1, board `nrf5340dk/nrf5340/cpuapp`. `zephyr.bin` SHA-256 `4c89e24ee02b8efc24603a943fdee9fcaf797bb62044e5425d7ec8292dc91b53`: the DK's flash read back after the captures and a pristine build of this commit both match it. |
 | Equipment | FX2-based 8-channel logic analyzer (sigrok `fx2lafw` driver) with PulseView (libsigrok 0.6.0-git-883c2ac, from the session file); the DK's onboard J-Link (SEGGER J-Link software V9.82) for flashing and halting |
 | Settings | 24 MS/s, 200 M samples (8.33 s). D0–D4 = SCK P0.08, MOSI P0.09, LAT P0.11, BLANK P0.12, frame marker P0.26. Edge resolution ±42 ns; the SCK duty cycle is not measurable at this rate. |
 | Method | [Matrix scan timing](firmware.md#matrix-scan-timing). Halt: J-Link command file `connect`, `h`, `sleep 2000`, `g` during the capture. Values measured from the capture by `analyze.py`. |
@@ -399,12 +403,12 @@ that:
   samples with the frame-swap time, including a start from a visualization
   mode;
 - no audio is captured or sent after REC leaves the matrix: for each stop
-  (button, app, length cap, display off, blanking, LED rail shed, driver
+  (button, app, low phone storage, WAV boundary, display off, blanking, LED rail shed, driver
   fault), compare the timestamp of the last captured and last sent sample
   with the frame-off or rail-off time, and check that queued audio is
   discarded;
 - a recording cannot start, from the app or a long-press, without a
-  connected, subscribed companion app that has proved the app key on this
+  connected, subscribed companion app that has proved the automatic session key on this
   connection; over a link whose bond is unauthenticated (Just Works); while
   the LED rail is shed for low battery or the display is off; or with the
   matrix driver faulted. A long-press then shows that recording is
@@ -413,15 +417,15 @@ that:
   accept; with the app suspended or stalled while still connected and
   subscribed, no capture starts and the badge shows that recording is
   unavailable;
-- app-key enrollment needs the code confirmed on the badge, and a second app
-  trying to enroll in the same pairing window cancels it; after pairing
-  again and after a factory reset, the old app key and counters are erased
-  and commands made with them are refused;
-- recording-control commands with a wrong key, a replayed or reused counter,
-  or sent by a second app on the same phone after the companion app has
-  authenticated are refused;
-- a second app subscribed on the same phone during a recording receives only
-  data it cannot decrypt, and altered audio packets are rejected by the app;
+- reconnect prepares the audio session without an enrollment action or a
+  second matching-code exchange; fresh connection nonces/session keys reject
+  previous-session commands. A second handshake on an established session is
+  refused. Authorization trusts the authenticated bonded phone (ADR0016);
+- recording-control commands with a wrong key or replayed/reused counter
+  are refused; the former separate-app identity guarantee is removed by ADR0016;
+- audio packets use the negotiated session key; altered/cross-session packets
+  are rejected. Distinct-app identity and same-phone active attacker exclusion
+  are no longer acceptance claims (ADR0016);
 - each recording uses a distinct key (review the derivation and compare the
   keys of two recordings), and packets from one recording injected into
   another are rejected;
@@ -433,9 +437,9 @@ that:
 - the user can stop a recording with a button press and from the app;
 - a recording also stops when the link drops or the app unsubscribes, the
   display is turned off or blanked, the LED rail is shed or the matrix driver
-  faults, or the length cap is reached; the firmware ceiling holds with the
-  length setting missing, corrupt or out of range in storage, and an
-  over-limit settings command is clamped or refused;
+  faults; phone low-storage and WAV-boundary stops preserve complete encrypted
+  chunks. Record beyond five minutes to check that legacy settings do not cap
+  recording; the removed duration command is refused;
 - a recording decodes correctly end to end: play a known synthetic waveform
   (for example a tone sweep with timing marks) to the microphone during a
   recording, with REC on the matrix and representative Bluetooth conditions,

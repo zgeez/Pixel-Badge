@@ -1,0 +1,9 @@
+{
+  "version": "0.9.2",
+  "build": 27,
+  "apk_sha256": "2cc8a948a9ae8627d363f760eec34d6b04a3433168b4195f1292bfdacd276609",
+  "installed": true,
+  "draft_hash_preserved": true,
+  "fatal_or_unhandled_log_lines": 0,
+  "live_phone_walkthrough_pending": true
+}

@@ -4,8 +4,8 @@
 
 # Preserve trailing whitespace in the two pinned upstream QR sources.
 # Other whitespace checks and application-owned files retain their policy.
-firmware/lib/qrcodegen/qrcodegen.c whitespace=-blank-at-eol
-firmware/lib/qrcodegen/qrcodegen.h whitespace=-blank-at-eol
+firmware/common/lib/qrcodegen/qrcodegen.c whitespace=-blank-at-eol
+firmware/common/lib/qrcodegen/qrcodegen.h whitespace=-blank-at-eol
 
 *.png binary
 *.jpg binary

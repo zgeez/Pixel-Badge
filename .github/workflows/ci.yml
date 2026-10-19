@@ -47,6 +47,9 @@ jobs:
       - name: Test app contact-link build defines
         run: python scripts/app/test_configure_links.py
 
+      - name: Test Pro Micro USB public-status parser
+        run: python scripts/bench/test_promicro_console.py
+
       - name: Test NFC provisioning host protocol
         run: python scripts/nfc/test_badge_nfc.py
 
@@ -71,6 +74,9 @@ jobs:
     name: firmware-build
     runs-on: ubuntu-24.04
     timeout-minutes: 60
+    env:
+      PROTOTYPE_CONFIGS: ${{ github.workspace }}/smart-led-badge/firmware/nrf5340_prototype/configs
+      REVA_CONFIGS: ${{ github.workspace }}/smart-led-badge/firmware/rev_a_nrf52840/configs
     container:
       # Official nRF Connect SDK v3.4.1 toolchain image, pinned by digest.
       # Keep in sync with scripts/dev.ps1.
@@ -109,10 +115,10 @@ jobs:
             smart-led-badge/build/nrf5340dk/zephyr/.config
             smart-led-badge/build/nrf5340dk/mcuboot/zephyr/zephyr.elf
             smart-led-badge/build/nrf5340dk/mcuboot/zephyr/.config
-            smart-led-badge/build/nrf5340dk/firmware/zephyr/zephyr.elf
-            smart-led-badge/build/nrf5340dk/firmware/zephyr/zephyr.signed.hex
-            smart-led-badge/build/nrf5340dk/firmware/zephyr/zephyr.map
-            smart-led-badge/build/nrf5340dk/firmware/zephyr/.config
+            smart-led-badge/build/nrf5340dk/nrf5340_prototype/zephyr/zephyr.elf
+            smart-led-badge/build/nrf5340dk/nrf5340_prototype/zephyr/zephyr.signed.hex
+            smart-led-badge/build/nrf5340dk/nrf5340_prototype/zephyr/zephyr.map
+            smart-led-badge/build/nrf5340dk/nrf5340_prototype/zephyr/.config
           # Needed for .config; only the paths listed above are uploaded.
           include-hidden-files: true
           if-no-files-found: error
@@ -121,7 +127,7 @@ jobs:
       - name: Build matrix timing bench test for nrf5340dk/nrf5340/cpuapp
         run: |
           export ZEPHYR_BASE="${GITHUB_WORKSPACE}/ncs/zephyr"
-          APP_DIR="${GITHUB_WORKSPACE}/smart-led-badge/firmware/bench/matrix_timing" \
+          APP_DIR="${GITHUB_WORKSPACE}/smart-led-badge/firmware/nrf5340_prototype/bench/matrix_timing" \
             BUILD_DIR="${GITHUB_WORKSPACE}/smart-led-badge/build/matrix_timing" \
             bash smart-led-badge/scripts/ci/build-firmware.sh
 
@@ -129,36 +135,120 @@ jobs:
         run: |
           export ZEPHYR_BASE="${GITHUB_WORKSPACE}/ncs/zephyr"
           BUILD_DIR="${GITHUB_WORKSPACE}/smart-led-badge/build/qr" \
-            EXTRA_CONF_FILE="${GITHUB_WORKSPACE}/smart-led-badge/firmware/configs/qr-screening.conf" \
+            EXTRA_CONF_FILE="${PROTOTYPE_CONFIGS}/qr-screening.conf" \
             bash smart-led-badge/scripts/ci/build-firmware.sh
 
       - name: Build prototype with optional bring-up checks
         run: |
           export ZEPHYR_BASE="${GITHUB_WORKSPACE}/ncs/zephyr"
           BUILD_DIR="${GITHUB_WORKSPACE}/smart-led-badge/build/prototype-debug" \
-            EXTRA_CONF_FILE="${GITHUB_WORKSPACE}/smart-led-badge/firmware/configs/prototype-debug.conf" \
+            EXTRA_CONF_FILE="${PROTOTYPE_CONFIGS}/prototype-debug.conf" \
+            bash smart-led-badge/scripts/ci/build-firmware.sh
+
+      - name: Build microphone level and FFT bench
+        run: |
+          export ZEPHYR_BASE="${GITHUB_WORKSPACE}/ncs/zephyr"
+          BUILD_DIR="${GITHUB_WORKSPACE}/smart-led-badge/build/audio-screening" \
+            EXTRA_CONF_FILE="${PROTOTYPE_CONFIGS}/audio-screening.conf" \
             bash smart-led-badge/scripts/ci/build-firmware.sh
 
       - name: Build watchdog reset-loop bench configuration
         run: |
           export ZEPHYR_BASE="${GITHUB_WORKSPACE}/ncs/zephyr"
           BUILD_DIR="${GITHUB_WORKSPACE}/smart-led-badge/build/watchdog-loop" \
-            EXTRA_CONF_FILE="${GITHUB_WORKSPACE}/smart-led-badge/firmware/configs/watchdog-loop.conf" \
+            EXTRA_CONF_FILE="${PROTOTYPE_CONFIGS}/watchdog-loop.conf" \
             bash smart-led-badge/scripts/ci/build-firmware.sh
 
       - name: Build explicit NFC provisioning commands
         run: |
           export ZEPHYR_BASE="${GITHUB_WORKSPACE}/ncs/zephyr"
           BUILD_DIR="${GITHUB_WORKSPACE}/smart-led-badge/build/nfc-provisioning" \
-            EXTRA_CONF_FILE="${GITHUB_WORKSPACE}/smart-led-badge/firmware/configs/nfc-provisioning.conf" \
+            EXTRA_CONF_FILE="${PROTOTYPE_CONFIGS}/nfc-provisioning.conf" \
             bash smart-led-badge/scripts/ci/build-firmware.sh
 
       - name: Build prototype BLE with network-core radio
         run: |
           export ZEPHYR_BASE="${GITHUB_WORKSPACE}/ncs/zephyr"
           BUILD_DIR="${GITHUB_WORKSPACE}/smart-led-badge/build/ble" \
-            SB_EXTRA_CONF_FILE="${GITHUB_WORKSPACE}/smart-led-badge/firmware/configs/ble-sysbuild.conf" \
+            SB_EXTRA_CONF_FILE="${PROTOTYPE_CONFIGS}/ble-sysbuild.conf" \
             bash smart-led-badge/scripts/ci/build-firmware.sh
+
+      - name: Build P3 recording bench with network-core radio
+        run: |
+          export ZEPHYR_BASE="${GITHUB_WORKSPACE}/ncs/zephyr"
+          BUILD_DIR="${GITHUB_WORKSPACE}/smart-led-badge/build/audio-recording" \
+            SB_EXTRA_CONF_FILE="${PROTOTYPE_CONFIGS}/ble-sysbuild.conf" \
+            EXTRA_CONF_FILE="${PROTOTYPE_CONFIGS}/audio-recording-bench.conf" \
+            bash smart-led-badge/scripts/ci/build-firmware.sh
+
+      - name: Build Rev A nRF52840 safe bring-up image
+        run: |
+          export ZEPHYR_BASE="${GITHUB_WORKSPACE}/ncs/zephyr"
+          APP_DIR="${GITHUB_WORKSPACE}/smart-led-badge/firmware/rev_a_nrf52840" \
+            BOARD=pixel_badge_reva/nrf52840 \
+            BUILD_DIR="${GITHUB_WORKSPACE}/smart-led-badge/build/rev_a_nrf52840" \
+            bash smart-led-badge/scripts/ci/build-firmware.sh
+
+      - name: Check compiled Rev A pin and flash contract
+        run: |
+          export ZEPHYR_BASE="${GITHUB_WORKSPACE}/ncs/zephyr"
+          python smart-led-badge/scripts/ci/check_reva_contract.py \
+            --build-dir smart-led-badge/build/rev_a_nrf52840 --self-test
+
+      - name: Build Rev A matrix and recording path
+        run: |
+          export ZEPHYR_BASE="${GITHUB_WORKSPACE}/ncs/zephyr"
+          APP_DIR="${GITHUB_WORKSPACE}/smart-led-badge/firmware/rev_a_nrf52840" \
+            BOARD=pixel_badge_reva/nrf52840 \
+            BUILD_DIR="${GITHUB_WORKSPACE}/smart-led-badge/build/rev_a_recording" \
+            EXTRA_CONF_FILE="${REVA_CONFIGS}/recording-bench.conf;${REVA_CONFIGS}/matrix-bench.conf" \
+            bash smart-led-badge/scripts/ci/build-firmware.sh
+
+      - name: Build Rev A peripheral diagnostics
+        run: |
+          export ZEPHYR_BASE="${GITHUB_WORKSPACE}/ncs/zephyr"
+          APP_DIR="${GITHUB_WORKSPACE}/smart-led-badge/firmware/rev_a_nrf52840" \
+            BOARD=pixel_badge_reva/nrf52840 \
+            BUILD_DIR="${GITHUB_WORKSPACE}/smart-led-badge/build/reva-diagnostics" \
+            EXTRA_CONF_FILE="${REVA_CONFIGS}/diagnostics.conf" \
+            bash smart-led-badge/scripts/ci/build-firmware.sh
+
+      - name: Build Pro Micro headless BLE bench
+        run: |
+          export ZEPHYR_BASE="${GITHUB_WORKSPACE}/ncs/zephyr"
+          APP_DIR="${GITHUB_WORKSPACE}/smart-led-badge/firmware/bench/promicro_nrf52840" \
+            BOARD=promicro_nrf52840/nrf52840/uf2 \
+            BUILD_DIR="${GITHUB_WORKSPACE}/smart-led-badge/build/promicro-bench" \
+            bash smart-led-badge/scripts/ci/build-firmware.sh
+
+      - name: Upload Pro Micro headless bench
+        uses: actions/upload-artifact@v7
+        with:
+          name: firmware-promicro-bench
+          path: |
+            smart-led-badge/build/promicro-bench/promicro_nrf52840/zephyr/zephyr.uf2
+            smart-led-badge/build/promicro-bench/promicro_nrf52840/zephyr/zephyr.bin
+            smart-led-badge/build/promicro-bench/promicro_nrf52840/zephyr/zephyr.elf
+            smart-led-badge/build/promicro-bench/promicro_nrf52840/zephyr/.config
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload Rev A port builds
+        uses: actions/upload-artifact@v7
+        with:
+          name: firmware-rev-a-nrf52840
+          path: |
+            smart-led-badge/build/rev_a_nrf52840/merged.hex
+            smart-led-badge/build/rev_a_nrf52840/partitions.yml
+            smart-led-badge/build/rev_a_nrf52840/rev_a_nrf52840/zephyr/zephyr.elf
+            smart-led-badge/build/rev_a_nrf52840/rev_a_nrf52840/zephyr/zephyr.map
+            smart-led-badge/build/rev_a_nrf52840/rev_a_nrf52840/zephyr/.config
+            smart-led-badge/build/rev_a_recording/merged.hex
+            smart-led-badge/build/reva-diagnostics/merged.hex
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
 
       - name: Upload prototype bench images
         uses: actions/upload-artifact@v7
@@ -167,18 +257,21 @@ jobs:
           path: |
             smart-led-badge/build/qr/merged.hex
             smart-led-badge/build/prototype-debug/merged.hex
+            smart-led-badge/build/audio-screening/merged.hex
+            smart-led-badge/build/audio-recording/merged.hex
+            smart-led-badge/build/audio-recording/merged_CPUNET.hex
             smart-led-badge/build/watchdog-loop/merged.hex
             smart-led-badge/build/nfc-provisioning/merged.hex
-            smart-led-badge/build/nfc-provisioning/firmware/zephyr/zephyr.elf
+            smart-led-badge/build/nfc-provisioning/nrf5340_prototype/zephyr/zephyr.elf
             smart-led-badge/build/ble/merged.hex
             smart-led-badge/build/ble/merged_CPUNET.hex
             smart-led-badge/build/ble/domains.yaml
-            smart-led-badge/build/ble/firmware/zephyr/zephyr.elf
+            smart-led-badge/build/ble/nrf5340_prototype/zephyr/zephyr.elf
           if-no-files-found: error
           retention-days: 14
 
-      # Rev A board definition (firmware/boards/smart_led_badge): both cores
-      # build, so devicetree or pin-map errors fail CI before hardware exists.
+      # Superseded nRF5340 custom board: retain both-core compile regression.
+      # The actual E73 Rev A board is built separately above.
       - name: Build smart_led_badge/nrf5340/cpuapp
         run: |
           export ZEPHYR_BASE="${GITHUB_WORKSPACE}/ncs/zephyr"
@@ -193,7 +286,7 @@ jobs:
           export ZEPHYR_BASE="${GITHUB_WORKSPACE}/ncs/zephyr"
           BOARD=smart_led_badge/nrf5340/cpuapp \
             BUILD_DIR="${GITHUB_WORKSPACE}/smart-led-badge/build/badge-periph" \
-            EXTRA_CONF_FILE="${GITHUB_WORKSPACE}/smart-led-badge/firmware/configs/rev-a-peripherals.conf" \
+            EXTRA_CONF_FILE="${PROTOTYPE_CONFIGS}/rev-a-peripherals.conf" \
             bash smart-led-badge/scripts/ci/build-firmware.sh
 
       - name: Build smart_led_badge/nrf5340/cpunet
@@ -227,6 +320,40 @@ jobs:
         run: flutter analyze
       - name: Test protocol, controller and screens
         run: flutter test
+      - name: Set up Java for Android tests
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Set up Android SDK command-line tools
+        uses: android-actions/setup-android@v4
+        with:
+          cmdline-tools-version: '15859902'
+          log-accepted-android-sdk-licenses: false
+      # AGP 8.11's library default is NDK 27; Flutter 3.38.5's app uses 28.2.
+      - name: Install pinned Android SDK and NDK packages
+        run: |
+          sdkmanager --sdk_root="$ANDROID_HOME" \
+            "platforms;android-36" "build-tools;36.1.0" \
+            "ndk;27.0.12077973" "ndk;28.2.13676358"
+          cat "$ANDROID_HOME/ndk/27.0.12077973/source.properties"
+          cat "$ANDROID_HOME/ndk/28.2.13676358/source.properties"
+      # Flutter generates the ignored wrapper and local.properties on clean CI.
+      - name: Prepare Android Gradle project
+        run: flutter build apk --debug --config-only
+      - name: Test Android storage, crypto and playback
+        working-directory: app/android
+        run: bash gradlew --no-daemon testDebugUnitTest
+      - name: Upload Android unit-test reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: android-unit-test-reports
+          path: |
+            app/build/app/test-results/testDebugUnitTest/
+            app/build/app/reports/tests/testDebugUnitTest/
+          if-no-files-found: warn
+          retention-days: 14
 
   unit-tests:
     name: unit-tests

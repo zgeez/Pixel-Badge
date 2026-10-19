@@ -1,0 +1,21 @@
+# SPDX-License-Identifier: MIT
+config REVA_MATRIX
+	bool "Rev A TLC59283 / HC595 SPI matrix"
+	default y
+	depends on DT_HAS_SMARTLEDBADGE_REVA_MATRIX_ENABLED && DISPLAY && SOC_NRF52840
+	select GPIO
+	select SPI
+	select NRFX_GPPI
+	help
+	  Dedicated SPI worker shifts complete rows while blanked. A one-shot
+	  TIMER/PPI pulse sets LED on-time and returns to blank without CPU work.
+	  Electrical timing, current and mapping require Rev A bring-up evidence.
+
+config REVA_MATRIX_OUTPUT
+	bool "Allow Rev A LED rail and scanning before board acceptance"
+	depends on REVA_MATRIX
+	default n
+	help
+	  Off in the initial bring-up image: LED_EN/ARM remain low and BLANK high.
+	  Enable only for current-limited matrix bench bring-up. This is not a
+	  substitute for charger, battery, rail and scan-stall acceptance.

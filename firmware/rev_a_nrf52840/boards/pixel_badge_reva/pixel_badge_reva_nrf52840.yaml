@@ -1,0 +1,17 @@
+# SPDX-License-Identifier: MIT
+identifier: pixel_badge_reva/nrf52840
+name: Pixel Badge Rev A (E73 nRF52840)
+type: mcu
+arch: arm
+toolchain:
+  - zephyr
+ram: 256
+flash: 1024
+supported:
+  - gpio
+  - i2c
+  - spi
+  - adc
+  - watchdog
+  - ble
+vendor: others

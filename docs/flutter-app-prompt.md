@@ -7,8 +7,9 @@ Copy this into the app-focused coding session. Continue the existing `app/`;
 Build and refine Pixel Badge, the smart LED badge companion app, in this repository's
 app/ directory using Flutter, Android first. Follow AGENTS.md, read the
 private status/requirements/phone-app plan in order, then inspect app/.
-Use docs/ble-protocol.md exactly. Do not modify firmware or invent a second
-protocol. Do not commit/push, install/upgrade global tools or accept licenses
+Use docs/ble-protocol.md v2 exactly, retaining basic v1 badge compatibility.
+Coordinate firmware changes through that shared contract. Do not commit/push,
+install/upgrade global tools or accept licenses
 unless explicitly authorized by the owner.
 
 The app securely configures a nearby nRF5340 badge, which then works offline.
@@ -55,8 +56,15 @@ GATT operations, prevent double submission and clean up subscriptions.
 Never automatically replay Apply: an accepted operation can finish after
 disconnect. Refresh/reconnect before another Apply after uncertain results.
 
-Do not add recording, app-key enrollment, DFU, cloud accounts, analytics or
-new modes. Audio belongs to P3 and accepted ADR 0011. Keep it possible later
+Studio adds custom short links, guarded NFC status/resync, smarter text and
+32x32 monochrome editing with up to 16 animation frames. Follow the phone's
+light/dark setting, save offline drafts separately from badge readback and
+never replay an interrupted upload. Use the shared case-sensitive bitmap
+font/layout for previews, default-MTU staging and paged artwork readback.
+See app/README.md for current limits, content-to-mode Apply and draft behavior.
+
+Do not add recording, app-key enrollment, DFU, cloud accounts or analytics.
+Audio belongs to P3 and accepted ADR 0011. Keep it possible later
 without claiming those features exist now. Android is the initial bench
 target; iOS packaging/testing needs a later macOS/Xcode run.
 

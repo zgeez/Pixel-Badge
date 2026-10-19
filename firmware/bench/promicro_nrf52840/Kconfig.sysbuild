@@ -1,0 +1,8 @@
+# SPDX-License-Identifier: MIT
+# Keep the factory UF2 bootloader; do not add MCUboot or repartition with PM.
+choice BOOTLOADER
+    default BOOTLOADER_NONE
+endchoice
+config PARTITION_MANAGER
+    default n
+source "share/sysbuild/Kconfig"

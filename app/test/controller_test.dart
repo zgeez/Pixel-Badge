@@ -19,6 +19,7 @@ class FakeLink implements BadgeLink {
   int id = 0, field = 0, phase = 0, result = 0;
   int rejection = 0, applies = 0;
   bool nfcVerified = true;
+  bool synchronizeOnApply = false;
   bool mismatch = false,
       failRead = false,
       dropNotification = false,
@@ -65,6 +66,7 @@ class FakeLink implements BadgeLink {
     final setting = BadgeField.values.firstWhere((v) => v.wire == field);
     if (!mismatch && rejection == 0) {
       values[setting.uuid] = staged[setting.uuid]!;
+      if (setting == BadgeField.url && synchronizeOnApply) nfcVerified = true;
     }
     if (loseConnection) {
       online.add(false);
@@ -88,35 +90,40 @@ class FakeLink implements BadgeLink {
 void main() {
   for (final lostAfterRefresh in [false, true]) {
     test(
-      'missing NFC prevents URL writes, lost after refresh=$lostAfterRefresh',
+      'URL Apply can recover unsynchronized NFC, lost after refresh=$lostAfterRefresh',
       () async {
-        final link = FakeLink()..nfcVerified = lostAfterRefresh;
+        final link = FakeLink()
+          ..nfcVerified = lostAfterRefresh
+          ..synchronizeOnApply = true;
         final controller = BadgeController();
         await controller.attach(link);
         link.nfcVerified = false;
-        await expectLater(
-          controller.apply(BadgeField.url, ascii.encode('HTTPS://A.B/Y')),
-          throwsA(
-            isA<StateError>().having(
-              (e) => e.message,
-              'message',
-              BadgeController.nfcRequiredMessage,
-            ),
-          ),
-        );
-        expect(link.staged, isEmpty);
-        expect(link.applies, 0);
-        expect(controller.url, 'HTTPS://A.B/X');
-        expect(controller.nfcVerified, isFalse);
-        await controller.refresh();
-        await controller.apply(BadgeField.name, ascii.encode('MY BADGE'));
-        expect(controller.name, 'MY BADGE');
+        await controller.apply(BadgeField.url, ascii.encode('HTTPS://A.B/Y'));
         expect(link.applies, 1);
+        expect(controller.url, 'HTTPS://A.B/Y');
+        expect(controller.confirmed && controller.nfcVerified, isTrue);
         controller.dispose();
         await link.dispose();
       },
     );
   }
+  test(
+    'successful URL response still requires synchronized readback',
+    () async {
+      final link = FakeLink()..nfcVerified = false;
+      final controller = BadgeController();
+      await controller.attach(link);
+      await expectLater(
+        controller.apply(BadgeField.url, ascii.encode('HTTPS://A.B/Y')),
+        throwsStateError,
+      );
+      expect(link.applies, 1);
+      expect(controller.confirmed, isFalse);
+      expect(controller.nfcVerified, isFalse);
+      controller.dispose();
+      await link.dispose();
+    },
+  );
   test(
     'refresh failure clears confirmation and refresh excludes Apply',
     () async {
@@ -167,7 +174,8 @@ void main() {
       );
       expect(controller.url, 'HTTPS://A.B/X');
       expect(controller.confirmed, isFalse);
-      expect(controller.message, contains('Run the NFC verifier'));
+      expect(controller.message, contains('NFC tag setup needs repair'));
+      expect(controller.nfcResult, -13);
       expect(controller.nfcVerified, isFalse);
       await expectLater(
         controller.apply(BadgeField.url, ascii.encode('HTTPS://A.B/Y')),

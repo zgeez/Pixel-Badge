@@ -1,0 +1,23 @@
+{
+  "persistent_flash_sha256": "5ea57c9217253761df08f4f842c20d5a8082e9771dd64761191b6db1f84790f4",
+  "previously_programmed_bytes_changed": 0,
+  "new_programmed_bytes": 0,
+  "brightness": 128,
+  "default_mode": 1,
+  "nfc_result": 0,
+  "nfc_ready": true,
+  "bond_loaded": true,
+  "healthy_boot_captured": true,
+  "cpu_running": true,
+  "app_version": "0.10.1",
+  "app_build": 29,
+  "app_draft_preserved": true,
+  "no_erase_flash": true,
+  "sha256": {
+    "app/build/app/outputs/flutter-apk/app-debug.apk": "5bae7d53253be5dcf98d16e5265d9f7f7de6fd17b5383fa61f58ec9650beb979",
+    "build/p3-recording/merged.hex": "248a419eb751a91e33ee04fa1d1736148d7da8942ced3217fe250dda79df063f",
+    "build/p3-recording/merged_CPUNET.hex": "66ed99eeebcf3ab93449c8ecf356aad6f13eaadaab4f7f87ddc11c158e871eec"
+  },
+  "bonded_reconnect_observed": true,
+  "settings_controls_enabled_after_reconnect": true
+}

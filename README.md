@@ -6,24 +6,21 @@ link and name/identity, runs a motion-driven fluid simulation and an audio
 visualization, is configured over BLE from a companion phone app, and carries a
 passive NFC tag that shares the same link even when the badge is switched off.
 
-**Status:** prototype firmware foundation implemented: QR/name modes, persistent
-settings, two-button controls, MCUboot and watchdog recovery on the DK target.
-P1 NFC provisioning completed with helper v0.2, but factory-password rejection
-needs a fresh check with the corrected v0.3 verifier. The owner reports LinkedIn
-URL reads work powered, powered off and after restoration. Remaining checks are in the
-[phone bench procedure](docs/nfc-prototype.md).
-P2 BLE configuration and the Android-first Flutter app are implemented for
-development: secure passkey pairing, confirmed link selection, name, brightness
-and mode. Firmware/app software checks pass; end-to-end phone acceptance is
-pending. See [BLE protocol and bench steps](docs/ble-protocol.md) and
-[app setup](app/README.md).
-The owner reports the initial P0 bench procedure passed; later display/schema
-recovery corrections need a new bench run. Rev A has a schematic and board
-definition; its hardware-specific firmware comes later. See
-[firmware](docs/firmware.md) for the current scope and validation limits.
+**Status:** the nRF5340 DK prototype implements QR/text, BLE configuration,
+synchronized passive NFC, 128-frame grayscale artwork, microphone spectrum/level
+visualization, encrypted phone recording and IMU fluid/orientation. Pixel Badge
+is the Android-first Flutter companion app. Recording is enabled only by an
+explicit development fragment pending physical acceptance.
 
-**Build status:** _CI status badge to be added once the CI workflow has run on
-`main`._
+The firmware has separate [prototype and Rev A applications](firmware/README.md)
+with shared services. The E73/nRF52840 Rev A port builds the combined application/
+controller and matrix backend; charger/power policy and physical bring-up remain.
+Final prototype physical checks are deferred to board bring-up at the owner's
+request. Software tests and successful builds do not establish electrical,
+optical, RF, battery-safety or complete product acceptance.
+
+See [firmware](docs/firmware.md), [Rev A implementation](docs/rev-a-firmware.md),
+[app setup](app/README.md) and [validation](docs/validation.md) for scope/evidence.
 
 ## Planned features
 
@@ -46,7 +43,7 @@ Rev A scope:
 
 | | |
 |---|---|
-| MCU | Nordic nRF52840 on the badge (Ebyte E73-2G4M08S1C module, [ADR 0015](docs/decisions/0015-nrf52840-e73-module.md)); prototype firmware runs on the nRF5340 DK until the Rev A port |
+| MCU | Nordic nRF52840 on the badge (Ebyte E73-2G4M08S1C module, [ADR 0015](docs/decisions/0015-nrf52840-e73-module.md)); separate nRF5340 DK prototype and [Rev A port](docs/rev-a-firmware.md) |
 | Firmware | nRF Connect SDK v3.4.1 / Zephyr RTOS, C++17 |
 | Tests | Ztest, Twister (`native_sim`) |
 | Hardware | KiCad 10.0.6, 4-layer PCB (≤ 118 × 76 mm), JLCPCB assembly (provisional) |
@@ -82,6 +79,6 @@ Start with [docs/architecture.md](docs/architecture.md).
 ## License
 
 [MIT](LICENSE), except the Rev A board definition in
-`firmware/boards/smart_led_badge/`, which is modified from Zephyr's
+`firmware/nrf5340_prototype/boards/smart_led_badge/`, which is modified from Zephyr's
 `raytac_mdbt53_db_40` board and stays under
 [Apache-2.0](LICENSES/Apache-2.0.txt) with its upstream copyright notices.

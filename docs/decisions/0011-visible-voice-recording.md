@@ -1,8 +1,13 @@
 # 0011: Visible voice recording streamed to the phone app
 
-- Status: Accepted
+- Status: Accepted; enrollment and duration amended by [0016](0016-simple-audio-controls.md)
 - Date: 2026-10-11
 - Deciders: Project owner
+
+The original decision below records the earlier enrollment/length-cap design.
+ADR0016 supersedes those requirements and the guarantee of excluding other apps
+on the bonded phone; REC visibility and all other capture/storage boundaries
+remain.
 
 ## Context
 
@@ -126,3 +131,5 @@ stop and every automatic stop condition work.
 
 - [Firmware: audio privacy requirement](../firmware.md#audio-privacy-requirement)
 - [Validation: microphone and audio processing](../validation.md#8-microphone-and-audio-processing)
+
+2026-10-16: [ADR0018](0018-grayscale-studio-recording-view.md) amends per-pixel intensity and/or the recording display. Historical acceptance does not validate the new grayscale scan or recording-view visibility.
