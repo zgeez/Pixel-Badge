@@ -3,8 +3,9 @@
 - Status: Accepted; partly superseded by [0008](0008-landscape-front-buttons.md)
   (edge-accessible buttons, LED-only front),
   [0009](0009-dual-orientation-dual-mounting.md) (magnetic and lanyard
-  mounting) and [0010](0010-single-sided-assembly.md) (single-sided assembly,
-  regional thickness targets)
+  mounting), [0010](0010-single-sided-assembly.md) (single-sided assembly,
+  regional thickness targets) and [0016](0016-rev-a-board-outline.md)
+  (118 × 76 mm board maximum)
 - Date: 2026-10-04
 - Deciders: Project owner
 
