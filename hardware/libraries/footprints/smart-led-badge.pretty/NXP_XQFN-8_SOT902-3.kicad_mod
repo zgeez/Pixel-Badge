@@ -163,6 +163,17 @@
 		(layer "F.SilkS")
 		(uuid "f53c32f0-9b17-4d6f-9979-7c8264046461")
 	)
+	(fp_text user "${REFERENCE}"
+		(at 0 0 0)
+		(layer "F.Fab")
+		(uuid "b4f4c400-7761-4d66-85fd-b2e801732083")
+		(effects
+			(font
+				(size 0.3 0.3)
+				(thickness 0.045)
+			)
+		)
+	)
 	(pad "1" smd rect
 		(at -0.6 -0.5)
 		(size 0.4 0.22)
