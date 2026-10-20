@@ -147,22 +147,34 @@ handling, load shedding, charging-only/off state and low-power transitions.
 The diagnostic image checks IMU/interrupts, guarded NTAG reads and PDM levels,
 and the power path (`common/src/app/power_diag.cpp`):
 - reset cause and the 32.768 kHz clock source;
-- the switched VBAT divider (25 ms settle), VLED sense and CC1/CC2 sense
-  through the SAADC;
+- the switched VBAT divider (sampled at least 25 ms after enable), VLED sense
+  and CC1/CC2 sense through the SAADC;
 - BQ25620 identity, faults, TS zone, D+/D- result and its ADC (VBUS, IBUS,
   VBAT, IBAT, VSYS, TS, TDIE);
-- button, power-switch and charger-interrupt edges, with a status-LED
-  heartbeat.
+- button and power-switch edges and the charger's latched event flags, with
+  a status-LED heartbeat.
 
-It applies the documented input-limit policy (1.5 A for a 1.5/3.0 A CC
-advertisement or a BC1.2 DCP/CDP/HVDCP port, otherwise 100 mA). It sets
-`TS_TH4_TH5_TH6 = 011` and keeps the charger I2C watchdog alive. Charging
-stays off unless the image is built with `diagnostics-charge.conf`; even then
-CHG_EN goes high only while:
+It samples CC every 20 ms and applies the documented input-limit policy
+within tSinkAdj: 1.5 A for a 1.5/3.0 A CC advertisement or a BC1.2 DCP/HVDCP
+port, otherwise 100 mA. This image has no USB stack and never enumerates, so a
+CDP port gets 100 mA (an unenumerated CDP reverts to SDP after 2.5 s,
+SLUSEG2D §8.3.3.3). A failed CC, status or input-limit access drops CHG_EN at
+once. It sets `TS_TH4_TH5_TH6 = 011` and keeps the charger I2C watchdog
+alive. Charging stays off unless the image is built with
+`diagnostics-charge.conf`; even then CHG_EN goes high only while:
 - VBUS is present;
 - the charger reports no fault and TS is normal;
-- the thresholds and ICHG (480 mA) read back as set, and VREG is 4200 mV;
-- the charger and SAADC agree on a pack voltage in 3.0-4.25 V.
+- the thresholds and ICHG (480 mA) read back as set, the input limit matches
+  the policy, and VREG is 4200 mV;
+- the charger and SAADC agree on a pack voltage in 3.0-4.25 V;
+- a pack-presence probe less than 30 s old passed.
+
+A charger regulates BAT even with no pack, so VBAT in range does not prove a
+pack is there. The probe pauses charging, turns on the charger's ~30 mA forced
+discharge (`FORCE_IBATDIS`) for 60 ms, and requires the divider to still read
+at least 3.0 V. It runs before the first enable, every 30 s while charging,
+and every 30 s while a missing pack holds charging off. Its behaviour with and
+without a pack is confirmed at bring-up before the first unattended charge.
 
 Register fields come from SLUSEG2D §8.6 and are unit-tested
 (`firmware/tests/power`).
@@ -185,8 +197,8 @@ current-limited supply. MODE steps through:
 5. all on at brightness 8, 32 and 128
 
 ACTION blanks and resumes at any time. The chain logic is unit-tested
-(`firmware/tests/matrix_chain`). The product charger policy (enumeration,
-20 ms CC sampling, load shedding) remains.
+(`firmware/tests/matrix_chain`). The product charger policy (USB
+enumeration, load shedding, power states) remains.
 NFC VCC is enabled on first transport preparation and retained; dynamic power
 cycling and the related recovery policy remain to implement. The wired setup
 helper still defaults to the nRF5340 debug target; explicit nRF52840 SWD target

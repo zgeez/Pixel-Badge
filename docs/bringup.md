@@ -33,9 +33,16 @@ Board: ____  Serial/batch: ____  Firmware commit: ____  Date: ____
 - [ ] Charger behavior: no charging until firmware drives CHG_EN high, in MCU
       reset, or with the logic rail off; reset TS
       thresholds stop charging below about 0 °C and above 45 °C
+- [ ] Pack-presence probe, before the first charge: with the charge image
+      and USB-C attached but no pack, the log must report `NO PACK` and keep
+      CHG_EN low; with a meter-checked pack it must report `pack present` at
+      about the metered voltage. Unplug the pack while charging: CHG_EN must
+      drop within the next 30 s probe
 - [ ] First charge, watched: diagnostics image plus `diagnostics-charge.conf`
       (ICHG 480 mA), a meter-checked pack, and a USB-C source that advertises
-      1.5 A or a BC1.2 charger (otherwise the input stays at 100 mA). The log
+      1.5 A or a BC1.2 dedicated charger (otherwise the input stays at
+      100 mA; this image does not enumerate, so a computer CDP port counts as
+      100 mA). The log
       must show every gate passing before CHG_EN goes high. Confirm the charge
       current on an inline USB-C power meter and the charger IBAT reading; feel
       or IR-check the charger, inductor and pack for the first 15 minutes; stop
