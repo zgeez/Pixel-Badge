@@ -64,6 +64,7 @@ def check(edt, contract, partitions):
     require(imu.bus_node != nfc_bus, "NFC and IMU must be on distinct buses")
     require(imu.bus_node.regs[0].addr == 0x40003000, "IMU must use TWIM0")
     require(nfc_bus.regs[0].addr == 0x40004000, "NFC must use TWIM1")
+    require(user.props["charger-i2c-bus"].val == imu.bus_node, "Charger shares TWIM0 with the IMU")
 
     # Compare Nordic PSEL function numbers plus physical port/pin. Constants
     # come from the pinned SDK binding, not from the board being checked.

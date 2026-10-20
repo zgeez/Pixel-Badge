@@ -8,8 +8,14 @@ on one Cortex-M4F. Shared badge logic lives in `../common`.
 # Full services, matrix output disarmed, recording disabled.
 ./scripts/dev.ps1 build -Target RevA -Pristine
 
-# Separate peripheral checks; no BLE/settings loop or recording.
+# Separate peripheral checks; no BLE/settings loop or recording. Charging off.
 ./scripts/dev.ps1 build -Target RevA -BuildDir build/reva-diagnostics -ExtraConfFile firmware/rev_a_nrf52840/configs/diagnostics.conf -Pristine
+
+# Staged matrix bench (current-limited supply): MODE = next step, ACTION = stop.
+./scripts/dev.ps1 build -Target RevA -BuildDir build/reva-stepper -ExtraConfFile @('firmware/rev_a_nrf52840/configs/diagnostics.conf','firmware/rev_a_nrf52840/configs/matrix-stepper.conf') -Pristine
+
+# The same checks for the watched first charge (480 mA, every gate must pass).
+./scripts/dev.ps1 build -Target RevA -BuildDir build/reva-diag-charge -ExtraConfFile @('firmware/rev_a_nrf52840/configs/diagnostics.conf','firmware/rev_a_nrf52840/configs/diagnostics-charge.conf') -Pristine
 
 # Compile the current-limited matrix + recording development variant.
 ./scripts/dev.ps1 build -Target RevA -BuildDir build/reva-matrix -ExtraConfFile @('firmware/rev_a_nrf52840/configs/matrix-bench.conf','firmware/rev_a_nrf52840/configs/recording-bench.conf') -Pristine

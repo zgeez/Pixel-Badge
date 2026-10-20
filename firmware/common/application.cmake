@@ -7,6 +7,9 @@ endif()
 target_sources(app PRIVATE
     ${BADGE_MAIN_SOURCE}
 	${BADGE_COMMON_DIR}/src/app/bringup.cpp
+	${BADGE_COMMON_DIR}/src/app/power_diag.cpp
+	${BADGE_COMMON_DIR}/src/app/matrix_diag.cpp
+	${BADGE_COMMON_DIR}/src/services/power_names.cpp
 	${BADGE_COMMON_DIR}/src/services/test_pattern.cpp
     ${BADGE_COMMON_DIR}/src/services/artwork_store.cpp
 	${BADGE_COMMON_DIR}/src/services/qr.cpp

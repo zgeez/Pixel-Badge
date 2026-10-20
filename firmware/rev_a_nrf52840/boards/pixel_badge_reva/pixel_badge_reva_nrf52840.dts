@@ -48,6 +48,7 @@
 		chg-int-gpios = <&gpio1 4 GPIO_ACTIVE_LOW>;
 		pwr-sw-gpios = <&gpio1 13 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
 		ntag-i2c-bus = <&i2c1>;
+		charger-i2c-bus = <&i2c0>;
 		nfc-pwr-gpios = <&gpio1 0 (GPIO_ACTIVE_HIGH | NRF_GPIO_DRIVE_H0H1)>;
 		nfc-fd-gpios = <&gpio1 2 GPIO_ACTIVE_LOW>;
 		imu-int2-gpios = <&gpio0 10 GPIO_ACTIVE_HIGH>;
@@ -79,7 +80,7 @@
 		accel-pwr-mode = <ICM42688_DT_ACCEL_LN>; accel-odr = <ICM42688_DT_ACCEL_ODR_100>; accel-fs = <ICM42688_DT_ACCEL_FS_2>;
 		gyro-pwr-mode = <ICM42688_DT_GYRO_LN>; gyro-odr = <ICM42688_DT_GYRO_ODR_100>; gyro-fs = <ICM42688_DT_GYRO_FS_2000>;
 	};
-	/* BQ25620 at0x6B shares this bus. Charger policy is a later port increment. */
+	/* BQ25620 at 0x6B shares this bus (zephyr,user charger-i2c-bus). */
 };
 &i2c1 {
 	compatible = "nordic,nrf-twim";

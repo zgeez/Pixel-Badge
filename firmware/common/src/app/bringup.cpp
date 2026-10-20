@@ -6,6 +6,8 @@
  *   magnitude at rest, and the data-ready interrupt rate.
  * - NFC tag (NT3H2111): delegated guarded read/session setup, or runtime NFC
  *   status when the service owns the tag. No EEPROM writes in the self-check.
+ * - Rev A power: reset cause, clock, rails, charger and inputs (power_diag.cpp).
+ * - Rev A matrix: MTX_SAFE_SENSE and TLC chain readback, outputs off (matrix_diag.cpp).
  * - Microphone: PDM capture on both channels; mean, AC RMS and range of each. Raw
  *   samples stay in the capture buffers and are discarded; only levels are
  *   logged.
@@ -14,6 +16,8 @@
 #include "badge/bringup.hpp"
 #include "badge/audio_capture.hpp"
 #include "badge/nfc_platform.hpp"
+#include "badge/power_diag.hpp"
+#include "badge/matrix_diag.hpp"
 
 #include <stdint.h>
 
@@ -342,7 +346,9 @@ int mic_check()
 
 int run_bringup_checks()
 {
-	int failed = 0;
+	int failed = power_diag_check();
+
+	failed += matrix_chain_check();
 
 #if HAVE_IMU
 	failed += imu_check();

@@ -8,6 +8,7 @@
 #include <zephyr/logging/log.h>
 
 #include "badge/bringup.hpp"
+#include "badge/matrix_diag.hpp"
 #include "badge/display_demo.hpp"
 #include "badge/qr_screening.hpp"
 #include "badge/prototype.hpp"
@@ -27,7 +28,9 @@ static void display_thread(void *, void *, void *)
 		LOG_ERR("display %s not ready", display->name);
 		return;
 	}
-#if defined(CONFIG_APP_QR_SCREENING)
+#if defined(CONFIG_APP_MATRIX_BENCH)
+	badge::run_matrix_bench(display);
+#elif defined(CONFIG_APP_QR_SCREENING)
 	badge::run_qr_screening(display);
 #else
 	badge::run_display_demo(display);
