@@ -13,4 +13,9 @@ static inline uint32_t badge_gray_slot_ticks(uint32_t on)
 	const uint32_t end = 16U + on + 32U;
 	return end < 256U ? 256U : end;
 }
+/* Rev A (reva_matrix.c): 2 us setup + on-time + 2 us blank, at least 16 us. */
+static inline uint32_t badge_reva_slot_ticks(uint32_t on)
+{
+	return on + 64U > 256U ? on + 64U : 256U;
+}
 #endif
