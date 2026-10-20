@@ -95,12 +95,17 @@ ZTEST(power, test_cc_policy)
 	zassert_equal(power::classify_cc_pin_mv(150), CcAdvert::kHigh);
 	zassert_equal(power::active_cc_pin_mv(10, 90), 90);
 	/* docs/power.md: 1.5 A for a high CC advert or DCP/CDP/HVDCP, else 100 mA. */
-	zassert_equal(power::input_limit_ma(CcAdvert::kHigh, 1), 1500);
-	zassert_equal(power::input_limit_ma(CcAdvert::kDefault, 3), 1500);
-	zassert_equal(power::input_limit_ma(CcAdvert::kDefault, 2), 1500);
-	zassert_equal(power::input_limit_ma(CcAdvert::kDefault, 6), 1500);
-	zassert_equal(power::input_limit_ma(CcAdvert::kDefault, 1), 100, "SDP before enumeration");
-	zassert_equal(power::input_limit_ma(CcAdvert::kNone, 4), 100, "unknown adapter");
+	zassert_equal(power::input_limit_ma(CcAdvert::kHigh, 1, false), 1500);
+	zassert_equal(power::input_limit_ma(CcAdvert::kDefault, 3, false), 1500);
+	zassert_equal(power::input_limit_ma(CcAdvert::kDefault, 2, false), 100,
+		      "CDP reverts to SDP unless enumerated");
+	zassert_equal(power::input_limit_ma(CcAdvert::kDefault, 2, true), 1500);
+	zassert_equal(power::input_limit_ma(CcAdvert::kDefault, 1, true), 100,
+		      "SDP stays at the pre-configuration limit here");
+	zassert_equal(power::input_limit_ma(CcAdvert::kDefault, 6, false), 1500);
+	zassert_equal(power::input_limit_ma(CcAdvert::kDefault, 1, false), 100,
+		      "SDP before enumeration");
+	zassert_equal(power::input_limit_ma(CcAdvert::kNone, 4, false), 100, "unknown adapter");
 }
 
 ZTEST_SUITE(power, NULL, NULL, NULL, NULL, NULL);

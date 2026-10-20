@@ -87,6 +87,7 @@ constexpr int decode_vreg(uint16_t word)
 }
 
 /* REG0x16 Charger Control 1. */
+constexpr uint8_t kForceIbatdis = 1U << 6; /* ~30 mA forced BAT discharge */
 constexpr uint8_t kEnChg = 1U << 5;
 constexpr uint8_t kEnHiz = 1U << 4;
 constexpr uint8_t kWdRst = 1U << 2;

@@ -10,7 +10,9 @@
  *   kept alive, and TS thresholds set before any charging;
  * - charging only with CONFIG_APP_BRINGUP_CHARGE and every gate passing,
  *   at CONFIG_APP_BRINGUP_ICHG_MA;
- * - buttons, power switch and charger interrupt edges, status LED heartbeat.
+ * - a pack-presence probe (30 mA forced discharge) before charging and every
+ *   30 s while charging;
+ * - buttons, power switch and charger event flags, status LED heartbeat.
  *
  * The matrix stays disarmed: this module never touches LED_EN/ARM/BLANK.
  */
@@ -57,11 +59,17 @@ namespace
 
 namespace chg = bq25620;
 
-constexpr int kTickMs = 250;
-constexpr int kLogEveryTicks = 20;     /* 5 s */
-constexpr int kWatchdogKickTicks = 40; /* 10 s, against the 50 s charger watchdog */
-constexpr int kVbatSettleMs = 25;      /* > 10 tau of the 23.5 k / 100 nF node */
-constexpr uint8_t kTh456Code = 0x3;    /* docs/power.md: TS_TH4_TH5_TH6 = 011 */
+/* CC is sampled and the input limit enforced every 20 ms, inside the 60 ms
+ * tSinkAdj of USB Type-C R2.5 (docs/power.md); slower work runs every 240 ms. */
+constexpr int kFastTickMs = 20;
+constexpr unsigned kSlowEvery = 12;          /* 240 ms: charger read, gates */
+constexpr unsigned kLogEvery = 250;          /* 5 s */
+constexpr unsigned kWatchdogKickEvery = 500; /* 10 s, against the 50 s charger watchdog */
+constexpr unsigned kVbatSettleTicks = 2;     /* 40 ms, above the 25 ms start-up settle */
+constexpr unsigned kProbeDischargeTicks = 3; /* 60 ms of FORCE_IBATDIS before sampling */
+constexpr unsigned kProbeEvery = 1500;       /* 30 s between pack-presence probes */
+constexpr int kVbatSettleMs = 25;            /* blocking read at start-up only */
+constexpr uint8_t kTh456Code = 0x3;          /* docs/power.md: TS_TH4_TH5_TH6 = 011 */
 
 #if defined(CONFIG_APP_BRINGUP_CHARGE)
 constexpr bool kChargeAllowed = true;
@@ -302,30 +310,28 @@ int kick_watchdog()
 	return err != 0 ? err : reg_write8(chg::kControl1, ctrl1 | chg::kWdRst);
 }
 
-/* Enforces the policy limit against the register every tick: the charger's
- * own D+/D- detection rewrites IINDPM (SDP/unknown 500 mA, DCP 1.5 A) and an
- * adapter removal resets it to 3.2 A (SLUSEG2D Table 8-11). */
-int apply_input_limit(power::CcAdvert cc, uint8_t vbus_stat, uint16_t iindpm_reg)
+/* Writes IINDPM when the policy limit changes. The slow tick compares the
+ * register with input_limit_ma and forces a rewrite if the charger's own D+/D-
+ * detection or an adapter removal changed it (SLUSEG2D Table 8-11). A failed
+ * write leaves input_limit_ma unknown, which fails the charge gate. */
+int enforce_input_limit(int limit)
 {
-	const int limit = power::input_limit_ma(cc, vbus_stat);
-
-	if (chg::decode_iindpm(iindpm_reg) == limit) {
-		input_limit_ma = limit;
+	if (limit == input_limit_ma) {
 		return 0;
 	}
 	int err = reg_write16(chg::kInputCurrent, chg::encode_iindpm(limit));
 
-	if (err == 0) {
-		LOG_INF("Charger: input limit %d -> %d mA (CC %s, D+/D- %s)",
-			chg::decode_iindpm(iindpm_reg), limit, power::cc_advert_name(cc),
-			chg::vbus_stat_name(vbus_stat));
-		input_limit_ma = limit;
+	if (err != 0) {
+		input_limit_ma = -1;
+		return err;
 	}
-	return err;
+	LOG_INF("Charger: input limit %d mA", limit);
+	input_limit_ma = limit;
+	return 0;
 }
 
 /* All gates for the bring-up charge (docs/bringup.md, first charge). */
-bool charge_gates_pass(const ChargerState &s, const Rails &r, const char *&reason)
+bool charge_gates_pass(const ChargerState &s, const Rails &r, int policy_limit, const char *&reason)
 {
 	if (!kChargeAllowed) {
 		reason = "disabled in this image (CONFIG_APP_BRINGUP_CHARGE=n)";
@@ -339,7 +345,8 @@ bool charge_gates_pass(const ChargerState &s, const Rails &r, const char *&reaso
 		reason = "TS thresholds not set";
 	} else if (chg::decode_ichg(s.ichg) != chg::decode_ichg(chg::encode_ichg(kIchgMa))) {
 		reason = "ICHG readback mismatch";
-	} else if (chg::decode_iindpm(s.iindpm) != input_limit_ma) {
+	} else if (input_limit_ma != policy_limit ||
+		   chg::decode_iindpm(s.iindpm) != input_limit_ma) {
 		reason = "input limit not at policy";
 	} else if (chg::decode_vreg(s.vreg) != 4200) {
 		reason = "VREG not 4200 mV";
@@ -407,7 +414,7 @@ struct Inputs {
 };
 
 /* /INT is a 256 us pulse (SLUSEG2D pin table), too short to poll; the flag
- * registers latch each event until read, so read them every tick. */
+ * registers latch each event until read, so read them every slow tick. */
 void log_charger_flags()
 {
 	uint8_t flag0 = 0, flag1 = 0, fault_flag0 = 0;
@@ -439,52 +446,161 @@ void log_input_edges(Inputs &last)
 	last = now;
 }
 
+/* Pack-presence probe. VBAT in range does not prove a pack: with no pack and
+ * charging enabled the charger regulates BAT itself. With charging disabled
+ * the BATFET turns off (SLUSEG2D 8.3.3.6), so the ~30 mA forced discharge
+ * (FORCE_IBATDIS, REG0x16 bit 6) pulls an empty BAT node below 3 V within
+ * milliseconds while a pack holds its voltage. */
+int set_force_discharge(bool on)
+{
+	uint8_t ctrl1 = 0;
+	int err = reg_read8(chg::kControl1, ctrl1);
+
+	if (err != 0) {
+		return err;
+	}
+	ctrl1 = on ? (ctrl1 | chg::kForceIbatdis) : (ctrl1 & ~chg::kForceIbatdis);
+	return reg_write8(chg::kControl1, static_cast<uint8_t>(ctrl1 & ~chg::kWdRst));
+}
+
+int read_cc(Rails &r)
+{
+	int pin = 0;
+	int err = adc_pin_mv(adc_cc1, pin);
+
+	r.cc1_pin_mv = err == 0 ? pin : -1;
+	if (err == 0) {
+		err = adc_pin_mv(adc_cc2, pin);
+	}
+	r.cc2_pin_mv = err == 0 ? pin : -1;
+	return err;
+}
+
 void power_thread(void *, void *, void *)
 {
 	Inputs inputs;
+	Rails r;
+	ChargerState s;
 	unsigned tick = 0;
+	/* VBAT divider and pack probe sequencing, in fast ticks. */
+	unsigned vbat_started = 0, probe_started = 0, last_probe = 0;
+	bool vbat_busy = false, probing = false, pack_ok = false, probed = false;
+	int policy = 100;
+	const char *reason = charger_present ? "starting" : "charger not present";
 
 	while (true) {
-		ChargerState s;
-		const Rails r = read_rails();
-		const char *reason =
-			charger_present ? "charger read failed" : "charger not present";
-		bool ok = false;
+		/* ---- fast: CC policy within tSinkAdj ---- */
+		if (charger_present) {
+			uint8_t status1 = 0;
 
-		if (charger_present && read_charger(s) == 0) {
-			bool fresh = true;
-
-			if ((s.status0 & 0x01) != 0) {
-				LOG_WRN("Charger: I2C watchdog expired; re-applying configuration");
-				(void)configure_charger();
-				(void)kick_watchdog();
+			if (read_cc(r) != 0 || reg_read8(chg::kStatus1, status1) != 0) {
+				set_charging(false, "CC or status read failed");
 				input_limit_ma = -1;
-				/* Re-read so the gates see the re-applied settings. */
-				fresh = read_charger(s) == 0;
-			}
-			if (fresh) {
+			} else {
 				const power::CcAdvert cc = power::classify_cc_pin_mv(
 					power::active_cc_pin_mv(r.cc1_pin_mv, r.cc2_pin_mv));
 
-				(void)apply_input_limit(cc, chg::vbus_stat(s.status1), s.iindpm);
-				ok = charge_gates_pass(s, r, reason);
+				/* No USB stack in this image: never enumerated, so a CDP
+				 * port gets the pre-enumeration limit. */
+				policy = power::input_limit_ma(cc, chg::vbus_stat(status1), false);
+				if (enforce_input_limit(policy) != 0) {
+					set_charging(false, "input limit write failed");
+				}
 			}
-			log_charger_flags();
 		}
-		set_charging(ok, reason);
 
-		if (tick % kWatchdogKickTicks == 0 && charger_present) {
+		/* ---- VBAT divider: enable, then sample kVbatSettleTicks later ---- */
+		if (vbat_busy && tick - vbat_started >= kVbatSettleTicks && !probing) {
+			int pin = 0;
+
+			r.vbat_mv =
+				adc_pin_mv(adc_vbat, pin) == 0 ? power::vbat_from_pin_mv(pin) : -1;
+			(void)gpio_pin_set_dt(&vbat_meas_en, 0);
+			vbat_busy = false;
+		}
+
+		/* ---- pack-presence probe ---- */
+		if (probing && tick - probe_started >= kProbeDischargeTicks) {
+			int pin = 0;
+			const int mv =
+				adc_pin_mv(adc_vbat, pin) == 0 ? power::vbat_from_pin_mv(pin) : -1;
+
+			(void)gpio_pin_set_dt(&vbat_meas_en, 0);
+			(void)set_force_discharge(false);
+			pack_ok = mv >= 3000;
+			probed = true;
+			probing = false;
+			last_probe = tick;
+			LOG_INF("Charger: pack probe %d mV under 30 mA discharge: %s", mv,
+				pack_ok ? "pack present" : "NO PACK");
+		}
+
+		/* ---- slow: charger state, gates, watchdog, log ---- */
+		if (tick % kSlowEvery == 0 && !probing) {
+			bool ok = false;
+
+			if (charger_present && read_charger(s) == 0) {
+				if ((s.status0 & 0x01) != 0) {
+					LOG_WRN("Charger: I2C watchdog expired; re-applying "
+						"configuration");
+					(void)configure_charger();
+					(void)kick_watchdog();
+					input_limit_ma = -1;
+					reason = "watchdog expired; reconfigured";
+				} else {
+					/* Charger rewrote IINDPM: force a rewrite on the next fast
+					 * tick. */
+					if (chg::decode_iindpm(s.iindpm) != input_limit_ma) {
+						input_limit_ma = -1;
+					}
+					ok = charge_gates_pass(s, r, policy, reason);
+				}
+				log_charger_flags();
+			} else if (charger_present) {
+				reason = "charger read failed";
+			}
+			/* Charging needs a pack probe no older than 30 s: before the first
+			 * enable, every 30 s while charging, and every 30 s while held
+			 * off by a missing pack, so re-inserting one is seen. */
+			if (ok && (!probed || tick - last_probe >= kProbeEvery)) {
+				set_charging(false, "pack presence probe");
+				if (vbat_busy) {
+					/* Divider sample in flight; probe on the next slow tick. */
+				} else if (set_force_discharge(true) != 0 ||
+					   gpio_pin_set_dt(&vbat_meas_en, 1) != 0) {
+					(void)set_force_discharge(false);
+					(void)gpio_pin_set_dt(&vbat_meas_en, 0);
+				} else {
+					probing = true;
+					probe_started = tick;
+				}
+			} else {
+				set_charging(ok && pack_ok,
+					     ok ? "no pack: BAT fell below 3 V in probe" : reason);
+				if (!vbat_busy) {
+					(void)gpio_pin_set_dt(&vbat_meas_en, 1);
+					vbat_busy = true;
+					vbat_started = tick;
+				}
+				int pin = 0;
+
+				if (adc_pin_mv(adc_vled, pin) == 0) {
+					r.vled_mv = power::vled_from_pin_mv(pin);
+				}
+			}
+		}
+		if (tick % kWatchdogKickEvery == 0 && charger_present) {
 			(void)kick_watchdog();
 		}
-		if (tick % kLogEveryTicks == 0) {
+		if (tick % kLogEvery == 0) {
 			log_state(s, r);
 		}
 		log_input_edges(inputs);
-		if (tick % 2 == 0) {
+		if (tick % 25 == 0) {
 			(void)gpio_pin_toggle_dt(&status_led);
 		}
 		tick++;
-		k_msleep(kTickMs);
+		k_msleep(kFastTickMs);
 	}
 }
 

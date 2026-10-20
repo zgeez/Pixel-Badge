@@ -59,12 +59,13 @@ constexpr int active_cc_pin_mv(int cc1_pin_mv, int cc2_pin_mv)
 	return cc1_pin_mv > cc2_pin_mv ? cc1_pin_mv : cc2_pin_mv;
 }
 
-/* Input current limit policy before USB enumeration (docs/power.md):
- * 1.5 A for a 1.5/3.0 A CC advertisement or a BC1.2 DCP/CDP/HVDCP port,
- * otherwise 100 mA. vbus_stat is the BQ25620 VBUS_STAT field. */
-constexpr int input_limit_ma(CcAdvert cc, uint8_t vbus_stat)
+/* Input current limit policy (docs/power.md): 1.5 A for a 1.5/3.0 A CC
+ * advertisement or a BC1.2 DCP/HVDCP port, otherwise 100 mA. A CDP port
+ * counts only once the device has enumerated: an unenumerated CDP reverts to
+ * SDP after 2.5 s (SLUSEG2D 8.3.3.3). vbus_stat is the BQ25620 VBUS_STAT field. */
+constexpr int input_limit_ma(CcAdvert cc, uint8_t vbus_stat, bool enumerated)
 {
-	const bool bc12_high = vbus_stat == 2 || vbus_stat == 3 || vbus_stat == 6;
+	const bool bc12_high = vbus_stat == 3 || vbus_stat == 6 || (vbus_stat == 2 && enumerated);
 
 	return (cc == CcAdvert::kHigh || bc12_high) ? 1500 : 100;
 }
