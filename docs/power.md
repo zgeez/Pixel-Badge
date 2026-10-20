@@ -25,10 +25,14 @@ for Rd ±10%; tSinkAdj 60 ms; BC1.2 detection by the charger on D+/D−):
 | Source state | Input limit (IINDPM) |
 |---|---|
 | CC advertises 1.5 A or 3.0 A (vRd ≥ 0.746 V) | 1.5 A |
-| BC1.2 dedicated or charging downstream port (DCP/CDP) | 1.5 A |
-| USB host port (SDP) or unknown 5 V adapter, before USB configuration | 100 mA |
-| SDP after the badge is configured by the host | 500 mA |
-| USB suspended | Suspend current |
+| BC1.2 dedicated charging port (DCP) | 1.5 A |
+| USB host port (SDP or CDP) or unknown 5 V adapter, before USB configuration | 100 mA |
+| SDP or CDP after the badge is configured by the host | 500 mA |
+| USB suspended | Suspend current: the charger enters HIZ and the pack runs the badge |
+
+A CDP may supply 1.5 A only if the device enumerates within 2.5 s of attach,
+otherwise it reverts to SDP (SLUSEG2D §8.3.3.3). An attach that also boots the
+badge cannot guarantee that, so a CDP is treated as an SDP.
 
 The BQ25620 runs BC1.2 detection itself at plug-in and sets 500 mA for an SDP
 or unknown adapter. Its CE input is pulled up to SYS (R313) and pulled low only
@@ -45,7 +49,17 @@ thresholds (SLUSEG2D §8.6), so firmware's thresholds stay in force. The reset
 thresholds (below) reach a COLD limit as low as −1.5 °C in the worst case, so
 they are never relied on: firmware sets its own before enabling charging.
 
-Firmware holds 100 mA until enumeration or a valid CC advertisement. It samples
+Firmware holds 100 mA until the host configures the badge (bMaxPower 500 mA)
+or a valid CC advertisement. The badge enumerates with one inert CDC ACM
+interface, chosen because Windows, macOS and Linux bind their built-in drivers
+to it and so select the configuration; nothing reads or writes it. The D+
+pull-up is connected only after the charger's BC1.2 detection finishes. When a
+host suspends the bus the charger enters HIZ (VBUS draws at most 20 µA,
+SLUSEG2D IQ_VBUS_HIZ; the battery runs the system, §8.3.4.3) if the pack reads
+at least 3.40 V; a suspend counts only after a host has reset the bus, so a
+dedicated charger's idle data lines never trigger it. PG depends only on VBUS
+(§8.3.8.1), so the logic rail stays on in HIZ; this and the suspend current of
+the whole badge are measured at bring-up. It samples
 CC1 and CC2 at least every 20 ms while VBUS is present, uses the higher reading
 as the active CC, treats readings in the specification's threshold bands as the
 lower advertisement, and returns to the lower limit within tSinkAdj when the
@@ -372,6 +386,13 @@ from the display alone. Use datasheet maxima until power measurements
 within 60 s, the matrix is shed again and further attempts back off (60 s,
 doubling to 15 min). After three failed attempts the display stays off until
 battery-qualified recovery. All numbers are PROPOSED.
+
+Firmware implements these defaults ([rev-a-firmware.md](rev-a-firmware.md#power-manager)).
+Its readings of the table: the cap is brightness level 127 (the driver's
+on-time per bit plane is linear in level, so this halves it); the lowest-power
+state also needs three unloaded readings in a row; a reading above 4.5 V counts
+as invalid. Input-qualified recovery needs a configured host port (500 mA) or
+a 1.5 A source, and never applies in HIZ.
 
 These values must still be checked against the selected pack's protection
 cutoff and discharge behavior, as listed below.
