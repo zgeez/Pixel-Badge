@@ -143,6 +143,23 @@ void LoadShedPolicy::update(const Sample &s)
 	if (battery_ok) {
 		capped_ = false;
 		input_ceiling_ = 255;
+		input_basis_ = false;
+	} else if (input_basis_) {
+		/* Running on the input's capacity: follow the current source. Lost
+		 * (unplugged, suspended into HIZ, deconfigured, below 500 mA): shed
+		 * without counting a failure; downgraded: lower the ceiling. */
+		const uint8_t budget = s.usb_present && s.input_limit_ma >= kInputOkLimitMa
+					       ? input_budget_level(s.input_limit_ma)
+					       : 0;
+
+		if (budget == 0) {
+			state_ = ShedState::kShed;
+			attempt_ = false;
+			input_basis_ = false;
+			retry_at_ = now;
+			return;
+		}
+		input_ceiling_ = budget;
 	}
 	if (attempt_ && now - enabled_at_ >= kRetryWindowMs) {
 		attempt_ = false;
@@ -198,6 +215,7 @@ void LoadShedPolicy::reenable(uint32_t now, bool battery_ok, uint8_t input_ceili
 	enabled_at_ = now;
 	attempt_ = true;
 	input_ceiling_ = input_ceiling;
+	input_basis_ = !battery_ok;
 	if (battery_ok) {
 		capped_ = false;
 	}

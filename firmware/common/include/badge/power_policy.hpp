@@ -94,6 +94,7 @@ private:
 	bool capped_ = false;
 	bool attempt_ = false; /* a re-enable inside its retry window */
 	bool battery_high_ = false;
+	bool input_basis_ = false; /* enabled on input, not battery */
 	unsigned below_shed_ = 0;
 	unsigned below_low_ = 0;
 	uint8_t ramp_ = 0;

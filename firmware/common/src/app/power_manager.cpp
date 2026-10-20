@@ -649,15 +649,33 @@ void debounce_switch(int &candidate, unsigned &stable)
 	}
 }
 
-void sleep_imu()
+/* The nRF52840's VBUS detector: a level, independent of the charger's I2C. */
+bool nrf_vbus_present()
+{
+#if NRF_POWER_HAS_USBREG
+	return nrf_power_usbregstatus_vbusdet_get(NRF_POWER);
+#else
+	return false;
+#endif
+}
+
+/* An IMU whose driver did not initialize is left in its reset state, with
+ * both sensors off (PWR_MGMT0 reset 0). */
+int sleep_imu()
 {
 #if defined(CONFIG_ICM42688_I2C) && DT_NODE_HAS_STATUS(DT_NODELABEL(imu), okay)
 	const struct device *const imu = DEVICE_DT_GET(DT_NODELABEL(imu));
 
-	if (device_is_ready(imu) && badge_imu_sleep(imu) != 0) {
-		LOG_WRN("Power: IMU sleep failed");
+	if (device_is_ready(imu)) {
+		const int err = badge_imu_sleep(imu);
+
+		if (err != 0) {
+			LOG_WRN("Power: IMU sleep failed (%d)", err);
+		}
+		return err;
 	}
 #endif
+	return 0;
 }
 
 /* High-impedance input (SLUSEG2D 8.3.4.3): VBUS draws at most 20 uA and the
@@ -797,6 +815,7 @@ void power_thread(void *, void *, void *)
 			if (read_cc(r) != 0 || reg_read8(chg::kStatus1, status1) != 0) {
 				set_charging(false, "CC or status read failed");
 				input_limit_ma = -1;
+				last_vbus_stat = 0xFF; /* unknown, not the last value */
 			} else {
 				/* Plug, unplug or a new D+/D- result: stop and let the slow
 				 * tick re-qualify the source. */
@@ -856,7 +875,7 @@ void power_thread(void *, void *, void *)
 			/* Loaded only if the LED rail stayed on across the reading. */
 			sample.loaded = vbat_loaded && rail_on();
 			/* In HIZ the pack carries the load: VBUS is present but not an input. */
-			sample.usb_present = hiz_maybe() ||
+			sample.usb_present = hiz_maybe() || nrf_vbus_present() ||
 					     (last_vbus_stat != 0 && last_vbus_stat != 0xFF) ||
 					     (s.fresh && s.vbus_mv >= 4300);
 			sample.input_limit_ma = hiz_maybe() ? -1 : input_limit_ma;
@@ -1098,22 +1117,13 @@ bool power_low_battery()
 void power_enter_charging_only()
 {
 	LOG_INF("Power: charging-only state (switch off, USB present)");
-	sleep_imu();
+	(void)sleep_imu();
 }
 
 void resume_manager()
 {
 	atomic_clear(&stop_state);
 	k_sem_give(&resume);
-}
-
-bool nrf_vbus_present()
-{
-#if NRF_POWER_HAS_USBREG
-	return nrf_power_usbregstatus_vbusdet_get(NRF_POWER);
-#else
-	return false;
-#endif
 }
 
 /* Checked after arming the wake sense, so an attach from here on pulses /INT.
@@ -1141,13 +1151,17 @@ int quiet_charger()
 		{chg::kFaultMask0, chg::kFaultMask0All},
 	};
 	uint8_t value = 0;
-	int err = update_control1(0, chg::kWatchdogMask);
+	/* Watchdog off and the ~30 mA forced discharge off, both read back. */
+	int err = update_control1(0, chg::kWatchdogMask | chg::kForceIbatdis);
 
 	if (err == 0) {
 		err = reg_read8(chg::kControl1, value);
 	}
-	if (err == 0 && (value & chg::kWatchdogMask) != 0) {
+	if (err == 0 && (value & (chg::kWatchdogMask | chg::kForceIbatdis)) != 0) {
 		err = -EIO;
+	}
+	if (err == 0) {
+		discharge_on = false;
 	}
 	for (const auto &w : writes) {
 		if (err == 0) {
@@ -1186,6 +1200,12 @@ void power_enter_off()
 	if (unavailable || !started) {
 		return;
 	}
+	if (!charger_present) {
+		/* It may still run its watchdog, ADC and interrupts from before an
+		 * MCU reset: wait for discovery (the application retries). */
+		LOG_WRN("Power: charger not found yet; System OFF deferred");
+		return;
+	}
 	k_sem_reset(&stopped);
 	k_sem_reset(&resume);
 	atomic_set(&stop_state, 1);
@@ -1220,7 +1240,7 @@ void power_enter_off()
 	/* Quiet the charger, or do not power off: the I2C watchdog would expire
 	 * and pulse /INT about every 50 s, and its continuous ADC draws about
 	 * 260 uA from the pack (SLUSEG2D IQ_BAT_ADC, against 1.5 uA). */
-	if (charger_present && quiet_charger() != 0) {
+	if (quiet_charger() != 0) {
 		LOG_ERR("Power: charger quiescing failed; staying on and retrying later");
 		abort_off();
 		return;
@@ -1230,7 +1250,11 @@ void power_enter_off()
 		abort_off();
 		return;
 	}
-	sleep_imu();
+	if (sleep_imu() != 0) {
+		LOG_ERR("Power: IMU sleep failed; staying on and retrying later");
+		abort_off();
+		return;
+	}
 	(void)gpio_pin_set_dt(&nfc_pwr, 0);
 	(void)gpio_pin_set_dt(&status_led, 0);
 	LOG_WRN("Power: battery low; System OFF until USB is attached or the switch is cycled");

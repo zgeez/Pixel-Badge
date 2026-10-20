@@ -163,19 +163,19 @@ ZTEST(power_policy, test_failed_attempts_back_off)
 	/* Attempt 1 qualifies at once on input, then sheds within 60 s. */
 	f.run(3550, false, 100, 100, true, 1500);
 	zassert_equal(f.policy.state(), ShedState::kRamping);
-	f.shed();
+	f.run(3390, true, 300, 100, true, 1500); /* sags with the source attached */
 	zassert_equal(f.policy.failures(), 1);
 	f.run(3550, false, kBackoffMs - 200, 100, true, 1500);
 	zassert_equal(f.policy.state(), ShedState::kShed, "60 s backoff");
 	f.run(3550, false, 300, 100, true, 1500);
 	zassert_equal(f.policy.state(), ShedState::kRamping);
-	f.shed();
+	f.run(3390, true, 300, 100, true, 1500); /* sags with the source attached */
 	zassert_equal(f.policy.failures(), 2);
 	f.run(3550, false, 2 * kBackoffMs - 200, 100, true, 1500);
 	zassert_equal(f.policy.state(), ShedState::kShed, "backoff doubles");
 	f.run(3550, false, 300, 100, true, 1500);
 	zassert_equal(f.policy.state(), ShedState::kRamping);
-	f.shed();
+	f.run(3390, true, 300, 100, true, 1500); /* sags with the source attached */
 	zassert_equal(f.policy.failures(), 3);
 	f.run(3550, false, 30 * 60000, 1000, true, 1500);
 	zassert_equal(f.policy.state(), ShedState::kShed, "input recovery locked out");
@@ -258,7 +258,7 @@ ZTEST(power_policy, test_invalid_readings_keep_failures)
 	f.run(3900, false, 100);
 	f.shed();
 	f.run(3550, false, 100, 100, true, 1500);
-	f.shed();
+	f.run(3390, true, 300, 100, true, 1500); /* sags with the source attached */
 	zassert_equal(f.policy.failures(), 1);
 	f.run(3550, false, kBackoffMs + 200, 100, true, 1500);
 	zassert_equal(f.policy.state(), ShedState::kRamping);
@@ -287,6 +287,32 @@ ZTEST(power_policy, test_invalid_normal_reading_requalifies)
 	g.invalid();
 	g.run(3600, false, 100);
 	zassert_equal(g.policy.ceiling(), kCapLevel, "the cap survives the gap");
+}
+
+ZTEST(power_policy, test_input_recovery_follows_source)
+{
+	Feed f;
+
+	f.run(3900, false, 100);
+	f.shed();
+	f.run(3550, false, 100, 100, true, 1500);
+	f.run(3550, true, 3 * kRampStepMs, 100, true, 1500);
+	zassert_equal(f.policy.state(), ShedState::kNormal);
+	f.run(3550, true, 100, 100, true, 500);
+	zassert_true(f.policy.ceiling() <= input_budget_level(500), "downgrade lowers the ceiling");
+	const uint8_t failures = f.policy.failures();
+
+	f.run(3550, true, 100);
+	zassert_equal(f.policy.state(), ShedState::kShed, "source lost: shed");
+	zassert_equal(f.policy.failures(), failures, "not counted as a failed attempt");
+
+	Feed g;
+
+	g.run(3900, false, 100);
+	g.shed();
+	g.run(3550, false, 100, 100, true, 1500);
+	g.run(3550, true, 100, 100, true, -1);
+	zassert_equal(g.policy.state(), ShedState::kShed, "HIZ or unknown limit: shed");
 }
 
 ZTEST_SUITE(power_policy, NULL, NULL, NULL, NULL, NULL);
