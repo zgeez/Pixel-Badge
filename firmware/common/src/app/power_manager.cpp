@@ -37,6 +37,7 @@
 #include <zephyr/logging/log.h>
 #include <zephyr/logging/log_ctrl.h>
 #include <zephyr/sys/atomic.h>
+#include <zephyr/sys/reboot.h>
 #include <hal/nrf_power.h>
 #if defined(CONFIG_POWEROFF)
 #include <zephyr/sys/poweroff.h>
@@ -134,7 +135,9 @@ atomic_t stop_state; /* 0 running, 1 stop requested, 2 thread parked */
 K_SEM_DEFINE(stopped, 0, 1);
 K_SEM_DEFINE(resume, 0, 1);
 K_SEM_DEFINE(usb_event, 0, 1); /* USB state changed: re-check HIZ at once */
-bool hiz_on;
+/* EN_HIZ may be set: true until a clear is confirmed, because the charger
+ * keeps it across an MCU reset (as discharge_on for FORCE_IBATDIS). */
+bool hiz_on = true;
 
 /* ---- Charger I2C (shared TWIM0 with the IMU; serialised by the bus lock) ---- */
 
@@ -692,6 +695,7 @@ void power_thread(void *, void *, void *)
 	int sw_candidate = -1;
 	unsigned sw_stable = 0;
 	bool hiz_warned = false;
+	bool hiz_want = false;
 	const char *reason = charger_present ? "starting" : "charger not present";
 
 	/* A suspended USB host needs suspend current within 10 ms of bus idle
@@ -701,6 +705,8 @@ void power_thread(void *, void *, void *)
 		const bool pack =
 			r.vbat_mv >= (hiz_on ? kHizExitMv : kHizMinMv) && !(probed && !pack_ok);
 		const bool want = charger_present && suspended && pack;
+
+		hiz_want = want;
 
 		if (suspended && !pack && !hiz_warned) {
 			LOG_WRN("USB host suspended without a pack above %d mV: input stays on",
@@ -845,11 +851,14 @@ void power_thread(void *, void *, void *)
 				} else {
 					ok = charge_gates_pass(s, r, policy_limit, reason);
 				}
-				if (hiz_on) {
+				if (hiz_want) {
 					/* The I2C watchdog and a re-plug clear EN_HIZ. */
 					(void)set_hiz(true);
+				}
+				if (hiz_on) {
 					ok = false;
-					reason = "USB host suspended (HIZ)";
+					reason = hiz_want ? "USB host suspended (HIZ)"
+							  : "HIZ clear not confirmed";
 				}
 				if (verbose) {
 					log_charger_flags();
@@ -975,9 +984,13 @@ int power_manager_start(bool verbose_logs)
 	} else {
 		LOG_INF("Charger: BQ25620 rev %u found", part & 0x07);
 		charger_present = true;
-		if (configure_charger() != 0 || set_hiz(false) != 0) {
+		if (configure_charger() != 0) {
 			LOG_ERR("Charger: FAIL, configuration write");
 			failed++;
+		}
+		/* A failed clear is retried by the manager every 20 ms. */
+		if (set_hiz(false) == 0) {
+			hiz_on = false;
 		}
 	}
 #if defined(CONFIG_APP_USB_DEVICE)
@@ -1051,6 +1064,77 @@ void resume_manager()
 	k_sem_give(&resume);
 }
 
+bool nrf_vbus_present()
+{
+#if NRF_POWER_HAS_USBREG
+	return nrf_power_usbregstatus_vbusdet_get(NRF_POWER);
+#else
+	return false;
+#endif
+}
+
+/* Checked after arming the wake sense, so an attach from here on pulses /INT.
+ * VBUS_STAT reads 0 while BC1.2 detection runs, so the nRF52840's own VBUS
+ * detector is checked too. */
+bool usb_attached()
+{
+	uint8_t status1 = 0;
+
+	return hiz_on || nrf_vbus_present() ||
+	       (charger_present && reg_read8(chg::kStatus1, status1) == 0 &&
+		chg::vbus_stat(status1) != 0);
+}
+
+/* Watchdog off, ADC off and every /INT source but VBUS masked, each read back.
+ * configure_charger() restores all of this after the wake. */
+int quiet_charger()
+{
+	const struct {
+		uint8_t reg, value;
+	} writes[] = {
+		{chg::kAdcControl, 0},
+		{chg::kMask0, chg::kMask0All},
+		{chg::kMask1, chg::kMask1AllButVbus},
+		{chg::kFaultMask0, chg::kFaultMask0All},
+	};
+	uint8_t value = 0;
+	int err = update_control1(0, chg::kWatchdogMask);
+
+	if (err == 0) {
+		err = reg_read8(chg::kControl1, value);
+	}
+	if (err == 0 && (value & chg::kWatchdogMask) != 0) {
+		err = -EIO;
+	}
+	for (const auto &w : writes) {
+		if (err == 0) {
+			err = reg_write8(w.reg, w.value);
+		}
+		if (err == 0) {
+			err = reg_read8(w.reg, value);
+		}
+		if (err == 0 && value != w.value) {
+			err = -EIO;
+		}
+	}
+	const uint8_t flags[] = {chg::kFlag0, chg::kFlag1, chg::kFaultFlag0};
+
+	for (uint8_t reg : flags) {
+		(void)reg_read8(reg, value); /* clear latched events */
+	}
+	return err;
+}
+
+/* Back to normal operation before anything was switched off. */
+void abort_off()
+{
+	(void)gpio_pin_interrupt_configure_dt(&chg_int, GPIO_INT_DISABLE);
+	if (charger_present) {
+		(void)configure_charger();
+	}
+	resume_manager();
+}
+
 void power_enter_off()
 {
 	static bool unavailable;
@@ -1089,39 +1173,17 @@ void power_enter_off()
 		resume_manager();
 		return;
 	}
-	/* Quiet the charger: the I2C watchdog would expire and pulse /INT about
-	 * every 50 s, and its continuous ADC draws about 260 uA from the pack
-	 * (SLUSEG2D IQ_BAT_ADC, against 1.5 uA). VBUS stays the only /INT source.
-	 * configure_charger() restores all of this after the wake. */
-	if (charger_present) {
-		uint8_t flag = 0;
-
-		(void)update_control1(0, chg::kWatchdogMask);
-		(void)reg_write8(chg::kAdcControl, 0);
-		(void)reg_write8(chg::kMask0, chg::kMask0All);
-		(void)reg_write8(chg::kMask1, chg::kMask1AllButVbus);
-		(void)reg_write8(chg::kFaultMask0, chg::kFaultMask0All);
-		(void)reg_read8(chg::kFlag0, flag);
-		(void)reg_read8(chg::kFlag1, flag);
-		(void)reg_read8(chg::kFaultFlag0, flag);
+	/* Quiet the charger, or do not power off: the I2C watchdog would expire
+	 * and pulse /INT about every 50 s, and its continuous ADC draws about
+	 * 260 uA from the pack (SLUSEG2D IQ_BAT_ADC, against 1.5 uA). */
+	if (charger_present && quiet_charger() != 0) {
+		LOG_ERR("Power: charger quiescing failed; staying on and retrying later");
+		abort_off();
+		return;
 	}
-	/* Checked after arming the wake sense, so an attach from here on pulses
-	 * /INT. VBUS_STAT reads 0 while BC1.2 detection runs, so the nRF52840's
-	 * own VBUS detector is checked too. */
-	uint8_t status1 = 0;
-	bool usb = hiz_on;
-#if NRF_POWER_HAS_USBREG
-	usb = usb || nrf_power_usbregstatus_vbusdet_get(NRF_POWER);
-#endif
-	usb = usb || (charger_present && reg_read8(chg::kStatus1, status1) == 0 &&
-		      chg::vbus_stat(status1) != 0);
-	if (usb) {
+	if (usb_attached()) {
 		LOG_INF("Power: USB attached; staying on");
-		(void)gpio_pin_interrupt_configure_dt(&chg_int, GPIO_INT_DISABLE);
-		if (charger_present) {
-			(void)configure_charger();
-		}
-		resume_manager();
+		abort_off();
 		return;
 	}
 	sleep_imu();
@@ -1130,6 +1192,16 @@ void power_enter_off()
 	LOG_WRN("Power: battery low; System OFF until USB is attached or the switch is cycled");
 	LOG_PANIC();
 #if defined(CONFIG_POWEROFF)
+	/* Last check with interrupts locked, so nothing can service and clear
+	 * an attach between it and System OFF. The nRF52840's VBUS detector is a
+	 * level, not the charger's 256 us pulse. The IMU and NFC are already off,
+	 * so an attach seen here restarts the badge. */
+	const unsigned int key = irq_lock();
+
+	if (nrf_vbus_present()) {
+		irq_unlock(key);
+		sys_reboot(SYS_REBOOT_COLD);
+	}
 	sys_poweroff();
 #endif
 }

@@ -227,7 +227,7 @@ void run_prototype()
 	const int64_t started_at = k_uptime_get();
 	uint32_t last_render = 0;
 	bool power_held = false;
-	[[maybe_unused]] bool off_attempted = false;
+	[[maybe_unused]] uint32_t off_retry_at = 0;
 	LOG_INF("badge ready: %s mode%s", modes.active() == Mode::kQr ? "QR" : "name",
 		safe ? " (safe)" : "");
 #if defined(CONFIG_APP_NFC)
@@ -255,8 +255,10 @@ void run_prototype()
 			sys_reboot(SYS_REBOOT_COLD);
 		}
 		const bool low_battery = power_low_battery();
-		if (low_battery && !off_attempted) {
-			off_attempted = true;
+		/* Retried every 60 s: an attempt can stop short (USB attached, or the
+		 * charger could not be quieted). */
+		if (low_battery && static_cast<int32_t>(now - off_retry_at) >= 0) {
+			off_retry_at = now + 60000;
 #if defined(CONFIG_APP_AUDIO)
 			audio_halt();
 #endif
@@ -264,7 +266,9 @@ void run_prototype()
 			display_ready = false;
 			power_enter_off(); /* returns only if USB appeared meanwhile */
 		}
-		off_attempted = off_attempted && low_battery;
+		if (!low_battery) {
+			off_retry_at = now;
+		}
 #endif
 #if defined(CONFIG_APP_POWER_MANAGER)
 		/* Load shedding, or a stalled power manager, holds the display like an
