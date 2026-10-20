@@ -84,6 +84,34 @@ config APP_BRINGUP_CHECKS
 	help
 	  Runs outside the normal badge loop. Off in the default prototype.
 
+config APP_BRINGUP_CHARGE
+	bool "Bring-up: allow battery charging when every gate passes"
+	depends on APP_BRINGUP_CHECKS
+	help
+	  Lets the Rev A power diagnostics drive CHG_EN high, at
+	  APP_BRINGUP_ICHG_MA, only while VBUS is present, the charger reports
+	  no fault, TS is normal, the TS thresholds and ICHG read back as set,
+	  VREG is 4200 mV and both VBAT readings agree on a pack in 3.0-4.25 V.
+	  Off by default: the first charge is a deliberate, watched step.
+
+config APP_BRINGUP_ICHG_MA
+	int "Bring-up charge current (mA)"
+	depends on APP_BRINGUP_CHARGE
+	default 480
+	range 80 1000
+	help
+	  BQ25620 ICHG in 80 mA steps (rounded down). 480 mA for the first
+	  charge; the pack allows up to 1.2 A.
+
+config APP_MATRIX_BENCH
+	bool "Rev A matrix bench: button-stepped staged LED tests"
+	depends on APP_BRINGUP_CHECKS && DISPLAY && REVA_MATRIX_OUTPUT
+	help
+	  Replaces the display demo with staged tests for a current-limited
+	  bench supply: rows with zero column current, single LEDs at minimum
+	  brightness, row/column walks, patterns, then all-on at rising
+	  brightness. MODE advances, ACTION stops (blanks) and resumes.
+
 config APP_WATCHDOG_TEST_LOOP
 	bool "Bench fault injection: reset until safe mode"
 	depends on APP_PROTOTYPE
