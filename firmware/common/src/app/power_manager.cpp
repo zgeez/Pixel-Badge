@@ -79,6 +79,7 @@ constexpr unsigned kVbatLoadedEvery = 5;     /* 100 ms while the LED rail is on 
 constexpr unsigned kVbatIdleEvery = 50;      /* 1 s otherwise */
 constexpr unsigned kProbeDischargeTicks = 3; /* 60 ms of FORCE_IBATDIS before sampling */
 constexpr unsigned kProbeEvery = 1500;       /* 30 s between pack-presence probes */
+constexpr unsigned kDiscoverEvery = 50;      /* 1 s between charger discovery retries */
 constexpr unsigned kSwitchStableTicks = 5;   /* 100 ms power-switch debounce */
 constexpr uint32_t kHealthyMs = 1000;        /* thread heartbeat age */
 constexpr int kVbatSettleMs = 25;            /* blocking read at start-up only */
@@ -114,6 +115,7 @@ const struct device *const display = DEVICE_DT_GET(DT_CHOSEN(zephyr_display));
 
 bool adc_calibrated;
 bool charger_present;
+bool configure_pending; /* configure_charger() failed: retried every 240 ms */
 bool charging;
 int input_limit_ma = -1;
 unsigned iindpm_restores; /* times the charger's own IINDPM value was overwritten */
@@ -658,6 +660,52 @@ void sleep_imu()
 #endif
 }
 
+/* High-impedance input (SLUSEG2D 8.3.4.3): VBUS draws at most 20 uA and the
+ * battery runs the system. Reset by the I2C watchdog and adapter plug-in. */
+int set_hiz(bool on)
+{
+	return on ? update_control1(chg::kEnHiz, 0) : update_control1(0, chg::kEnHiz);
+}
+
+/* BQ25620 identity and configuration. Retried by the manager every second
+ * until the charger answers, so a transient bus error at boot does not leave
+ * the input limit, charging and System OFF quiescing disabled all boot. */
+int discover_charger()
+{
+	static bool logged;
+	uint8_t part = 0;
+	int err = device_is_ready(charger_bus) ? reg_read8(chg::kPartInfo, part) : -ENODEV;
+
+	if (err == 0 && !chg::is_bq25620(part)) {
+		err = -ENODEV;
+	}
+	if (err != 0) {
+		if (!logged) {
+			LOG_ERR("Charger: FAIL, no BQ25620 at 0x%02x (part 0x%02x, %d); retrying",
+				chg::kAddress, part, err);
+			logged = true;
+		}
+		return err;
+	}
+	LOG_INF("Charger: BQ25620 rev %u found", part & 0x07);
+	hiz_on = true; /* unknown until a clear is confirmed */
+	configure_pending = configure_charger() != 0;
+	if (configure_pending) {
+		LOG_ERR("Charger: FAIL, configuration write; retrying");
+	}
+	if (set_hiz(false) == 0) {
+		hiz_on = false;
+	}
+	charger_present = true;
+	return configure_pending ? -EIO : 0;
+}
+
+/* EN_HIZ may be set; meaningless without a charger. */
+bool hiz_maybe()
+{
+	return charger_present && hiz_on;
+}
+
 power::UsbHost usb_host()
 {
 #if defined(CONFIG_APP_USB_DEVICE)
@@ -671,13 +719,6 @@ power::UsbHost usb_host()
 	}
 #endif
 	return power::UsbHost::kNotConfigured;
-}
-
-/* High-impedance input (SLUSEG2D 8.3.4.3): VBUS draws at most 20 uA and the
- * battery runs the system. Reset by the I2C watchdog and adapter plug-in. */
-int set_hiz(bool on)
-{
-	return on ? update_control1(chg::kEnHiz, 0) : update_control1(0, chg::kEnHiz);
 }
 
 void power_thread(void *, void *, void *)
@@ -805,10 +846,10 @@ void power_thread(void *, void *, void *)
 			/* Loaded only if the LED rail stayed on across the reading. */
 			sample.loaded = vbat_loaded && rail_on();
 			/* In HIZ the pack carries the load: VBUS is present but not an input. */
-			sample.usb_present = hiz_on ||
+			sample.usb_present = hiz_maybe() ||
 					     (last_vbus_stat != 0 && last_vbus_stat != 0xFF) ||
 					     (s.fresh && s.vbus_mv >= 4300);
-			sample.input_limit_ma = hiz_on ? -1 : input_limit_ma;
+			sample.input_limit_ma = hiz_maybe() ? -1 : input_limit_ma;
 			sample.now_ms = k_uptime_get_32();
 			apply_policy(sample);
 		}
@@ -836,9 +877,16 @@ void power_thread(void *, void *, void *)
 			}
 		}
 
+		if (!charger_present && tick % kDiscoverEvery == 0) {
+			(void)discover_charger();
+		}
 		/* ---- slow: charger state, gates, watchdog, log ---- */
 		if (tick % kSlowEvery == 0 && !probing) {
 			bool ok = false;
+
+			if (charger_present && configure_pending) {
+				configure_pending = configure_charger() != 0;
+			}
 
 			if (charger_present && read_charger(s) == 0) {
 				if ((s.status0 & 0x01) != 0) {
@@ -970,28 +1018,9 @@ int power_manager_start(bool verbose_logs)
 		failed++;
 	}
 
-	uint8_t part = 0;
-
-	if (!device_is_ready(charger_bus)) {
-		LOG_ERR("Charger: FAIL, I2C bus not ready");
+	/* A failed discovery or HIZ clear is retried by the manager. */
+	if (discover_charger() != 0) {
 		failed++;
-	} else if (reg_read8(chg::kPartInfo, part) != 0) {
-		LOG_ERR("Charger: FAIL, no response at 0x%02x", chg::kAddress);
-		failed++;
-	} else if (!chg::is_bq25620(part)) {
-		LOG_ERR("Charger: FAIL, part info 0x%02x is not a BQ25620", part);
-		failed++;
-	} else {
-		LOG_INF("Charger: BQ25620 rev %u found", part & 0x07);
-		charger_present = true;
-		if (configure_charger() != 0) {
-			LOG_ERR("Charger: FAIL, configuration write");
-			failed++;
-		}
-		/* A failed clear is retried by the manager every 20 ms. */
-		if (set_hiz(false) == 0) {
-			hiz_on = false;
-		}
 	}
 #if defined(CONFIG_APP_USB_DEVICE)
 	if (const int err = badge_usb_start(&usb_event); err != 0) {
@@ -1021,9 +1050,11 @@ int power_manager_start(bool verbose_logs)
 
 bool power_manager_healthy()
 {
-	/* Not started: nothing to supervise, and the LED rail stays held off. */
-	return !started || atomic_get(&stop_state) != 0 ||
-	       k_uptime_get_32() - static_cast<uint32_t>(atomic_get(&heartbeat)) < kHealthyMs;
+	/* Never started (GPIO setup failed): unhealthy, so the application holds
+	 * the display and stops the watchdog feed instead of running unmanaged. */
+	return started &&
+	       (atomic_get(&stop_state) != 0 ||
+		k_uptime_get_32() - static_cast<uint32_t>(atomic_get(&heartbeat)) < kHealthyMs);
 }
 
 int power_switch_state(uint32_t timeout_ms)
@@ -1080,7 +1111,7 @@ bool usb_attached()
 {
 	uint8_t status1 = 0;
 
-	return hiz_on || nrf_vbus_present() ||
+	return hiz_maybe() || nrf_vbus_present() ||
 	       (charger_present && reg_read8(chg::kStatus1, status1) == 0 &&
 		chg::vbus_stat(status1) != 0);
 }

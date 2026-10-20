@@ -232,4 +232,40 @@ ZTEST(power_policy, test_low_power_only_unloaded_on_battery)
 	zassert_false(f.policy.low_power(), "never on an invalid reading");
 }
 
+ZTEST(power_policy, test_invalid_readings_abort_reenable)
+{
+	Feed f;
+
+	f.run(3900, false, 100);
+	f.shed();
+	f.run(3750, false, kBatteryOkMs + 1000, 1000);
+	zassert_equal(f.policy.state(), ShedState::kRamping);
+	for (int i = 0; i < 700; ++i) { /* 70 s outage */
+		f.invalid();
+	}
+	zassert_equal(f.policy.state(), ShedState::kShed, "attempt aborted, not completed");
+	f.run(3750, true, 100);
+	zassert_equal(f.policy.ceiling(), 0, "a loaded reading after the outage does not ramp");
+	f.run(3750, false, kBatteryOkMs + 1000, 1000);
+	zassert_equal(f.policy.state(), ShedState::kRamping);
+	zassert_equal(f.policy.ceiling(), 13, "ramp restarts from the lowest level");
+}
+
+ZTEST(power_policy, test_invalid_readings_keep_failures)
+{
+	Feed f;
+
+	f.run(3900, false, 100);
+	f.shed();
+	f.run(3550, false, 100, 100, true, 1500);
+	f.shed();
+	zassert_equal(f.policy.failures(), 1);
+	f.run(3550, false, kBackoffMs + 200, 100, true, 1500);
+	zassert_equal(f.policy.state(), ShedState::kRamping);
+	for (int i = 0; i < 700; ++i) {
+		f.invalid();
+	}
+	zassert_equal(f.policy.failures(), 1, "an outage is not a successful attempt");
+}
+
 ZTEST_SUITE(power_policy, NULL, NULL, NULL, NULL, NULL);

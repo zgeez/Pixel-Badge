@@ -72,6 +72,14 @@ void LoadShedPolicy::update(const Sample &s)
 		below_shed_ = 0;
 		below_low_ = 0;
 		battery_high_ = false;
+		/* A re-enable attempt cannot be validated without readings: abort it
+		 * without counting a failure. Recovery qualifies again and restarts
+		 * the ramp from the lowest level. */
+		if (attempt_ || state_ == ShedState::kRamping) {
+			state_ = ShedState::kShed;
+			attempt_ = false;
+			retry_at_ = now;
+		}
 		return;
 	}
 	valid_ = true;
