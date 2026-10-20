@@ -96,6 +96,10 @@ bool adc_calibrated;
 bool charger_present;
 bool charging;
 int input_limit_ma = -1;
+unsigned iindpm_restores; /* times the charger's own IINDPM value was overwritten */
+/* FORCE_IBATDIS may be set: true until a clear is confirmed, including after an
+ * MCU reset that interrupted a probe. */
+bool discharge_on = true;
 
 /* ---- Charger I2C (shared TWIM0 with the IMU; serialised by the bus lock) ---- */
 
@@ -245,9 +249,10 @@ struct ChargerState {
 	int vbus_mv = 0, vbat_mv = 0, vsys_mv = 0, ibus_ma = 0, ibat_ma = 0;
 	int ts_permille = 0, tdie_decic = 0;
 	bool ibat_valid = false;
+	bool fresh = false; /* every field came from the last read */
 };
 
-int read_charger(ChargerState &s)
+int read_charger_fields(ChargerState &s)
 {
 	uint16_t w = 0;
 	int err;
@@ -261,28 +266,51 @@ int read_charger(ChargerState &s)
 	    (err = reg_read16(chg::kChargeVoltage, s.vreg)) != 0) {
 		return err;
 	}
-	if (reg_read16(chg::kVbusAdc, w) == 0) {
-		s.vbus_mv = chg::vbus_mv(w);
+	if ((err = reg_read16(chg::kVbusAdc, w)) != 0) {
+		return err;
 	}
-	if (reg_read16(chg::kVbatAdc, w) == 0) {
-		s.vbat_mv = chg::vbat_mv(w);
+	s.vbus_mv = chg::vbus_mv(w);
+	if ((err = reg_read16(chg::kVbatAdc, w)) != 0) {
+		return err;
 	}
-	if (reg_read16(chg::kVsysAdc, w) == 0) {
-		s.vsys_mv = chg::vbat_mv(w);
+	s.vbat_mv = chg::vbat_mv(w);
+	if ((err = reg_read16(chg::kVsysAdc, w)) != 0) {
+		return err;
 	}
-	if (reg_read16(chg::kIbusAdc, w) == 0) {
-		s.ibus_ma = chg::ibus_ma(w);
+	s.vsys_mv = chg::vbat_mv(w);
+	if ((err = reg_read16(chg::kIbusAdc, w)) != 0) {
+		return err;
 	}
-	if (reg_read16(chg::kIbatAdc, w) == 0) {
-		s.ibat_valid = chg::ibat_valid(w);
-		s.ibat_ma = chg::ibat_ma(w);
+	s.ibus_ma = chg::ibus_ma(w);
+	if ((err = reg_read16(chg::kIbatAdc, w)) != 0) {
+		return err;
 	}
-	if (reg_read16(chg::kTsAdc, w) == 0) {
-		s.ts_permille = chg::ts_permille(w);
+	s.ibat_valid = chg::ibat_valid(w);
+	s.ibat_ma = chg::ibat_ma(w);
+	if ((err = reg_read16(chg::kTsAdc, w)) != 0) {
+		return err;
 	}
-	if (reg_read16(chg::kTdieAdc, w) == 0) {
-		s.tdie_decic = chg::tdie_decic(w);
+	s.ts_permille = chg::ts_permille(w);
+	if ((err = reg_read16(chg::kTdieAdc, w)) != 0) {
+		return err;
 	}
+	s.tdie_decic = chg::tdie_decic(w);
+	return 0;
+}
+
+/* Updates s only when every register read succeeds; otherwise s is marked
+ * stale, so no gate or log uses a value left over from an earlier read. */
+int read_charger(ChargerState &s)
+{
+	ChargerState next;
+	int err = read_charger_fields(next);
+
+	if (err != 0) {
+		s.fresh = false;
+		return err;
+	}
+	next.fresh = true;
+	s = next;
 	return 0;
 }
 
@@ -302,32 +330,47 @@ int configure_charger()
 	return reg_write8(chg::kAdcControl, chg::kAdcEnableContinuous12Bit);
 }
 
-int kick_watchdog()
+/* Also clears FORCE_IBATDIS unless a pack probe is running, so the
+ * read-modify-write cannot preserve a discharge left on by a failed clear. */
+int kick_watchdog(bool probe_running)
 {
 	uint8_t ctrl1 = 0;
 	int err = reg_read8(chg::kControl1, ctrl1);
 
-	return err != 0 ? err : reg_write8(chg::kControl1, ctrl1 | chg::kWdRst);
-}
-
-/* Writes IINDPM when the policy limit changes. The slow tick compares the
- * register with input_limit_ma and forces a rewrite if the charger's own D+/D-
- * detection or an adapter removal changed it (SLUSEG2D Table 8-11). A failed
- * write leaves input_limit_ma unknown, which fails the charge gate. */
-int enforce_input_limit(int limit)
-{
-	if (limit == input_limit_ma) {
-		return 0;
-	}
-	int err = reg_write16(chg::kInputCurrent, chg::encode_iindpm(limit));
-
 	if (err != 0) {
-		input_limit_ma = -1;
 		return err;
 	}
-	LOG_INF("Charger: input limit %d mA", limit);
-	input_limit_ma = limit;
-	return 0;
+	ctrl1 |= chg::kWdRst;
+	if (!probe_running) {
+		ctrl1 &= static_cast<uint8_t>(~chg::kForceIbatdis);
+	}
+	err = reg_write8(chg::kControl1, ctrl1);
+	if (err == 0 && !probe_running) {
+		discharge_on = false;
+	}
+	return err;
+}
+
+/* Reads IINDPM on every fast tick and rewrites it when it differs from the
+ * policy. No cached value is trusted: the charger resets IINDPM to 3.2 A on
+ * adapter removal and its D+/D- detection rewrites it on every plug-in
+ * (SLUSEG2D REG0x06). input_limit_ma is the limit confirmed this tick, or -1
+ * after a failed access, which fails the charge gate. */
+int enforce_input_limit(int limit)
+{
+	uint16_t reg = 0;
+	int err = reg_read16(chg::kInputCurrent, reg);
+
+	if (err == 0 && chg::decode_iindpm(reg) != limit) {
+		err = reg_write16(chg::kInputCurrent, chg::encode_iindpm(limit));
+		if (err == 0 && limit != input_limit_ma) {
+			LOG_INF("Charger: input limit %d mA", limit);
+		} else if (err == 0) {
+			iindpm_restores++;
+		}
+	}
+	input_limit_ma = err == 0 ? limit : -1;
+	return err;
 }
 
 /* All gates for the bring-up charge (docs/bringup.md, first charge). */
@@ -394,6 +437,10 @@ void log_state(const ChargerState &s, const Rails &r)
 	if (!charger_present) {
 		return;
 	}
+	if (!s.fresh) {
+		LOG_WRN("Charger: last register read failed; no current telemetry");
+		return;
+	}
 	LOG_INF("Charger: VBUS %d mV IBUS %d mA | VBAT %d mV IBAT %d%s mA | VSYS %d mV | "
 		"TS %d.%d %% | TDIE %s%d.%d C",
 		s.vbus_mv, s.ibus_ma, s.vbat_mv, s.ibat_ma, s.ibat_valid ? "" : "?", s.vsys_mv,
@@ -401,12 +448,13 @@ void log_state(const ChargerState &s, const Rails &r)
 		(s.tdie_decic < 0 ? -s.tdie_decic : s.tdie_decic) / 10,
 		(s.tdie_decic < 0 ? -s.tdie_decic : s.tdie_decic) % 10);
 	LOG_INF("Charger: %s, D+/D- %s, TS %s, fault 0x%02x, status0 0x%02x, ICHG %d mA, "
-		"IINDPM %d mA, VREG %d mV, CHG_EN %d%s%s",
+		"IINDPM %d mA (%u restores), VREG %d mV, CHG_EN %d%s%s",
 		chg::chg_stat_name(chg::chg_stat(s.status1)),
 		chg::vbus_stat_name(chg::vbus_stat(s.status1)),
 		chg::ts_stat_name(chg::ts_stat(s.fault0)), s.fault0, s.status0,
-		chg::decode_ichg(s.ichg), chg::decode_iindpm(s.iindpm), chg::decode_vreg(s.vreg),
-		charging ? 1 : 0, charging ? "" : " - ", charging ? "" : off_reason);
+		chg::decode_ichg(s.ichg), chg::decode_iindpm(s.iindpm), iindpm_restores,
+		chg::decode_vreg(s.vreg), charging ? 1 : 0, charging ? "" : " - ",
+		charging ? "" : off_reason);
 }
 
 struct Inputs {
@@ -454,13 +502,21 @@ void log_input_edges(Inputs &last)
 int set_force_discharge(bool on)
 {
 	uint8_t ctrl1 = 0;
+
+	if (on) {
+		discharge_on = true; /* assume set even if the write fails part-way */
+	}
 	int err = reg_read8(chg::kControl1, ctrl1);
 
 	if (err != 0) {
 		return err;
 	}
 	ctrl1 = on ? (ctrl1 | chg::kForceIbatdis) : (ctrl1 & ~chg::kForceIbatdis);
-	return reg_write8(chg::kControl1, static_cast<uint8_t>(ctrl1 & ~chg::kWdRst));
+	err = reg_write8(chg::kControl1, static_cast<uint8_t>(ctrl1 & ~chg::kWdRst));
+	if (err == 0 && !on) {
+		discharge_on = false;
+	}
+	return err;
 }
 
 int read_cc(Rails &r)
@@ -486,6 +542,7 @@ void power_thread(void *, void *, void *)
 	unsigned vbat_started = 0, probe_started = 0, last_probe = 0;
 	bool vbat_busy = false, probing = false, pack_ok = false, probed = false;
 	int policy = 100;
+	uint8_t last_vbus_stat = 0xFF;
 	const char *reason = charger_present ? "starting" : "charger not present";
 
 	while (true) {
@@ -497,6 +554,12 @@ void power_thread(void *, void *, void *)
 				set_charging(false, "CC or status read failed");
 				input_limit_ma = -1;
 			} else {
+				/* Plug, unplug or a new D+/D- result: stop and let the slow
+				 * tick re-qualify the source. */
+				if (chg::vbus_stat(status1) != last_vbus_stat) {
+					set_charging(false, "input source changed");
+					last_vbus_stat = chg::vbus_stat(status1);
+				}
 				const power::CcAdvert cc = power::classify_cc_pin_mv(
 					power::active_cc_pin_mv(r.cc1_pin_mv, r.cc2_pin_mv));
 
@@ -504,8 +567,12 @@ void power_thread(void *, void *, void *)
 				 * port gets the pre-enumeration limit. */
 				policy = power::input_limit_ma(cc, chg::vbus_stat(status1), false);
 				if (enforce_input_limit(policy) != 0) {
-					set_charging(false, "input limit write failed");
+					set_charging(false, "input limit access failed");
 				}
+			}
+			/* Keep retrying a failed FORCE_IBATDIS clear. */
+			if (discharge_on && !probing && set_force_discharge(false) == 0) {
+				LOG_INF("Charger: forced discharge off");
 			}
 		}
 
@@ -526,13 +593,20 @@ void power_thread(void *, void *, void *)
 				adc_pin_mv(adc_vbat, pin) == 0 ? power::vbat_from_pin_mv(pin) : -1;
 
 			(void)gpio_pin_set_dt(&vbat_meas_en, 0);
-			(void)set_force_discharge(false);
-			pack_ok = mv >= 3000;
-			probed = true;
 			probing = false;
 			last_probe = tick;
-			LOG_INF("Charger: pack probe %d mV under 30 mA discharge: %s", mv,
-				pack_ok ? "pack present" : "NO PACK");
+			if (set_force_discharge(false) != 0) {
+				/* Not a valid probe until the discharge is off; the fast
+				 * tick retries the clear and the probe runs again. */
+				pack_ok = false;
+				probed = false;
+				LOG_WRN("Charger: pack probe cleanup failed; retrying");
+			} else {
+				pack_ok = mv >= 3000;
+				probed = true;
+				LOG_INF("Charger: pack probe %d mV under 30 mA discharge: %s", mv,
+					pack_ok ? "pack present" : "NO PACK");
+			}
 		}
 
 		/* ---- slow: charger state, gates, watchdog, log ---- */
@@ -544,15 +618,10 @@ void power_thread(void *, void *, void *)
 					LOG_WRN("Charger: I2C watchdog expired; re-applying "
 						"configuration");
 					(void)configure_charger();
-					(void)kick_watchdog();
+					(void)kick_watchdog(false);
 					input_limit_ma = -1;
 					reason = "watchdog expired; reconfigured";
 				} else {
-					/* Charger rewrote IINDPM: force a rewrite on the next fast
-					 * tick. */
-					if (chg::decode_iindpm(s.iindpm) != input_limit_ma) {
-						input_limit_ma = -1;
-					}
 					ok = charge_gates_pass(s, r, policy, reason);
 				}
 				log_charger_flags();
@@ -564,8 +633,9 @@ void power_thread(void *, void *, void *)
 			 * off by a missing pack, so re-inserting one is seen. */
 			if (ok && (!probed || tick - last_probe >= kProbeEvery)) {
 				set_charging(false, "pack presence probe");
-				if (vbat_busy) {
-					/* Divider sample in flight; probe on the next slow tick. */
+				if (vbat_busy || discharge_on) {
+					/* Divider sample in flight or a clear pending: probe on a
+					 * later slow tick. */
 				} else if (set_force_discharge(true) != 0 ||
 					   gpio_pin_set_dt(&vbat_meas_en, 1) != 0) {
 					(void)set_force_discharge(false);
@@ -575,8 +645,11 @@ void power_thread(void *, void *, void *)
 					probe_started = tick;
 				}
 			} else {
-				set_charging(ok && pack_ok,
-					     ok ? "no pack: BAT fell below 3 V in probe" : reason);
+				set_charging(ok && pack_ok && !discharge_on,
+					     !ok ? reason
+					     : discharge_on
+						     ? "forced discharge still on"
+						     : "no pack: BAT fell below 3 V in probe");
 				if (!vbat_busy) {
 					(void)gpio_pin_set_dt(&vbat_meas_en, 1);
 					vbat_busy = true;
@@ -590,7 +663,7 @@ void power_thread(void *, void *, void *)
 			}
 		}
 		if (tick % kWatchdogKickEvery == 0 && charger_present) {
-			(void)kick_watchdog();
+			(void)kick_watchdog(probing);
 		}
 		if (tick % kLogEvery == 0) {
 			log_state(s, r);
