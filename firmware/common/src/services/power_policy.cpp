@@ -79,6 +79,9 @@ void LoadShedPolicy::update(const Sample &s)
 			state_ = ShedState::kShed;
 			attempt_ = false;
 			retry_at_ = now;
+		} else if (state_ == ShedState::kNormal) {
+			/* The next reading qualifies again, as at boot. */
+			state_ = ShedState::kNoReading;
 		}
 		return;
 	}
@@ -101,8 +104,9 @@ void LoadShedPolicy::update(const Sample &s)
 	const bool battery_ok = battery_high_ && now - battery_high_since_ >= kBatteryOkMs;
 
 	if (state_ == ShedState::kNoReading) {
-		/* Below the loaded shed level even unloaded: start shed. */
-		capped_ = s.vbat_mv < kCapMv;
+		/* Below the loaded shed level even unloaded: start shed. A cap from
+		 * before an invalid-reading gap stays. */
+		capped_ = capped_ || s.vbat_mv < kCapMv;
 		if (s.vbat_mv < kShedMv) {
 			state_ = ShedState::kShed;
 			retry_at_ = now;

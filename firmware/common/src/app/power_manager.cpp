@@ -767,6 +767,15 @@ void power_thread(void *, void *, void *)
 		}
 	};
 
+	/* A USB state change is handled between the I2C-heavy steps too, not
+	 * only in the end-of-tick wait. A contended bus lock can still delay
+	 * the HIZ write itself. */
+	auto service_usb = [&]() {
+		if (k_sem_take(&usb_event, K_NO_WAIT) == 0 && charger_present) {
+			update_hiz();
+		}
+	};
+
 	while (true) {
 		if (atomic_cas(&stop_state, 1, 2)) {
 			/* power_enter_off() owns the hardware until it resumes this
@@ -780,6 +789,7 @@ void power_thread(void *, void *, void *)
 		atomic_set(&heartbeat, static_cast<atomic_val_t>(k_uptime_get_32()));
 		debounce_switch(sw_candidate, sw_stable);
 
+		service_usb();
 		/* ---- fast: CC policy within tSinkAdj ---- */
 		if (charger_present) {
 			uint8_t status1 = 0;
@@ -884,15 +894,17 @@ void power_thread(void *, void *, void *)
 		if (tick % kSlowEvery == 0 && !probing) {
 			bool ok = false;
 
+			service_usb();
 			if (charger_present && configure_pending) {
 				configure_pending = configure_charger() != 0;
 			}
-
+			service_usb();
 			if (charger_present && read_charger(s) == 0) {
+				service_usb();
 				if ((s.status0 & 0x01) != 0) {
 					LOG_WRN("Charger: I2C watchdog expired; re-applying "
 						"configuration");
-					(void)configure_charger();
+					configure_pending = configure_charger() != 0;
 					(void)kick_watchdog(false);
 					input_limit_ma = -1;
 					reason = "watchdog expired; reconfigured";
@@ -1161,7 +1173,8 @@ void abort_off()
 {
 	(void)gpio_pin_interrupt_configure_dt(&chg_int, GPIO_INT_DISABLE);
 	if (charger_present) {
-		(void)configure_charger();
+		/* A failure stays pending: the manager retries every 240 ms. */
+		configure_pending = configure_charger() != 0;
 	}
 	resume_manager();
 }

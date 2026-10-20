@@ -268,4 +268,25 @@ ZTEST(power_policy, test_invalid_readings_keep_failures)
 	zassert_equal(f.policy.failures(), 1, "an outage is not a successful attempt");
 }
 
+ZTEST(power_policy, test_invalid_normal_reading_requalifies)
+{
+	Feed f;
+
+	f.run(3900, false, 100);
+	zassert_equal(f.policy.ceiling(), 255);
+	f.invalid();
+	f.run(3390, false, 100);
+	zassert_equal(f.policy.state(), ShedState::kShed, "low first reading after a gap sheds");
+	zassert_equal(f.policy.ceiling(), 0);
+
+	Feed g;
+
+	g.run(3900, false, 100);
+	g.run(3540, true, 100);
+	zassert_equal(g.policy.ceiling(), kCapLevel);
+	g.invalid();
+	g.run(3600, false, 100);
+	zassert_equal(g.policy.ceiling(), kCapLevel, "the cap survives the gap");
+}
+
 ZTEST_SUITE(power_policy, NULL, NULL, NULL, NULL, NULL);
