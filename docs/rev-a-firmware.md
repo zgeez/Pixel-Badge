@@ -158,9 +158,13 @@ It samples CC every 20 ms and applies the documented input-limit policy
 within tSinkAdj: 1.5 A for a 1.5/3.0 A CC advertisement or a BC1.2 DCP/HVDCP
 port, otherwise 100 mA. This image has no USB stack and never enumerates, so a
 CDP port gets 100 mA (an unenumerated CDP reverts to SDP after 2.5 s,
-SLUSEG2D §8.3.3.3). A failed CC, status or input-limit access drops CHG_EN at
-once. It sets `TS_TH4_TH5_TH6 = 011` and keeps the charger I2C watchdog
-alive. Charging stays off unless the image is built with
+SLUSEG2D §8.3.3.3). The input-limit register is read back on every 20 ms
+tick and rewritten if it differs, because the charger resets it on adapter
+removal and rewrites it on each plug-in; a change of input source also drops
+CHG_EN until the gates pass again. A failed CC, status, input-limit or charger
+telemetry read drops CHG_EN at once, and the log reports no telemetry rather
+than stale values. It sets `TS_TH4_TH5_TH6 = 011` and keeps the charger I2C
+watchdog alive. Charging stays off unless the image is built with
 `diagnostics-charge.conf`; even then CHG_EN goes high only while:
 - VBUS is present;
 - the charger reports no fault and TS is normal;
@@ -172,9 +176,12 @@ alive. Charging stays off unless the image is built with
 A charger regulates BAT even with no pack, so VBAT in range does not prove a
 pack is there. The probe pauses charging, turns on the charger's ~30 mA forced
 discharge (`FORCE_IBATDIS`) for 60 ms, and requires the divider to still read
-at least 3.0 V. It runs before the first enable, every 30 s while charging,
-and every 30 s while a missing pack holds charging off. Its behaviour with and
-without a pack is confirmed at bring-up before the first unattended charge.
+at least 3.0 V. If clearing the forced discharge fails, the probe does not
+count: the clear is retried every 20 ms, every watchdog kick also clears it,
+and charging stays off until it is confirmed off. It runs before the first
+enable, every 30 s while charging, and every 30 s while a missing pack holds
+charging off. Its behaviour with and without a pack is confirmed at bring-up
+before the first unattended charge.
 
 Register fields come from SLUSEG2D §8.6 and are unit-tested
 (`firmware/tests/power`).
