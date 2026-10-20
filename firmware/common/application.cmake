@@ -8,6 +8,8 @@ target_sources(app PRIVATE
     ${BADGE_MAIN_SOURCE}
 	${BADGE_COMMON_DIR}/src/app/bringup.cpp
 	${BADGE_COMMON_DIR}/src/app/power_diag.cpp
+	${BADGE_COMMON_DIR}/src/app/power_manager.cpp
+	${BADGE_COMMON_DIR}/src/services/power_policy.cpp
 	${BADGE_COMMON_DIR}/src/app/matrix_diag.cpp
 	${BADGE_COMMON_DIR}/src/services/power_names.cpp
 	${BADGE_COMMON_DIR}/src/services/test_pattern.cpp
@@ -19,6 +21,8 @@ target_sources(app PRIVATE
 )
 add_subdirectory(${BADGE_COMMON_DIR}/lib/qrcodegen ${CMAKE_CURRENT_BINARY_DIR}/qrcodegen)
 target_link_libraries(app PRIVATE badge_qrcodegen)
+target_sources_ifdef(CONFIG_APP_POWER_STATES app PRIVATE ${BADGE_COMMON_DIR}/src/app/charging_only.cpp)
+target_sources_ifdef(CONFIG_APP_USB_DEVICE app PRIVATE ${BADGE_COMMON_DIR}/src/platform/usb_device.c)
 target_sources_ifdef(CONFIG_APP_NFC app PRIVATE ${BADGE_COMMON_DIR}/src/app/nfc.cpp)
 target_sources_ifdef(CONFIG_APP_NFC app PRIVATE ${BADGE_COMMON_DIR}/src/services/url_update.cpp)
 target_sources_ifdef(CONFIG_APP_NFC app PRIVATE ${BADGE_COMMON_DIR}/src/services/nfc_session.cpp)

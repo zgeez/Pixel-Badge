@@ -34,6 +34,9 @@ enum Reg : uint8_t {
 	kFlag0 = 0x20,
 	kFlag1 = 0x21,
 	kFaultFlag0 = 0x22,
+	kMask0 = 0x23,      /* ADC_DONE, TREG, VSYS, IINDPM, VINDPM, SAFETY_TMR, WD */
+	kMask1 = 0x24,      /* CHG (bit 3), VBUS (bit 0) */
+	kFaultMask0 = 0x25, /* VBUS/BAT/SYS/OTG fault, TSHUT, TS */
 	kAdcControl = 0x26,
 	kAdcDisable0 = 0x27,
 	kIbusAdc = 0x28,
@@ -92,6 +95,13 @@ constexpr uint8_t kEnChg = 1U << 5;
 constexpr uint8_t kEnHiz = 1U << 4;
 constexpr uint8_t kWdRst = 1U << 2;
 constexpr uint8_t kWatchdogMask = 0x03; /* 00 off, 01 50 s (reset), 10 100 s, 11 200 s */
+constexpr uint8_t kWatchdog50s = 0x01;
+
+/* REG0x23-0x25 interrupt masks (1 = no /INT pulse; flags still latch). All
+ * sources except VBUS, so a VBUS change is the only /INT event. */
+constexpr uint8_t kMask0All = 0x7F;
+constexpr uint8_t kMask1AllButVbus = 1U << 3;
+constexpr uint8_t kFaultMask0All = 0xF9;
 
 /* REG0x1B NTC Control 1: TS_TH4_TH5_TH6 occupies bits 4:2. */
 constexpr uint8_t kTh456Mask = 0x07U << 2;

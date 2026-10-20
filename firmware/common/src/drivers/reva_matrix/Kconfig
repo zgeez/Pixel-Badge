@@ -19,3 +19,11 @@ config REVA_MATRIX_OUTPUT
 	  Off in the initial bring-up image: LED_EN/ARM remain low and BLANK high.
 	  Enable only for current-limited matrix bench bring-up. This is not a
 	  substitute for charger, battery, rail and scan-stall acceptance.
+
+config REVA_MATRIX_POWER_CAP
+	bool "Hold the LED rail off until the power policy sets a ceiling"
+	depends on REVA_MATRIX
+	help
+	  The brightness ceiling starts at 0 (LED rail off) instead of 255 and
+	  is raised only by badge_display_set_power_cap() from the battery
+	  load-shedding policy.

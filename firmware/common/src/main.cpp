@@ -13,6 +13,12 @@
 #include "badge/qr_screening.hpp"
 #include "badge/prototype.hpp"
 #include "badge/audio_screening.hpp"
+#if defined(CONFIG_APP_POWER_MANAGER)
+#include "badge/power_manager.hpp"
+#endif
+#if defined(CONFIG_APP_POWER_STATES)
+#include "badge/charging_only.hpp"
+#endif
 
 LOG_MODULE_REGISTER(app, CONFIG_APP_LOG_LEVEL);
 
@@ -57,6 +63,18 @@ K_THREAD_DEFINE(bringup_tid, 3072, bringup_thread, NULL, NULL, NULL, 8, 0, 0);
 int main(void)
 {
 	LOG_INF("smart-led-badge starting on %s", CONFIG_BOARD_TARGET);
+
+#if defined(CONFIG_APP_POWER_MANAGER) && !defined(CONFIG_APP_BRINGUP_CHECKS)
+	/* Bring-up images start it from power_diag_check() instead. */
+	(void)badge::power_manager_start(false);
+#endif
+#if defined(CONFIG_APP_POWER_STATES)
+	/* Switch OFF while running means USB holds the logic rail up. An
+	 * unreadable switch counts as on. */
+	if (badge::power_switch_state(500) == 0) {
+		badge::run_charging_only();
+	}
+#endif
 
 #if defined(CONFIG_APP_PROTOTYPE)
 	badge::run_prototype();

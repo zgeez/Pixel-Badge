@@ -84,19 +84,89 @@ config APP_BRINGUP_CHECKS
 	help
 	  Runs outside the normal badge loop. Off in the default prototype.
 
-config APP_BRINGUP_CHARGE
-	bool "Bring-up: allow battery charging when every gate passes"
-	depends on APP_BRINGUP_CHECKS
+config APP_POWER_MANAGER
+	bool "Rev A charger and battery manager"
+	default y if BOARD_PIXEL_BADGE_REVA
+	depends on ADC && I2C && GPIO
 	help
-	  Lets the Rev A power diagnostics drive CHG_EN high, at
-	  APP_BRINGUP_ICHG_MA, only while VBUS is present, the charger reports
-	  no fault, TS is normal, the TS thresholds and ICHG read back as set,
-	  VREG is 4200 mV and both VBAT readings agree on a pack in 3.0-4.25 V.
-	  Off by default: the first charge is a deliberate, watched step.
+	  One thread for the BQ25620 and battery sensing (docs/power.md):
+	  CC/BC1.2 input-current policy enforced every 20 ms, charger
+	  configuration and I2C watchdog, gated charging, VBAT sampling for
+	  load shedding and the power-switch reading. The product image and
+	  the bring-up diagnostics share it.
 
-config APP_BRINGUP_ICHG_MA
-	int "Bring-up charge current (mA)"
-	depends on APP_BRINGUP_CHARGE
+config APP_USB_DEVICE
+	bool "Rev A USB device for the input-current policy"
+	default y if BOARD_PIXEL_BADGE_REVA
+	depends on APP_POWER_MANAGER && USB_DEVICE_STACK_NEXT && USBD_CDC_ACM_CLASS
+	help
+	  Enumerates with a 500 mA configuration and an inert CDC ACM
+	  interface. A host that configures the badge allows the 500 mA SDP
+	  input limit; a suspended host puts the charger in HIZ so VBUS
+	  carries suspend current (battery present). The D+ pull-up waits for
+	  the charger's BC1.2 detection.
+
+config APP_USB_VID
+	hex "USB vendor ID"
+	default 0x2fe3
+	depends on APP_USB_DEVICE
+	help
+	  0x2FE3 is the Zephyr project's ID for samples and testing, not for
+	  products. Kept for this personal, non-distributed badge; set an
+	  assigned VID/PID before distributing firmware or boards.
+
+config APP_USB_PID
+	hex "USB product ID"
+	default 0x0001
+	depends on APP_USB_DEVICE
+
+config APP_USB_MANUFACTURER
+	string "USB manufacturer string"
+	default "Smart LED Badge"
+	depends on APP_USB_DEVICE
+
+config APP_USB_PRODUCT
+	string "USB product string"
+	default "Smart LED Badge Rev A"
+	depends on APP_USB_DEVICE
+
+config APP_LOAD_SHED
+	bool "Battery load shedding for the matrix"
+	default y
+	depends on APP_POWER_MANAGER && REVA_MATRIX
+	select REVA_MATRIX_POWER_CAP
+	help
+	  Caps matrix brightness and turns the LED rail off on low battery,
+	  with controlled re-enable (power_policy.hpp). The LED rail stays off
+	  until the first valid VBAT reading. Thresholds are PROPOSED until
+	  pack characterization.
+
+config APP_POWER_STATES
+	bool "Charging-only and low-battery off states"
+	default y if APP_PROTOTYPE
+	depends on APP_POWER_MANAGER
+	help
+	  Switch OFF with USB present boots a charging-only state (no matrix,
+	  microphone, IMU, NFC I2C side or Bluetooth); switch changes restart
+	  between states. On battery, a low unloaded VBAT enters System OFF,
+	  woken by a USB attach (charger interrupt) or a switch cycle. System
+	  OFF needs CONFIG_POWEROFF (set in the Rev A prj.conf; selecting it
+	  here forms a Kconfig dependency loop through HWINFO and I2C).
+
+config APP_CHARGING
+	bool "Allow battery charging when every gate passes"
+	depends on APP_POWER_MANAGER
+	help
+	  Lets the power manager drive CHG_EN high, at APP_CHARGE_ICHG_MA,
+	  only while VBUS is present, the charger reports no fault, TS is
+	  normal, the TS thresholds, ICHG and input limit read back as set,
+	  VREG is 4200 mV, both VBAT readings agree on a pack in 3.0-4.25 V
+	  and a pack-presence probe less than 30 s old passed. Off by default
+	  until the charge and thermal tests in validation.md pass.
+
+config APP_CHARGE_ICHG_MA
+	int "Charge current (mA)"
+	depends on APP_CHARGING
 	default 480
 	range 80 1000
 	help

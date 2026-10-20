@@ -31,9 +31,9 @@ struct matrix_data {
 	struct k_sem pulse;
 	struct k_thread thread;
 	uint8_t fb[2][1024];
-	uint8_t front, brightness, blank_channel;
+	uint8_t front, brightness, blank_channel, power_cap;
 	enum display_pixel_format format;
-	bool blanked, pending, stale;
+	bool blanked, pending, stale, rail_on;
 	int fault;
 	uint32_t epoch;
 	atomic_t scans;
@@ -60,6 +60,12 @@ static void off(const struct matrix_config *cfg, struct matrix_data *data)
 	blank(cfg, data);
 	(void)gpio_pin_set_dt(&cfg->arm, 0);
 	(void)gpio_pin_set_dt(&cfg->enable, 0);
+	data->rail_on = false;
+}
+/* Blanked by the application or held off by the power policy. */
+static bool dark(const struct matrix_data *data)
+{
+	return data->blanked || data->power_cap == 0;
 }
 static void slot_isr(const void *arg)
 {
@@ -88,7 +94,7 @@ static void worker(void *pointer, void *unused1, void *unused2)
 			powered = false;
 			row = plane = 0;
 		}
-		if (data->blanked) {
+		if (dark(data)) {
 			off(cfg, data);
 			powered = false;
 			row = plane = 0;
@@ -103,6 +109,7 @@ static void worker(void *pointer, void *unused1, void *unused2)
 				data->fault = rc;
 				data->blanked = true;
 			}
+			data->rail_on = rc == 0;
 			k_mutex_unlock(&data->mutex);
 			k_sleep(K_MSEC(5));
 			powered = rc == 0;
@@ -126,7 +133,7 @@ static void worker(void *pointer, void *unused1, void *unused2)
 			k_mutex_unlock(&data->mutex);
 			continue;
 		}
-		if (rc == 0 && !data->blanked) {
+		if (rc == 0 && !dark(data)) {
 			rc = gpio_pin_set_dt(&cfg->arm, 1);
 			if (rc == 0) {
 				rc = gpio_pin_set_dt(&cfg->lat, 1);
@@ -141,9 +148,10 @@ static void worker(void *pointer, void *unused1, void *unused2)
 				rc = safe < 0 ? safe : -EIO;
 			}
 			if (rc == 0) {
-				uint32_t on = badge_gray_on_ticks(plane, data->brightness);
+				uint32_t on = badge_gray_on_ticks(
+					plane, MIN(data->brightness, data->power_cap));
 				/* Reserve 2us setup and 2us blank after the pulse. */
-				uint32_t period = MAX(256U, 64U + on);
+				uint32_t period = badge_reva_slot_ticks(on);
 				blank(cfg, data);
 				k_sem_reset(&data->pulse);
 				nrf_timer_task_trigger(cfg->timer, NRF_TIMER_TASK_CLEAR);
@@ -164,7 +172,7 @@ static void worker(void *pointer, void *unused1, void *unused2)
 			data->blanked = true;
 			off(cfg, data);
 		}
-		bool active = !data->blanked;
+		bool active = !dark(data);
 		k_mutex_unlock(&data->mutex);
 		if (!active) {
 			continue;
@@ -252,7 +260,7 @@ static int write_frame(const struct device *dev, uint16_t x, uint16_t y,
 	}
 	data->stale = false;
 	if (!desc->frame_incomplete) {
-		if (data->blanked) {
+		if (dark(data)) {
 			data->front = back;
 			data->stale = true;
 		} else {
@@ -301,6 +309,7 @@ int badge_display_wait_visible(const struct device *dev, unsigned timeout_ms)
 	while (k_uptime_get() < deadline) {
 		k_mutex_lock(&data->mutex, K_FOREVER);
 		bool pending = data->pending, blanked = data->blanked;
+		bool held = data->power_cap == 0;
 		int fault = data->fault;
 		k_mutex_unlock(&data->mutex);
 		if (fault) {
@@ -309,6 +318,9 @@ int badge_display_wait_visible(const struct device *dev, unsigned timeout_ms)
 		if (blanked) {
 			return -EIO;
 		}
+		if (held) {
+			return -EAGAIN;
+		}
 		/* Two completed scans guarantee a full scan after any queued swap. */
 		if (!pending && ((uint32_t)atomic_get(&data->scans) - (uint32_t)previous) >= 2) {
 			return 0;
@@ -316,6 +328,27 @@ int badge_display_wait_visible(const struct device *dev, unsigned timeout_ms)
 		k_msleep(1);
 	}
 	return -ETIMEDOUT;
+}
+void badge_display_set_power_cap(const struct device *dev, uint8_t ceiling)
+{
+	struct matrix_data *data = dev->data;
+	k_mutex_lock(&data->mutex, K_FOREVER);
+	data->power_cap = ceiling;
+	/* As in blanking_on: a swap cannot complete while scanning is stopped. */
+	if (ceiling == 0 && data->pending) {
+		data->front ^= 1;
+		data->pending = false;
+		data->stale = true;
+	}
+	k_mutex_unlock(&data->mutex);
+}
+bool badge_display_rail_on(const struct device *dev)
+{
+	struct matrix_data *data = dev->data;
+	k_mutex_lock(&data->mutex, K_FOREVER);
+	bool on = data->rail_on;
+	k_mutex_unlock(&data->mutex);
+	return on;
 }
 static DEVICE_API(display, matrix_api) = {.blanking_on = blanking_on,
 					  .blanking_off = blanking_off,
@@ -332,6 +365,7 @@ static int initialize(const struct device *dev)
 	data->blanked = true;
 	data->stale = true;
 	data->brightness = 128;
+	data->power_cap = IS_ENABLED(CONFIG_REVA_MATRIX_POWER_CAP) ? 0 : 255;
 	data->format = PIXEL_FORMAT_MONO01;
 	if (!device_is_ready(cfg->spi)) {
 		return -ENODEV;

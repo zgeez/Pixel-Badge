@@ -59,15 +59,25 @@ constexpr int active_cc_pin_mv(int cc1_pin_mv, int cc2_pin_mv)
 	return cc1_pin_mv > cc2_pin_mv ? cc1_pin_mv : cc2_pin_mv;
 }
 
-/* Input current limit policy (docs/power.md): 1.5 A for a 1.5/3.0 A CC
- * advertisement or a BC1.2 DCP/HVDCP port, otherwise 100 mA. A CDP port
- * counts only once the device has enumerated: an unenumerated CDP reverts to
- * SDP after 2.5 s (SLUSEG2D 8.3.3.3). vbus_stat is the BQ25620 VBUS_STAT field. */
-constexpr int input_limit_ma(CcAdvert cc, uint8_t vbus_stat, bool enumerated)
-{
-	const bool bc12_high = vbus_stat == 3 || vbus_stat == 6 || (vbus_stat == 2 && enumerated);
+/* What the USB host has done with the badge (usb_device.h). */
+enum class UsbHost : uint8_t {
+	kNotConfigured,
+	kConfigured, /* host selected the 500 mA configuration */
+	kSuspended,  /* host suspended the bus: the charger goes to HIZ instead */
+};
 
-	return (cc == CcAdvert::kHigh || bc12_high) ? 1500 : 100;
+/* Input current limit policy (docs/power.md): 1.5 A for a 1.5/3.0 A CC
+ * advertisement or a BC1.2 DCP/HVDCP port; 500 mA once a host has configured
+ * the badge; otherwise 100 mA. A CDP is treated as an SDP: it allows 1.5 A
+ * only if the device enumerated within 2.5 s of attach (SLUSEG2D 8.3.3.3),
+ * which the badge cannot guarantee when the attach also boots it. vbus_stat
+ * is the BQ25620 VBUS_STAT field. */
+constexpr int input_limit_ma(CcAdvert cc, uint8_t vbus_stat, UsbHost host)
+{
+	if (cc == CcAdvert::kHigh || vbus_stat == 3 || vbus_stat == 6) {
+		return 1500;
+	}
+	return host == UsbHost::kConfigured ? 500 : 100;
 }
 
 const char *cc_advert_name(CcAdvert cc);
