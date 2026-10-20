@@ -19,11 +19,30 @@ Board: ____  Serial/batch: ____  Firmware commit: ____  Date: ____
 ## Power
 
 - [ ] First power from current-limited bench supply
+- [ ] Rails in order, with no battery and the LED rail off: SYS (TP201), then
+      3V3_REG and +3V3 (TP203/TP204); VLED (TP206) stays at 0 V
 - [ ] Each rail voltage
 - [ ] Idle current
+- [ ] Flash the diagnostics image (`firmware/rev_a_nrf52840/README.md`). Its
+      RTT log reports reset cause, the 32.768 kHz clock source, the SAADC VBAT,
+      VLED and CC readings, the charger's identity, faults, TS zone, D+/D-
+      result and ADC readings, and button/power-switch edges. The status LED
+      blinks while it runs. Charging stays off in this image
+- [ ] Matrix dark in reset and boot: LED_EN low and BLANK high, VLED about
+      0 V in the diagnostics log, no LED lit
 - [ ] Charger behavior: no charging until firmware drives CHG_EN high, in MCU
       reset, or with the logic rail off; reset TS
       thresholds stop charging below about 0 °C and above 45 °C
+- [ ] First charge, watched: diagnostics image plus `diagnostics-charge.conf`
+      (ICHG 480 mA), a meter-checked pack, and a USB-C source that advertises
+      1.5 A or a BC1.2 charger (otherwise the input stays at 100 mA). The log
+      must show every gate passing before CHG_EN goes high. Confirm the charge
+      current on an inline USB-C power meter and the charger IBAT reading; feel
+      or IR-check the charger, inductor and pack for the first 15 minutes; stop
+      if anything gets hot. Scope REGN, BTST-SW and SW before any charge
+      current above about 500 mA
+- [ ] USB-C plug seating with the cables you will use (the receptacle face sits
+      0.55 mm inside the board edge)
 - [ ] CC1/CC2 each have separate 5.1 kΩ Rd; C-to-C VBUS/charging attachment in
       both orientations, including switch-off and battery-absent states
 - [ ] USB-C VBUS reaches charger input and module VBUS pin 27 through the
@@ -60,6 +79,15 @@ Board: ____  Serial/batch: ____  Firmware commit: ____  Date: ____
 ## LED matrix
 
 - [ ] All-off state
+- [ ] LED-driver chain, outputs off (diagnostics image): MTX_SAFE_SENSE reads
+      1 and the TLC chain readback passes at one offset; check the HC595 chain
+      (SER_V/SRCLK_V/RCLK_V) on a logic analyzer
+- [ ] Staged matrix bench (`matrix-stepper.conf`, current-limited supply):
+      rows scanning with no LED lit, then one LED at minimum brightness, then
+      walks, patterns and all-on at rising brightness; record supply current
+      and VLED at each all-on step
+- [ ] Stalled-scan safety: halt the MCU in the debugger mid-scan; the
+      matrix must go dark within about 1-1.5 ms (monostable)
 - [ ] Single-pixel and row/column test patterns
 - [ ] Brightness control
 - [ ] Refresh timing (see validation.md), including during BLE activity: the

@@ -32,7 +32,7 @@ for Rd ±10%; tSinkAdj 60 ms; BC1.2 detection by the charger on D+/D−):
 
 The BQ25620 runs BC1.2 detection itself at plug-in and sets 500 mA for an SDP
 or unknown adapter. Its CE input is pulled up to SYS (R313) and pulled low only
-through Q303 while the MCU drives CHG_EN (P0.29) high; R316 holds CHG_EN low
+through Q303 while the MCU drives CHG_EN (P0.31) high; R316 holds CHG_EN low
 otherwise. The charger therefore does not charge until firmware has configured
 it (IINDPM 100 mA, detection result read, temperature thresholds set, then
 CHG_EN high), and it stops charging whenever the MCU is in reset, unpowered or
@@ -381,7 +381,7 @@ Schematic-freeze results (2026-10-07; calculations, not measurements):
 - **Switch and divider.** AO3401A high-side switch Q201 between the pack and the
   divider, its gate pulled to VBAT by R218 47 kΩ (off by default) and pulled
   down by AO3400A Q202 from VBAT_MEAS_EN (R219 100 kΩ pull-down); divider
-  R220/R221 47 kΩ / 47 kΩ 1 %, C208 100 nF at the ADC node (AIN0). At the
+  R220/R221 47 kΩ / 47 kΩ 1 %, C208 100 nF at the ADC node (AIN6). At the
   pack's 4.28 V overcharge limit the node is 2.14 V, inside VSS–VDD in normal
   operation, charging and startup; with the MCU off the switch is off and R221
   holds the node at ground.
