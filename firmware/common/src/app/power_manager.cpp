@@ -82,6 +82,7 @@ constexpr unsigned kProbeEvery = 1500;       /* 30 s between pack-presence probe
 constexpr unsigned kDiscoverEvery = 50;      /* 1 s between charger discovery retries */
 constexpr unsigned kSwitchStableTicks = 5;   /* 100 ms power-switch debounce */
 constexpr uint32_t kHealthyMs = 1000;        /* thread heartbeat age */
+constexpr uint32_t kAdcGraceMs = 5000;       /* SAADC down this long: unhealthy */
 constexpr int kVbatSettleMs = 25;            /* blocking read at start-up only */
 constexpr int kHizMinMv = 3400;     /* pack needed to enter HIZ while USB is suspended ... */
 constexpr int kHizExitMv = 3300;    /* ... and to stay in it (hysteresis) */
@@ -114,6 +115,8 @@ const struct device *const display = DEVICE_DT_GET(DT_CHOSEN(zephyr_display));
 #endif
 
 bool adc_calibrated;
+bool adc_ready;                           /* all four SAADC channels set up; retried every 1 s */
+atomic_t adc_down_since = ATOMIC_INIT(0); /* uptime ms of the first failure, 0 = ready */
 bool charger_present;
 bool configure_pending; /* configure_charger() failed: retried every 240 ms */
 bool charging;
@@ -214,6 +217,9 @@ int adc_setup()
 
 int adc_pin_mv(const struct adc_dt_spec &spec, int &mv)
 {
+	if (!adc_ready) {
+		return -ENODEV;
+	}
 	int16_t sample = 0;
 	struct adc_sequence seq = {};
 
@@ -812,19 +818,28 @@ void power_thread(void *, void *, void *)
 		if (charger_present) {
 			uint8_t status1 = 0;
 
-			if (read_cc(r) != 0 || reg_read8(chg::kStatus1, status1) != 0) {
-				set_charging(false, "CC or status read failed");
+			const bool cc_ok = read_cc(r) == 0;
+
+			if (reg_read8(chg::kStatus1, status1) != 0) {
+				set_charging(false, "status read failed");
 				input_limit_ma = -1;
 				last_vbus_stat = 0xFF; /* unknown, not the last value */
 			} else {
+				if (!cc_ok) {
+					set_charging(false, "CC read failed");
+				}
 				/* Plug, unplug or a new D+/D- result: stop and let the slow
 				 * tick re-qualify the source. */
 				if (chg::vbus_stat(status1) != last_vbus_stat) {
 					set_charging(false, "input source changed");
 					last_vbus_stat = chg::vbus_stat(status1);
 				}
-				const power::CcAdvert cc = power::classify_cc_pin_mv(
-					power::active_cc_pin_mv(r.cc1_pin_mv, r.cc2_pin_mv));
+				/* Unknown CC counts as no advertisement: the limit is still
+				 * enforced, from BC1.2 and USB configuration only. */
+				const power::CcAdvert cc =
+					cc_ok ? power::classify_cc_pin_mv(power::active_cc_pin_mv(
+							r.cc1_pin_mv, r.cc2_pin_mv))
+					      : power::CcAdvert::kNone;
 
 				/* 500 mA only once a host has configured the badge; a
 				 * CDP counts as an SDP. */
@@ -908,6 +923,11 @@ void power_thread(void *, void *, void *)
 
 		if (!charger_present && tick % kDiscoverEvery == 0) {
 			(void)discover_charger();
+		}
+		if (!adc_ready && tick % kDiscoverEvery == 0 && adc_setup() == 0) {
+			adc_ready = true;
+			atomic_clear(&adc_down_since);
+			LOG_INF("Power: SAADC ready");
 		}
 		/* ---- slow: charger state, gates, watchdog, log ---- */
 		if (tick % kSlowEvery == 0 && !probing) {
@@ -1044,8 +1064,11 @@ int power_manager_start(bool verbose_logs)
 		LOG_ERR("Power: FAIL, GPIO setup; the LED rail stays off");
 		return 1;
 	}
-	if (adc_setup() != 0) {
-		LOG_ERR("Power: FAIL, SAADC setup");
+	adc_ready = adc_setup() == 0;
+	if (!adc_ready) {
+		/* Retried every 1 s; unhealthy after kAdcGraceMs (no VBAT, no CC). */
+		LOG_ERR("Power: FAIL, SAADC setup; retrying");
+		atomic_set(&adc_down_since, static_cast<atomic_val_t>(k_uptime_get_32() | 1U));
 		failed++;
 	}
 
@@ -1083,6 +1106,13 @@ bool power_manager_healthy()
 {
 	/* Never started (GPIO setup failed): unhealthy, so the application holds
 	 * the display and stops the watchdog feed instead of running unmanaged. */
+	/* An SAADC that stays down leaves no VBAT (no low-battery off) and no CC
+	 * reading: unhealthy, so the watchdog resets and setup runs again. */
+	const uint32_t adc_down = static_cast<uint32_t>(atomic_get(&adc_down_since));
+
+	if (adc_down != 0 && k_uptime_get_32() - adc_down >= kAdcGraceMs) {
+		return false;
+	}
 	return started &&
 	       (atomic_get(&stop_state) != 0 ||
 		k_uptime_get_32() - static_cast<uint32_t>(atomic_get(&heartbeat)) < kHealthyMs);
