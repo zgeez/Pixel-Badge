@@ -47,7 +47,7 @@ Rev A scope:
 | Firmware | nRF Connect SDK v3.4.1 / Zephyr RTOS, C++17 |
 | Tests | Ztest, Twister (`native_sim`) |
 | Hardware | KiCad 10.0.6, 4-layer PCB (≤ 118 × 76 mm), JLCPCB assembly (provisional) |
-| CI | GitHub Actions with the nRF Connect SDK toolchain container; pull requests run it once labelled `ci`, and only for the changed parts of the tree |
+| CI | GitHub Actions with the nRF Connect SDK toolchain container; pull requests run it once labelled `ci` (the `ci-label` check fails until then), and only for the changed parts of the tree |
 
 ## Repository layout
 
