@@ -121,6 +121,7 @@ bool adc_ready; /* all four SAADC channels set up; retried every 1 s */
 atomic_t last_vbat_ok;
 atomic_t last_cc_ok;
 bool charger_present;
+bool vled_fault;        /* VLED present with LED_EN low at start: matrix held for this boot */
 bool configure_pending; /* configure_charger() failed: retried every 240 ms */
 bool charging;
 int input_limit_ma = -1;
@@ -623,7 +624,8 @@ void apply_policy(const power::Sample &sample)
 	const bool was_low = policy.low_power();
 
 	policy.update(sample);
-	const uint8_t ceiling = policy.ceiling();
+	/* A rail that cannot be switched off cannot be shed: keep the matrix off. */
+	const uint8_t ceiling = vled_fault ? 0 : policy.ceiling();
 
 #if defined(CONFIG_APP_LOAD_SHED)
 	badge_display_set_power_cap(display, ceiling);
@@ -764,6 +766,7 @@ void power_thread(void *, void *, void *)
 	unsigned sw_stable = 0;
 	bool hiz_warned = false;
 	bool hiz_pack_latched = false; /* left HIZ on a low pack: stay out until resume */
+	int hiz_vbat_mv = -1;          /* last valid VBAT sample, -1 after an invalid one */
 	bool hiz_want = false;
 	bool cc_fresh = false; /* last fast-tick CC read succeeded */
 	const char *reason = charger_present ? "starting" : "charger not present";
@@ -780,7 +783,7 @@ void power_thread(void *, void *, void *)
 		 * VBUS the pack rebounds above the entry level, and re-entering would
 		 * toggle HIZ and keep loading the suspended host. */
 		const bool pack = !hiz_pack_latched &&
-				  r.vbat_mv >= (hiz_on ? kHizExitMv : kHizMinMv) &&
+				  hiz_vbat_mv >= (hiz_on ? kHizExitMv : kHizMinMv) &&
 				  !(probed && !pack_ok);
 		const bool want = charger_present && suspended && pack;
 
@@ -909,6 +912,7 @@ void power_thread(void *, void *, void *)
 			vbat_busy = false;
 			r.vbat_mv = read_ok ? power::vbat_from_pin_mv(pin) : -1;
 			sample.valid = read_ok && r.vbat_mv >= 0 && r.vbat_mv <= kVbatMaxMv;
+			hiz_vbat_mv = sample.valid ? r.vbat_mv : -1;
 			if (sample.valid) {
 				atomic_set(&last_vbat_ok,
 					   static_cast<atomic_val_t>(k_uptime_get_32()));
@@ -993,7 +997,8 @@ void power_thread(void *, void *, void *)
 					ok = false;
 					reason = "CC read failed";
 				}
-				if (hiz_on) {
+				if (hiz_on || hiz_want) {
+					/* Also while a wanted HIZ entry is not confirmed. */
 					ok = false;
 					reason = hiz_want ? "USB host suspended (HIZ)"
 							  : "HIZ clear not confirmed";
@@ -1131,7 +1136,8 @@ int power_manager_start(bool verbose_logs)
 		LOG_INF("Power: VLED %d mV (LED rail is off at start: expect ~0)", r.vled_mv);
 	}
 	if (r.vled_mv > 500) {
-		LOG_ERR("Power: FAIL, VLED present while LED_EN is low");
+		LOG_ERR("Power: FAIL, VLED present while LED_EN is low; matrix held off");
+		vled_fault = true;
 		failed++;
 	}
 	LOG_INF("Power manager started: %d failed checks; charging %s", failed,
