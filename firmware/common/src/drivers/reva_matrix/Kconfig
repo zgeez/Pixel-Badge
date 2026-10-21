@@ -20,6 +20,15 @@ config REVA_MATRIX_OUTPUT
 	  Enable only for current-limited matrix bench bring-up. This is not a
 	  substitute for charger, battery, rail and scan-stall acceptance.
 
+config REVA_MATRIX_STALL_TEST
+	bool "Scan-stall test for the matrix bench"
+	depends on REVA_MATRIX_OUTPUT
+	help
+	  Adds badge_display_stall_test(): one LED is lit after a single LAT
+	  pulse with no further pulses, so the external one-shot must blank it.
+	  The driver times MTX_SAFE_SENSE and a timer compare re-blanks through
+	  PPI at a hard limit. Matrix bench only.
+
 config REVA_MATRIX_POWER_CAP
 	bool "Hold the LED rail off until the power policy sets a ceiling"
 	depends on REVA_MATRIX
