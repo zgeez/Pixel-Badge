@@ -32,8 +32,16 @@ counter without marking the physical display ready.
 Display-dependent writes, new pairing and capture remain unavailable; a blank
 matrix is never acknowledged as a physically visible frame. Actual driver
 initialization errors still follow bounded recovery and restart policy.
-Charging remains disabled. Battery sensing, charger/USB policy, load shedding,
-complete self-test and low-power transitions still need implementation.
+The power manager runs in every Rev A image: USB-C/BC1.2 input-current policy,
+battery sensing and matrix load shedding, and in the product image the
+charging-only state (switch OFF with USB) and low-battery System OFF. A USB
+device enumerates for the 500 mA host-port limit and uses HIZ while the host
+is suspended. It keeps the Zephyr test VID/PID for this personal badge;
+distributed firmware or boards need an assigned ID.
+Charging stays disabled until the image is built with `CONFIG_APP_CHARGING`;
+a complete self-test is not implemented. Thresholds are PROPOSED until
+bring-up measurements
+([rev-a-firmware.md](../../docs/rev-a-firmware.md#power-manager)).
 
 NFC VCC starts low and turns on on first transport preparation, with a 10 ms
 bring-up guard. It remains on while the service owns FD/session state; dynamic

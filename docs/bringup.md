@@ -40,9 +40,8 @@ Board: ____  Serial/batch: ____  Firmware commit: ____  Date: ____
       drop within the next 30 s probe
 - [ ] First charge, watched: diagnostics image plus `diagnostics-charge.conf`
       (ICHG 480 mA), a meter-checked pack, and a USB-C source that advertises
-      1.5 A or a BC1.2 dedicated charger (otherwise the input stays at
-      100 mA; this image does not enumerate, so a computer CDP port counts as
-      100 mA). The log
+      1.5 A or a BC1.2 dedicated charger (a computer port gives 500 mA once it
+      configures the badge, otherwise 100 mA). The log
       must show every gate passing before CHG_EN goes high. Confirm the charge
       current on an inline USB-C power meter and the charger IBAT reading; feel
       or IR-check the charger, inductor and pack for the first 15 minutes; stop
@@ -54,11 +53,31 @@ Board: ____  Serial/batch: ____  Firmware commit: ____  Date: ____
       both orientations, including switch-off and battery-absent states
 - [ ] USB-C VBUS reaches charger input and module VBUS pin 27 through the
       specified conditioning/decoupling; hot-plug and switch-off states checked
-- [ ] USB diagnostic enumeration/data with MCU logic supply enabled
+- [ ] USB enumeration: on a computer the badge appears as a CDC ACM device,
+      the log shows `USB configuration 1` and the input limit rises to
+      500 mA; on a wall charger it never enumerates and the D+ pull-up comes
+      on only after the charger's detection result is logged
+- [ ] USB suspend: sleep the host with a pack fitted; the log shows the
+      charger entering HIZ, an inline meter shows VBUS current at or below
+      2.5 mA, the badge keeps running (switch ON or OFF), and waking the host
+      leaves HIZ
 - [ ] Battery-powered operation
 - [ ] Switched VBAT sensing agrees with meter; disabled/reset/off leakage and
       ADC back-powering checked; loaded low-battery shedding/recovery and invalid
       sample behavior verified (validation.md §12); final thresholds recorded
+- [ ] Product power states: with USB attached and the switch OFF the log
+      reports the charging-only state, BLE does not advertise and the matrix
+      stays dark; switching ON restarts into normal operation, and switching
+      OFF again restarts into charging-only
+- [ ] Load shedding on a current-limited supply at the battery connector
+      (matrix image): lowering the supply caps brightness below about
+      3.55 V and turns the LED rail off below about 3.40 V; raising it to
+      3.70 V or more re-enables from the lowest level in 5 s steps. Record the
+      loaded and unloaded VBAT readings against a meter
+- [ ] Low-battery off: on that supply with no USB, about 3.25 V unloaded
+      enters System OFF (log, then no RTT); record the off current; attaching
+      USB must wake the badge. A debugger keeps the nRF52840 in emulated
+      System OFF, so measure with it detached
 - [ ] Independent battery protection and recovery checked against selected
       pack/cell specifications using controlled fixtures; record limits/results
 

@@ -94,18 +94,25 @@ ZTEST(power, test_cc_policy)
 	zassert_equal(power::classify_cc_pin_mv(80), CcAdvert::kHigh);
 	zassert_equal(power::classify_cc_pin_mv(150), CcAdvert::kHigh);
 	zassert_equal(power::active_cc_pin_mv(10, 90), 90);
-	/* docs/power.md: 1.5 A for a high CC advert or DCP/CDP/HVDCP, else 100 mA. */
-	zassert_equal(power::input_limit_ma(CcAdvert::kHigh, 1, false), 1500);
-	zassert_equal(power::input_limit_ma(CcAdvert::kDefault, 3, false), 1500);
-	zassert_equal(power::input_limit_ma(CcAdvert::kDefault, 2, false), 100,
+	/* docs/power.md: 1.5 A for a high CC advert or DCP/HVDCP, 500 mA once a
+	 * host configures the badge, else 100 mA. */
+	using power::UsbHost;
+	zassert_equal(power::input_limit_ma(CcAdvert::kHigh, 1, UsbHost::kNotConfigured), 1500);
+	zassert_equal(power::input_limit_ma(CcAdvert::kDefault, 3, UsbHost::kNotConfigured), 1500);
+	zassert_equal(power::input_limit_ma(CcAdvert::kDefault, 6, UsbHost::kNotConfigured), 1500);
+	zassert_equal(power::input_limit_ma(CcAdvert::kDefault, 1, UsbHost::kNotConfigured), 100,
+		      "SDP before configuration");
+	zassert_equal(power::input_limit_ma(CcAdvert::kDefault, 1, UsbHost::kConfigured), 500,
+		      "configured SDP");
+	zassert_equal(power::input_limit_ma(CcAdvert::kDefault, 2, UsbHost::kNotConfigured), 100,
 		      "CDP reverts to SDP unless enumerated");
-	zassert_equal(power::input_limit_ma(CcAdvert::kDefault, 2, true), 1500);
-	zassert_equal(power::input_limit_ma(CcAdvert::kDefault, 1, true), 100,
-		      "SDP stays at the pre-configuration limit here");
-	zassert_equal(power::input_limit_ma(CcAdvert::kDefault, 6, false), 1500);
-	zassert_equal(power::input_limit_ma(CcAdvert::kDefault, 1, false), 100,
-		      "SDP before enumeration");
-	zassert_equal(power::input_limit_ma(CcAdvert::kNone, 4, false), 100, "unknown adapter");
+	zassert_equal(power::input_limit_ma(CcAdvert::kDefault, 2, UsbHost::kConfigured), 500,
+		      "CDP is not trusted beyond a configured SDP");
+	zassert_equal(power::input_limit_ma(CcAdvert::kDefault, 1, UsbHost::kSuspended), 100,
+		      "suspended: HIZ handles suspend current");
+	zassert_equal(power::input_limit_ma(CcAdvert::kNone, 4, UsbHost::kConfigured), 500);
+	zassert_equal(power::input_limit_ma(CcAdvert::kNone, 4, UsbHost::kNotConfigured), 100,
+		      "unknown adapter");
 }
 
 ZTEST_SUITE(power, NULL, NULL, NULL, NULL, NULL);

@@ -31,7 +31,7 @@ against that contract; optional KiCad XML compares the contract with U401 nets.
 |---|---|
 | Matrix | SPIM3 at 8 MHz; P0.12 SCK, P0.04 MOSI, P0.08 MISO; P1.09 LAT |
 | Matrix control | P0.05 BLANK, P0.06 ARM, P0.26 SAFE, P0.07 LED_EN; TIMER3, one GPIOTE task, two PPI connections |
-| IMU and charger | TWIM0 at 400 kHz, P0.15/P0.17; IMU interrupt P0.09 |
+| IMU and charger | TWIM0 at 100 kHz (the BQ25620 needs extra bus-free and repeated-START time at 400 kHz in low-power mode, SLUSEG2D §8.5), P0.15/P0.17; IMU interrupt P0.09 |
 | NTAG | TWIM1 at 100 kHz, P0.22/P0.24; P1.00 VCC, P1.02 FD |
 | Microphone | PDM, P0.20 CLK/P0.13 DIN |
 | Sense inputs | SAADC AIN6 VBAT, AIN0 CC1, AIN1 CC2, AIN5 VLED |
@@ -141,35 +141,36 @@ the full Rev A build as the capacity reference and hardware acceptance target.
 
 ## Remaining implementation and acceptance
 
-Next increment: BQ25620 initialization/current/temperature policy, USB-C/BC1.2
-and enumeration policy, switched battery/rail sensing, invalid/stale-sample
-handling, load shedding, charging-only/off state and low-power transitions.
-The diagnostic image checks IMU/interrupts, guarded NTAG reads and PDM levels,
-and the power path (`common/src/app/power_diag.cpp`):
-- reset cause and the 32.768 kHz clock source;
-- the switched VBAT divider (sampled at least 25 ms after enable), VLED sense
-  and CC1/CC2 sense through the SAADC;
-- BQ25620 identity, faults, TS zone, D+/D- result and its ADC (VBUS, IBUS,
-  VBAT, IBAT, VSYS, TS, TDIE);
-- button and power-switch edges and the charger's latched event flags, with
-  a status-LED heartbeat.
+### Power manager
 
-It samples CC every 20 ms and applies the documented input-limit policy
-within tSinkAdj: 1.5 A for a 1.5/3.0 A CC advertisement or a BC1.2 DCP/HVDCP
-port, otherwise 100 mA. This image has no USB stack and never enumerates, so a
-CDP port gets 100 mA (an unenumerated CDP reverts to SDP after 2.5 s,
-SLUSEG2D §8.3.3.3). The input-limit register is read back on every 20 ms
-tick and rewritten if it differs, because the charger resets it on adapter
-removal and rewrites it on each plug-in; a change of input source also drops
-CHG_EN until the gates pass again. A failed CC, status, input-limit or charger
-telemetry read drops CHG_EN at once, and the log reports no telemetry rather
-than stale values. It sets `TS_TH4_TH5_TH6 = 011` and keeps the charger I2C
-watchdog alive. Charging stays off unless the image is built with
-`diagnostics-charge.conf`; even then CHG_EN goes high only while:
+The product and diagnostics images share one charger and battery manager
+(`common/src/app/power_manager.cpp`, `CONFIG_APP_POWER_MANAGER`, on by default
+for Rev A). It samples CC every 20 ms and applies the documented input-limit
+policy within tSinkAdj: 1.5 A for a 1.5/3.0 A CC advertisement or a BC1.2
+DCP/HVDCP port, 500 mA once a USB host configures the badge, otherwise 100 mA.
+A CDP is treated as an SDP (it reverts to SDP unless the device enumerates
+within 2.5 s, SLUSEG2D §8.3.3.3). The USB device
+(`common/src/platform/usb_device.c`, `CONFIG_APP_USB_DEVICE`) enumerates with a
+500 mA configuration and one inert CDC ACM interface, connects its D+ pull-up
+only after the charger's BC1.2 detection, and on a host suspend puts the
+charger in HIZ so the pack runs the badge (pack at 3.40 V or more; charging
+stops). It keeps the Zephyr test VID 0x2FE3 / PID 0x0001 because this badge
+is personal and not distributed; firmware or boards made for others need an
+assigned ID (`CONFIG_APP_USB_VID`/`PID`). The input-limit register
+is read back on every 20 ms tick and rewritten if it differs, because the
+charger resets it on adapter removal and rewrites it on each plug-in; a change
+of input source also drops CHG_EN until the gates pass again. A failed CC,
+status, input-limit or charger telemetry read drops CHG_EN at once. It sets
+`TS_TH4_TH5_TH6 = 011` and keeps the charger I2C watchdog alive.
+
+Charging stays off unless the image is built with `CONFIG_APP_CHARGING`
+(`diagnostics-charge.conf` for the first watched charge; off in the product
+image until the charge and thermal tests in validation.md pass). Even then
+CHG_EN goes high only while:
 - VBUS is present;
 - the charger reports no fault and TS is normal;
-- the thresholds and ICHG (480 mA) read back as set, the input limit matches
-  the policy, and VREG is 4200 mV;
+- the thresholds and ICHG (`CONFIG_APP_CHARGE_ICHG_MA`, 480 mA) read back as
+  set, the input limit matches the policy, and VREG is 4200 mV;
 - the charger and SAADC agree on a pack voltage in 3.0-4.25 V;
 - a pack-presence probe less than 30 s old passed.
 
@@ -181,10 +182,65 @@ count: the clear is retried every 20 ms, every watchdog kick also clears it,
 and charging stays off until it is confirmed off. It runs before the first
 enable, every 30 s while charging, and every 30 s while a missing pack holds
 charging off. Its behaviour with and without a pack is confirmed at bring-up
-before the first unattended charge.
+before the first unattended charge. In the product image the status LED is on
+while the pack charges.
+
+**Load shedding** (`CONFIG_APP_LOAD_SHED`, `common/src/services/power_policy.cpp`)
+implements the PROPOSED policy in [power.md](power.md#battery-state-measurement).
+VBAT is read through the switched divider every 100 ms while the LED rail is on
+and every 1 s otherwise. The matrix driver enforces the resulting brightness
+ceiling on every slot, whatever level the application sets:
+- loaded VBAT below 3.55 V caps brightness at level 127 (half the full-scale
+  on-time per bit plane);
+- three loaded readings in a row below 3.40 V turn the LED rail off;
+- re-enable needs 10 s at 3.70 V or more (battery-qualified), or USB with a
+  confirmed input limit of at least 500 mA and VBAT at 3.50 V or more
+  (input-qualified, with a ceiling from a worst-case total input-current
+  estimate with 20 % margin). It starts at level 13 and steps through 64 and
+  127 to 255 every 5 s;
+- a shed within 60 s of a re-enable counts as a failed attempt; retries back
+  off from 60 s, doubling to 15 min, and after three failures only
+  battery-qualified recovery is allowed;
+- a missing, invalid or stale reading, and every boot until the first reading,
+  keep the LED rail off.
+
+The application treats a held display like the intentional disarm: no display
+IO, no new pairing, configuration writes or recording (which need a visible
+display), and no display-recovery restart. A stalled manager also holds the
+display and stops the watchdog feed. The manager also reports unhealthy, so the
+watchdog resets the badge, when VBAT or CC readings stay invalid for 5 s, or
+while USB is attached and the charger has not answered for 5 s or the USB
+stack did not start. The matrix stays held until VLED has been read near 0 V
+with the rail off, and while a suspended host still waits for a confirmed HIZ.
+The thresholds and the input-current estimate are PROPOSED; the estimate uses
+datasheet maxima and stated assumptions until validation §4 and §12 measure
+them.
+
+**Power states** (`CONFIG_APP_POWER_STATES`, product image), as in
+[power.md](power.md#power-states):
+- switch OFF with the logic rail up (USB present) boots a charging-only state
+  (`common/src/app/charging_only.cpp`): the manager runs; the matrix,
+  microphone, NFC I2C side and Bluetooth are never started and the IMU is put
+  to sleep. Turning the switch on restarts into normal operation, and turning
+  it off while running restarts into charging-only;
+- on battery, three unloaded readings in a row below 3.30 V enter System OFF
+  with the LED rail, charging, VBAT divider, NFC supply and IMU off, and the
+  charger's I2C watchdog, ADC and all interrupt sources but VBUS off. The
+  charger's interrupt (pulsed on a VBUS change by default, REG0x24) wakes it
+  when USB is attached; cycling the switch restarts it. The wake path and the
+  System OFF current are checked at bring-up.
+
+The diagnostics image starts the same manager from its power check with
+verbose logs: reset cause and 32.768 kHz clock source, SAADC rails (VBAT,
+VLED, CC1/CC2), BQ25620 identity, faults, TS zone, D+/D- result and its ADC
+(VBUS, IBUS, VBAT, IBAT, VSYS, TS, TDIE), the charger's latched event flags,
+button and switch edges and a status-LED heartbeat. It has no power-state
+transitions. `matrix-stepper.conf` turns load shedding off: that bench may run
+without a pack and relies on the supply's current limit.
 
 Register fields come from SLUSEG2D §8.6 and are unit-tested
-(`firmware/tests/power`).
+(`firmware/tests/power`); the load-shed policy and input estimate are
+unit-tested in `firmware/tests/power_policy`.
 
 The diagnostics image also checks the matrix with its outputs disabled
 (`common/src/app/matrix_diag.cpp`):
@@ -204,8 +260,7 @@ current-limited supply. MODE steps through:
 5. all on at brightness 8, 32 and 128
 
 ACTION blanks and resumes at any time. The chain logic is unit-tested
-(`firmware/tests/matrix_chain`). The product charger policy (USB
-enumeration, load shedding, power states) remains.
+(`firmware/tests/matrix_chain`).
 NFC VCC is enabled on first transport preparation and retained; dynamic power
 cycling and the related recovery policy remain to implement. The wired setup
 helper still defaults to the nRF5340 debug target; explicit nRF52840 SWD target

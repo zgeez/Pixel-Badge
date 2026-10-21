@@ -24,6 +24,7 @@
 
 #include "icm4268x_reg.h"
 #include "bus_lock.h"
+#include "badge/imu_power.h"
 
 LOG_MODULE_REGISTER(icm42688_i2c, CONFIG_SENSOR_LOG_LEVEL);
 
@@ -255,6 +256,18 @@ static int icm42688_i2c_configure(const struct device *dev)
 		k_msleep(STARTUP_DELAY_MS);
 	}
 	return 0;
+}
+
+/* Turns both sensors off (PWR_MGMT0 gyro and accel modes off) for the
+ * charging-only and System OFF power states. A reset reconfigures them. */
+int badge_imu_sleep(const struct device *dev)
+{
+	int ret = reg_write(dev, 0, B0(REG_PWR_MGMT0),
+			    FIELD_PREP(MASK_GYRO_MODE, ICM42688_DT_GYRO_OFF) |
+				    FIELD_PREP(MASK_ACCEL_MODE, ICM42688_DT_ACCEL_OFF));
+
+	k_busy_wait(MODE_DELAY_US);
+	return ret;
 }
 
 static int icm42688_i2c_sample_fetch(const struct device *dev, enum sensor_channel chan)

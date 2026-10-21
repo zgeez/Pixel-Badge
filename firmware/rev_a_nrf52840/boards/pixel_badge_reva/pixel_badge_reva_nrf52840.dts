@@ -72,7 +72,10 @@
 };
 &i2c0 {
 	compatible = "nordic,nrf-twim";
-	status = "okay"; clock-frequency = <I2C_BITRATE_FAST>;
+	/* Standard mode: at 400 kHz the BQ25620 in low-power mode needs >= 68 us
+	 * bus-free and repeated-START setup time (SLUSEG2D 8.5), which TWIM
+	 * cannot insert; 100 kHz has no extra requirement. */
+	status = "okay"; clock-frequency = <I2C_BITRATE_STANDARD>;
 	pinctrl-0 = <&i2c0_default>; pinctrl-1 = <&i2c0_sleep>; pinctrl-names = "default", "sleep";
 	imu: icm42688@68 {
 		compatible = "invensense,icm42688p-i2c"; reg = <0x68>;
@@ -86,6 +89,16 @@
 	compatible = "nordic,nrf-twim";
 	status = "okay"; clock-frequency = <I2C_BITRATE_STANDARD>;
 	pinctrl-0 = <&i2c1_default>; pinctrl-1 = <&i2c1_sleep>; pinctrl-names = "default", "sleep";
+};
+/* E73 USB: D+ pin 31, D- pin 29, VBUS pin 27 (docs/power.md). The firmware's
+ * only USB function is an inert CDC ACM interface that lets the host configure
+ * the badge for the 500 mA SDP input limit. */
+zephyr_udc0: &usbd {
+	compatible = "nordic,nrf-usbd";
+	status = "okay";
+	cdc_acm_uart0: cdc_acm_uart0 {
+		compatible = "zephyr,cdc-acm-uart";
+	};
 };
 &pdm0 { status = "okay"; pinctrl-0 = <&pdm0_default>; pinctrl-1 = <&pdm0_sleep>; pinctrl-names = "default", "sleep"; };
 &adc {

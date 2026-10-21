@@ -19,6 +19,9 @@
 #if defined(CONFIG_APP_BLE)
 #include "badge/ble.hpp"
 #endif
+#if defined(CONFIG_APP_POWER_MANAGER)
+#include "badge/power_manager.hpp"
+#endif
 
 #include <zephyr/device.h>
 #include <zephyr/drivers/display.h>
@@ -223,6 +226,8 @@ void run_prototype()
 	}
 	const int64_t started_at = k_uptime_get();
 	uint32_t last_render = 0;
+	bool power_held = false;
+	[[maybe_unused]] uint32_t off_retry_at = 0;
 	LOG_INF("badge ready: %s mode%s", modes.active() == Mode::kQr ? "QR" : "name",
 		safe ? " (safe)" : "");
 #if defined(CONFIG_APP_NFC)
@@ -239,6 +244,61 @@ void run_prototype()
 			k_sleep(K_FOREVER);
 		}
 		bool changed = false;
+#if defined(CONFIG_APP_POWER_STATES)
+		if (power_switch_state() == 0) {
+			/* Still running with the switch off: USB holds the rail up. */
+			LOG_INF("power switch off: restarting into charging-only");
+#if defined(CONFIG_APP_AUDIO)
+			audio_halt();
+#endif
+			display_blanking_on(display);
+			sys_reboot(SYS_REBOOT_COLD);
+		}
+		const bool low_battery = power_low_battery();
+		/* Retried every 60 s: an attempt can stop short (USB attached, or the
+		 * charger could not be quieted). */
+		if (low_battery && static_cast<int32_t>(now - off_retry_at) >= 0) {
+			off_retry_at = now + 60000;
+#if defined(CONFIG_APP_AUDIO)
+			audio_halt();
+#endif
+			display_blanking_on(display);
+			display_ready = false;
+			power_enter_off(); /* returns only if USB appeared meanwhile */
+		}
+		if (!low_battery) {
+			off_retry_at = now;
+		}
+#endif
+#if defined(CONFIG_APP_POWER_MANAGER)
+		/* Load shedding, or a stalled power manager, holds the display like an
+		 * intentional disarm: no driver IO, and no pairing, configuration or
+		 * recording, which need a visible display. */
+		const bool power_ok = power_manager_healthy();
+		const bool hold = power_display_held() || !power_ok;
+#else
+		constexpr bool power_ok = true;
+		constexpr bool hold = false;
+#endif
+		if (hold != power_held) {
+			power_held = hold;
+			if (hold && power_ok) {
+				LOG_INF("display held by the battery policy (no reading yet, or "
+					"shed)");
+				display_blanking_on(display);
+			} else if (hold) {
+				LOG_ERR("power manager stalled; display held, watchdog feed "
+					"stopped");
+				display_blanking_on(display);
+			} else {
+				LOG_INF("display released by the power manager");
+			}
+			display_ready = false; /* re-initialize on release */
+		}
+		const bool held = display_disarmed || power_held;
+		/* A battery hold is a stable state; a stalled manager is a fault and
+		 * must not clear the reset-loop counter. */
+		const bool intentional = display_disarmed || (power_held && power_ok);
 #if defined(CONFIG_APP_MOTION)
 		if (!safe) {
 			poll_motion(modes, now);
@@ -361,7 +421,7 @@ void run_prototype()
 				rotate_overlay = rotate_overlay || overlay != AudioOverlay::kNone;
 #endif
 			}
-			if (!display_disarmed) {
+			if (!held) {
 				brightness_rc = display_set_brightness(
 					display,
 					audio_recording() ? 255 : settings.values().brightness);
@@ -375,7 +435,7 @@ void run_prototype()
 #endif
 			/* Disarmed is a stable configuration, not a retryable driver fault.
 			 * Keep the physical error for visibility gates without repeating IO. */
-			int rc = display_disarmed ? -EPERM : brightness_rc;
+			int rc = held ? -EPERM : brightness_rc;
 			if (rc == 0) {
 				auto submit = [&](bool initialize) {
 					if (initialize) {
@@ -410,9 +470,9 @@ void run_prototype()
 				!pairing_overlay && modes.active() == Mode::kQr ? rc : -EAGAIN);
 #endif
 			const bool recovering = display_health.recovering();
-			display_health.report(rc, completed, display_disarmed);
+			display_health.report(rc, completed, intentional);
 			if (rc != 0) {
-				if (!display_disarmed && !recovering) {
+				if (!held && !recovering) {
 					LOG_WRN("display write failed (%d); retrying", rc);
 				}
 			} else {
@@ -438,11 +498,12 @@ void run_prototype()
 			/* Let the configured watchdog reset the SoC and preserve its cause. */
 			k_sleep(K_FOREVER);
 		}
-		if (channel >= 0) {
+		/* A stalled power manager stops the feed: the reset drops CHG_EN and
+		 * the LED rail. */
+		if (channel >= 0 && power_ok) {
 			wdt_feed(watchdog, channel);
 		}
-		if (display_health.acknowledge_boot(guard, display_ready, display_disarmed,
-						    completed)) {
+		if (display_health.acknowledge_boot(guard, display_ready, intentional, completed)) {
 			retain_boot_count(0xa0);
 			LOG_INF("healthy boot; reset-loop counter cleared");
 		}
