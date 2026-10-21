@@ -10,8 +10,9 @@
 # The complete set of packages this installs into the digest-pinned image is
 # locked to exact versions below, including the g++-13 compiler packages that
 # g++-multilib pulls in. Packages come from a fixed Ubuntu archive snapshot. If
-# the snapshot service cannot be reached, the regular Ubuntu archive is tried
-# instead. Either way, apt must plan exactly the locked set at the locked
+# the snapshot service cannot be reached, for the index or for the packages
+# themselves, the regular Ubuntu archive is tried instead. Either way, apt must
+# plan exactly the locked set at the locked
 # versions, and the installed versions are checked afterwards. If the archive no
 # longer carries a locked version, the job fails rather than install something
 # else. The g++ version matches the gcc already in the image.
@@ -59,26 +60,46 @@ update_index() {
 	apt -o Acquire::Retries=3 update -qq --error-on=any
 }
 
-use_mirror "${SNAPSHOT_URI}"
-if ! update_index; then
+# The install plan must be exactly the locked set: nothing added, upgraded or at
+# another version.
+check_plan() {
+	local expected plan
+	expected="$(printf '%s\n' "${LOCK[@]}" | sort)"
+	plan="$(apt -s install --no-install-recommends "${LOCK[@]}" |
+		awk '/^Inst /{ name = $2; sub(/:amd64$/, "", name); print name "=" substr($3, 2) }' | sort)"
+	if [ "${plan}" != "${expected}" ]; then
+		echo "error: apt's install plan differs from the locked package set" >&2
+		diff <(echo "${expected}") <(echo "${plan}") >&2 || true
+		exit 1
+	fi
+}
+
+install_locked() {
+	apt -o Acquire::Retries=3 install -y -qq --no-install-recommends "${LOCK[@]}"
+}
+
+use_archive() {
 	echo "warning: Ubuntu snapshot ${UBUNTU_SNAPSHOT} unavailable;" \
 		"trying ${ARCHIVE_URI} with the same locked package set" >&2
 	use_mirror "${ARCHIVE_URI}"
 	update_index
-fi
+	check_plan
+}
 
-# The install plan must be exactly the locked set: nothing added, upgraded or at
-# another version.
-expected="$(printf '%s\n' "${LOCK[@]}" | sort)"
-plan="$(apt -s install --no-install-recommends "${LOCK[@]}" |
-	awk '/^Inst /{ name = $2; sub(/:amd64$/, "", name); print name "=" substr($3, 2) }' | sort)"
-if [ "${plan}" != "${expected}" ]; then
-	echo "error: apt's install plan differs from the locked package set" >&2
-	diff <(echo "${expected}") <(echo "${plan}") >&2 || true
-	exit 1
+use_mirror "${SNAPSHOT_URI}"
+if update_index; then
+	check_plan
+else
+	use_archive
 fi
-
-apt install -y -qq --no-install-recommends "${LOCK[@]}"
+# The snapshot's index can load while its package downloads fail (HTTP 503).
+if ! install_locked; then
+	if grep -q "^URIs: ${ARCHIVE_URI}" "${sources}"; then
+		exit 1
+	fi
+	use_archive
+	install_locked
+fi
 
 for entry in "${LOCK[@]}"; do
 	name="${entry%%=*}"
