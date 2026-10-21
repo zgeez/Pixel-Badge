@@ -9,6 +9,22 @@
     check   Check formatting, lint YAML, and check repository hygiene.
     hardware  Run KiCad ERC and the pin/pad check, export schematic PDF/BOM (requires KiCad 10.0.6).
     clean   Remove the build/ directory.
+    recover Rev A only: erase the whole nRF52840 (ERASEALL) and keep its debug
+            port open. Needed once for a new module, whose AP-Protect blocks
+            SWD. Erases settings, bond and artwork; requires -EraseAll.
+    flash   Rev A only: program -BuildDir's merged.hex over SWD, erasing only the
+            ranges it touches (UICR, settings, bond and artwork are kept), verify
+            by readback and reset.
+    rtt     Rev A only: log RTT channel 0 to -RttLog (default build/rtt/<time>.log).
+
+    recover, flash and rtt use a J-Link probe (the nRF5340 DK's debug out, see
+    docs/bringup.md). They refuse to act unless the probe identifies an
+    nRF52840, so the DK's own nRF5340 is never erased or programmed by mistake;
+    recover also accepts a target that AP-Protect keeps from being identified.
+    recover and flash pass --family nrf52 to nrfutil, so the write itself fails
+    if the target changed after the check. -SwdSpeedKhz applies to every probe
+    access. Name the probe with -SerialNumber when more than one J-Link is
+    connected.
 
     The nRF Connect SDK at -NcsRoot\-NcsVersion and the toolchain it requires
     are always loaded, overriding any SDK environment already active. The
@@ -26,11 +42,20 @@
 
 .EXAMPLE
     .\scripts\dev.ps1 build -App firmware/nrf5340_prototype/bench/matrix_timing -BuildDir build/matrix_timing
+
+.EXAMPLE
+    .\scripts\dev.ps1 recover -Target RevA -EraseAll
+
+.EXAMPLE
+    .\scripts\dev.ps1 flash -Target RevA -BuildDir build/reva-diagnostics
+
+.EXAMPLE
+    .\scripts\dev.ps1 rtt -Target RevA
 #>
 [CmdletBinding()]
 param(
     [Parameter(Position = 0)]
-    [ValidateSet('build', 'test', 'format', 'check', 'hardware', 'clean')]
+    [ValidateSet('build', 'test', 'format', 'check', 'hardware', 'clean', 'recover', 'flash', 'rtt')]
     [string] $Command = 'build',
 
     [ValidateSet('Prototype', 'RevA')]
@@ -48,7 +73,16 @@ param(
     [string] $QrLink = 'Portfolio',
     [string] $NcsVersion = 'v3.4.1',
     [string] $NcsRoot = $(if ($env:NCS_ROOT) { $env:NCS_ROOT } else { 'C:\ncs' }),
-    [switch] $Pristine
+    [switch] $Pristine,
+    # recover/flash/rtt: serial number of the J-Link probe (the DK's debugger).
+    [string] $SerialNumber,
+    # recover: confirms that the whole chip, including settings, bond and
+    # artwork, is erased.
+    [switch] $EraseAll,
+    # rtt: output file.
+    [string] $RttLog,
+    # recover/flash/rtt: SWD clock in kHz (the flat cable to J501 is long).
+    [int] $SwdSpeedKhz = 1000
 )
 
 Set-StrictMode -Version Latest
@@ -234,6 +268,207 @@ function Invoke-Check {
     Write-Host 'All checks passed.'
 }
 
+function Get-NrfutilLines {
+    # nrfutil from the pinned toolchain (Initialize-NcsEnvironment puts it on
+    # PATH and sets NRFUTIL_HOME). Returns the JSON Lines output as text.
+    param([string[]] $Arguments)
+    $exe = (Get-Command nrfutil -CommandType Application -ErrorAction Stop |
+        Select-Object -First 1).Source
+    $ErrorActionPreference = 'Continue'
+    $out = & $exe @Arguments 2>&1 | ForEach-Object { "$_" }
+    [pscustomobject]@{ Code = $LASTEXITCODE; Text = ($out -join "`n") }
+}
+
+function Get-JsonValue {
+    # A property of a parsed JSON object, or $null when it is missing (dev.ps1
+    # runs in strict mode, where reading a missing property throws).
+    param($Object, [string] $Name)
+    if ($null -eq $Object -or $Object -isnot [Management.Automation.PSCustomObject]) { return $null }
+    $property = $Object.PSObject.Properties[$Name]
+    if ($property) { $property.Value }
+}
+
+function Get-JLinkSerials {
+    # Serial numbers of J-Link probes in nrfutil's JSON Lines device list.
+    param([string] $Text)
+    $found = @()
+    foreach ($line in $Text -split "`n") {
+        if (-not $line.Trim().StartsWith('{')) { continue }
+        try { $obj = $line | ConvertFrom-Json } catch { continue }
+        if ((Get-JsonValue $obj 'type') -ne 'task_end') { continue }
+        $devices = Get-JsonValue (Get-JsonValue (Get-JsonValue $obj 'data') 'data') 'devices'
+        foreach ($device in @($devices)) {
+            if ((Get-JsonValue (Get-JsonValue $device 'traits') 'jlink') -eq $true) {
+                $found += [string](Get-JsonValue $device 'serialNumber')
+            }
+        }
+    }
+    $found | Sort-Object -Unique
+}
+
+function Resolve-JLinkProbe {
+    $list = Get-NrfutilLines @('device', 'list', '--traits', 'jlink', '--json')
+    $serials = @(Get-JLinkSerials $list.Text)
+    if ($SerialNumber) {
+        if ($serials -notcontains $SerialNumber) {
+            throw "J-Link probe $SerialNumber not found (connected: $($serials -join ', '))."
+        }
+        return $SerialNumber
+    }
+    if ($serials.Count -eq 0) {
+        throw 'No J-Link probe found. Connect the nRF5340 DK (debug out to J501, see docs/bringup.md).'
+    }
+    if ($serials.Count -gt 1) {
+        throw "Several J-Link probes found ($($serials -join ', ')); choose one with -SerialNumber."
+    }
+    return $serials[0]
+}
+
+function Get-SwdArguments {
+    @('--swd-clock-frequency', [string]$SwdSpeedKhz)
+}
+
+function Get-DeviceInfoNodes {
+    # Every deviceInfo.jlink object anywhere under a parsed JSON node.
+    param($Node)
+    if ($Node -is [array]) {
+        foreach ($item in $Node) { Get-DeviceInfoNodes $item }
+        return
+    }
+    if ($Node -isnot [Management.Automation.PSCustomObject]) { return }
+    foreach ($property in $Node.PSObject.Properties) {
+        $jlink = if ($property.Name -eq 'deviceInfo') { Get-JsonValue $property.Value 'jlink' }
+        if ($jlink) { $jlink } else { Get-DeviceInfoNodes $property.Value }
+    }
+}
+
+function Get-TargetIdentity {
+    # The chip behind the probe, from a successful device-info:
+    # deviceInfo.jlink.deviceFamily/deviceVersion (for example NRF52_FAMILY,
+    # NRF52840_xxAA_REV2; nrfutil-device 2.20.0 puts it at task_end
+    # data.data.deviceInfo). Family and Version are empty unless nrfutil exited
+    # 0, its task ended in success and it reported exactly one identity.
+    param([string] $Probe)
+    $info = Get-NrfutilLines (@('device', 'device-info', '--serial-number', $Probe, '--json') + (Get-SwdArguments))
+    $identity = [pscustomobject]@{ Family = ''; Version = ''; Text = $info.Text }
+    if ($info.Code -ne 0) { return $identity }
+    $nodes = @()
+    $succeeded = $false
+    foreach ($line in $info.Text -split "`n") {
+        if (-not $line.Trim().StartsWith('{')) { continue }
+        try { $obj = $line | ConvertFrom-Json } catch { continue }
+        if ((Get-JsonValue $obj 'type') -ne 'task_end') { continue }
+        $data = Get-JsonValue $obj 'data'
+        if ((Get-JsonValue $data 'result') -ne 'success') { return $identity }
+        $succeeded = $true
+        $nodes += @(Get-DeviceInfoNodes $data)
+    }
+    if (-not $succeeded -or $nodes.Count -ne 1) { return $identity }
+    $identity.Family = [string](Get-JsonValue $nodes[0] 'deviceFamily')
+    $identity.Version = [string](Get-JsonValue $nodes[0] 'deviceVersion')
+    $identity
+}
+
+function Assert-RevATarget {
+    # With nothing powered on the debug-out connector the DK's debugger targets
+    # the DK's own nRF5340. Only an identified nRF52840 (the badge's E73) is
+    # accepted. -AllowProtected (recover only) also accepts a target that
+    # cannot be identified, since AP-Protect can hide the part; the recover
+    # command itself then refuses anything but the nRF52 family.
+    param([string] $Probe, [switch] $AllowProtected)
+    $id = Get-TargetIdentity $Probe
+    if ($id.Family -eq 'NRF52_FAMILY' -and $id.Version -match '^NRF52840_') {
+        Write-Host "Probe $Probe sees $($id.Version)."
+        return
+    }
+    if ($id.Family -match '^NRF53' -or $id.Version -match '^NRF53' -or
+        (-not $id.Family -and $id.Text -match '(?i)nrf53')) {
+        throw "Probe $Probe sees an nRF5340 (the DK itself), not the badge. Check the debug-out setup in docs/bringup.md: badge powered, VTG on the cable, DK SB47 open."
+    }
+    if (($id.Family -and $id.Family -ne 'NRF52_FAMILY') -or $id.Version -match '^NRF\d') {
+        throw "Probe $Probe sees $($id.Family) $($id.Version), not the badge's nRF52840."
+    }
+    Write-Host $id.Text
+    if (-not $AllowProtected) {
+        throw "Probe $Probe could not identify an nRF52840 (output above). A new module with AP-Protect needs 'recover' first; otherwise check the cable and badge power."
+    }
+    Write-Warning "Probe $Probe could not identify the target (AP-Protect on a new module hides it). Recovering only if nrfutil detects the nRF52 family."
+}
+
+function Assert-RevAImage {
+    # A Rev A sysbuild image with no UICR records: programming it must neither
+    # erase UICR (AP-Protect stays open, pin reset and NFC-pin settings stay)
+    # nor flash a DK image to the badge.
+    param([string] $Hex)
+    if (-not (Test-Path -LiteralPath $Hex)) {
+        throw "$Hex not found; build first (dev.ps1 build -Target RevA -BuildDir ...)."
+    }
+    $config = Join-Path (Split-Path -Parent $Hex) 'rev_a_nrf52840\zephyr\.config'
+    if (-not (Test-Path -LiteralPath $config) -or
+        -not (Select-String -LiteralPath $config -Pattern '^CONFIG_BOARD="pixel_badge_reva"' -Quiet)) {
+        throw "$Hex is not a Rev A (pixel_badge_reva) build."
+    }
+    if (Select-String -LiteralPath $Hex -Pattern '^:020000041000' -Quiet) {
+        throw "$Hex contains UICR data; programming it would erase UICR and re-lock the debug port."
+    }
+}
+
+function Invoke-Recover {
+    if ($Target -ne 'RevA') { throw 'recover is for the Rev A badge only (-Target RevA).' }
+    if (-not $EraseAll) {
+        throw 'recover erases the whole nRF52840, including settings, the BLE bond and artwork. Add -EraseAll to confirm.'
+    }
+    Initialize-NcsEnvironment
+    $probe = Resolve-JLinkProbe
+    Assert-RevATarget $probe -AllowProtected
+    Write-Host "Recovering the nRF52840 behind J-Link $probe (ERASEALL, debug port kept open)..."
+    # --family repeats the target check inside the destructive command itself,
+    # so a target that changed since identification (badge power lost, the
+    # probe back on the DK's nRF5340) is refused.
+    Invoke-Native nrfutil (@('device', 'recover', '--serial-number', $probe, '--family', 'nrf52') + (Get-SwdArguments))
+}
+
+function Invoke-Flash {
+    if ($Target -ne 'RevA') { throw 'flash is for the Rev A badge only (-Target RevA).' }
+    Initialize-NcsEnvironment
+    $hex = Join-Path (Join-Path $RepoRoot $BuildDir) 'merged.hex'
+    Assert-RevAImage $hex
+    $probe = Resolve-JLinkProbe
+    Assert-RevATarget $probe
+    Write-Host "Programming $hex through J-Link $probe..."
+    # --family: as in recover, the target is checked again by the write itself.
+    Invoke-Native nrfutil (@('device', 'program', '--serial-number', $probe, '--family', 'nrf52', '--firmware', $hex,
+        '--options', 'chip_erase_mode=ERASE_RANGES_TOUCHED_BY_FIRMWARE,verify=VERIFY_READ,reset=RESET_SYSTEM') +
+        (Get-SwdArguments))
+}
+
+function Get-JLinkTool {
+    param([string] $Name)
+    $onPath = Get-Command $Name -CommandType Application -ErrorAction SilentlyContinue
+    if ($onPath) { return ($onPath | Select-Object -First 1).Source }
+    $installs = @(Get-ChildItem -Directory -Path "$env:ProgramFiles\SEGGER" -Filter 'JLink*' -ErrorAction SilentlyContinue |
+        Sort-Object Name -Descending)
+    foreach ($dir in $installs) {
+        $candidate = Join-Path $dir.FullName $Name
+        if (Test-Path -LiteralPath $candidate) { return $candidate }
+    }
+    throw "$Name not found; install the SEGGER J-Link software."
+}
+
+function Invoke-Rtt {
+    if ($Target -ne 'RevA') { throw 'rtt is for the Rev A badge only (-Target RevA).' }
+    Initialize-NcsEnvironment
+    $probe = Resolve-JLinkProbe
+    Assert-RevATarget $probe
+    if (-not $RttLog) {
+        $RttLog = Join-Path $RepoRoot ("build/rtt/{0:yyyyMMdd-HHmmss}.log" -f (Get-Date))
+    }
+    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $RttLog) | Out-Null
+    $logger = Get-JLinkTool 'JLinkRTTLogger.exe'
+    Write-Host "Logging RTT channel 0 from J-Link $probe to $RttLog (Ctrl+C to stop)..."
+    & $logger -Device NRF52840_XXAA -If SWD -Speed $SwdSpeedKhz -USB $probe -RTTChannel 0 $RttLog
+}
+
 Push-Location $RepoRoot
 try {
     switch ($Command) {
@@ -244,6 +479,9 @@ try {
         'hardware' {
             Invoke-Native python @((Join-Path $RepoRoot 'scripts/ci/check_hardware.py'))
         }
+        'recover' { Invoke-Recover }
+        'flash'  { Invoke-Flash }
+        'rtt'    { Invoke-Rtt }
         'clean'  {
             if (Test-Path (Join-Path $RepoRoot 'build')) {
                 Remove-Item -Recurse -Force (Join-Path $RepoRoot 'build')
