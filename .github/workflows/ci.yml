@@ -1,21 +1,75 @@
 name: CI
 
+# Pull requests run CI only while they carry the "ci" label: leave it off
+# during review rounds and add it once the reviews pass. Pushes to main and
+# manual runs always run. Jobs then run only for the parts of the tree that
+# changed (the "changes" job).
 on:
   push:
     branches: [main]
   pull_request:
+    types: [opened, synchronize, reopened, labeled]
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  # Adding some other label starts a run that does nothing; give it its own
+  # group so it cannot cancel a run in progress.
+  group: >-
+    ${{ github.workflow }}-${{ github.ref }}-${{
+    github.event.action == 'labeled' && github.event.label.name != 'ci' && github.run_id || 'ci' }}
   cancel-in-progress: true
 
 jobs:
+  changes:
+    name: changes
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    if: >-
+      github.event_name != 'pull_request' ||
+      (contains(github.event.pull_request.labels.*.name, 'ci') &&
+      (github.event.action != 'labeled' || github.event.label.name == 'ci'))
+    outputs:
+      firmware: ${{ steps.scope.outputs.firmware }}
+      app: ${{ steps.scope.outputs.app }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      # Firmware builds read scripts/ (CI helpers, the QR default-URL
+      # generator); the app reads scripts/app/. Workflow changes run all.
+      - name: Scope the jobs to the changed paths
+        id: scope
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if [ "$EVENT" != "pull_request" ]; then
+            echo "firmware=true" >> "$GITHUB_OUTPUT"
+            echo "app=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          files="$(git diff --name-only "$BASE...$HEAD")"
+          printf '%s\n' "$files"
+          firmware=false
+          app=false
+          if printf '%s\n' "$files" | grep -qE '^(firmware/|scripts/|\.github/workflows/)'; then
+            firmware=true
+          fi
+          if printf '%s\n' "$files" | grep -qE '^(app/|scripts/app/|\.github/workflows/)'; then
+            app=true
+          fi
+          echo "firmware=$firmware" >> "$GITHUB_OUTPUT"
+          echo "app=$app" >> "$GITHUB_OUTPUT"
+
   repo-lint:
     name: repo-lint
+    needs: changes
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -72,6 +126,8 @@ jobs:
 
   firmware-build:
     name: firmware-build
+    needs: changes
+    if: needs.changes.outputs.firmware == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     env:
@@ -298,6 +354,8 @@ jobs:
 
   flutter-tests:
     name: flutter-tests
+    needs: changes
+    if: needs.changes.outputs.app == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     defaults:
@@ -357,6 +415,8 @@ jobs:
 
   unit-tests:
     name: unit-tests
+    needs: changes
+    if: needs.changes.outputs.firmware == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     container:
