@@ -3,7 +3,9 @@
 Copy this checklist into a bring-up issue per board. Record measured values,
 equipment, and firmware commit next to each item. Stop at the first failure in
 the power section. [bringup-logs.md](bringup-logs.md) lists the image for each
-step and the RTT log lines that mean pass or fail.
+step and the RTT log lines that mean pass or fail;
+[bringup-expected.md](bringup-expected.md) lists the design values to compare
+measurements with.
 
 Board: ____  Serial/batch: ____  Firmware commit: ____  Date: ____
 
