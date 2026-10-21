@@ -90,4 +90,7 @@ itself on its first boot (`gpio-as-nreset`, `nfct-pins-as-gpios`), and keeps the
 debug port open while UICR allows it (`CONFIG_NRF_APPROTECT_USE_UICR`, the SDK
 default). Add `-SerialNumber` when more than one J-Link is connected.
 
+[Bring-up logs](../../docs/bringup-logs.md) lists the expected log lines for each
+bring-up step.
+
 [Implementation, memory, chip trade-offs and bring-up gates](../../docs/rev-a-firmware.md)
