@@ -14,7 +14,15 @@ measured results.
 | Electrical checks, sensors, outputs-off matrix test | Diagnostics | `dev.ps1 build -Image Diagnostics -Pristine`, `dev.ps1 flash -Image Diagnostics` |
 | Staged matrix bench (current-limited supply) | Diagnostics + stepper | `dev.ps1 build -Image Diagnostics -BuildDir build/reva-stepper -ExtraConfFile firmware/rev_a_nrf52840/configs/matrix-stepper.conf -Pristine`, then `dev.ps1 flash -Image Diagnostics -BuildDir build/reva-stepper` |
 | Pack probe and first watched charge | Diagnostics + charge | `dev.ps1 build -Image Diagnostics -BuildDir build/reva-diag-charge -ExtraConfFile firmware/rev_a_nrf52840/configs/diagnostics-charge.conf -Pristine`, then `dev.ps1 flash -Image Diagnostics -BuildDir build/reva-diag-charge` |
-| BLE, NFC, power states | Main | `dev.ps1 build -Image Main -Pristine`, `dev.ps1 flash -Image Main` |
+| BLE advertising and readback, NFC, power states; display disarmed | Main | `dev.ps1 build -Image Main -Pristine`, `dev.ps1 flash -Image Main` |
+| Display, new passkey pairing, refresh timing, loaded load shedding (current-limited supply) | Main + matrix | `dev.ps1 build -Image Main -BuildDir build/reva-matrix -ExtraConfFile firmware/rev_a_nrf52840/configs/matrix-bench.conf -Pristine`, then `dev.ps1 flash -Image Main -BuildDir build/reva-matrix` |
+
+The default Main image keeps the matrix disarmed (`CONFIG_REVA_MATRIX_OUTPUT=n`):
+display writes and new passkey pairing cannot succeed, and the LED rail never
+loads the battery. Use the Main + matrix build for those checks, only on a
+current-limited supply until the battery and charging checks pass. Add
+`firmware/rev_a_nrf52840/configs/recording-bench.conf` to the same
+`-ExtraConfFile` list for recording checks.
 
 Capture every run with `dev.ps1 rtt -Target RevA` (log in `build/rtt/`) and
 attach the file to the board's bring-up issue. A new module may need
@@ -121,15 +129,25 @@ settings; charging resumes only after they read back again.
 
 Start on a current-limited supply. The log opens with `Matrix bench: current-limited
 supply only. MODE = next step, ACTION = stop/resume` and `Matrix bench step 0:
-blanked, LED rail off`. Each MODE press logs the next step:
+blanked, LED rail off`. Each MODE press advances one step and logs
+`Matrix bench step N: <name>`:
 
-1. rows scanning, zero column current: no LED may light
-2. single LED top-left, brightness 1
-3. single LED bottom-right, brightness 1
-4. row walk, then column walk, brightness 8
-5. orientation marker (block top-left, long arm along the top), checkerboard,
-   inverse checkerboard
-6. all on at brightness 8, 32 and 128: record supply current and VLED at each
+| Step | Shows | Check |
+|---|---|---|
+| 0 | blanked, LED rail off | Dark |
+| 1 | rows scanning, zero column current (brightness 0) | No LED may light |
+| 2 | single LED top-left, brightness 1 | Only that LED |
+| 3 | single LED bottom-right, brightness 1 | Only that LED |
+| 4 | row walk top to bottom, brightness 8 | One row at a time, in order |
+| 5 | column walk left to right, brightness 8 | One column at a time, in order |
+| 6 | orientation marker (block top-left, long arm along the top) | Orientation |
+| 7 | checkerboard, brightness 8 | No stuck or missing LEDs |
+| 8 | inverse checkerboard, brightness 8 | The complement of step 7 |
+| 9 | all on, brightness 8 | Record supply current and VLED |
+| 10 | all on, brightness 32 | Record supply current and VLED |
+| 11 | all on, brightness 128 | Record supply current and VLED |
+
+The press after step 11 returns to step 0 (blanked).
 
 ACTION logs `Matrix bench: STOPPED (blanked)` and resumes with `Matrix bench:
 resumed`. `Matrix bench: driver error N (matrix blanked); back to step 0` is a
@@ -140,7 +158,8 @@ the supply's current limit protects the board.
 
 | Line | Meaning |
 |---|---|
-| `Power: VBAT N mV: matrix ceiling N (<state>, N failed re-enables)` | Load shedding changed state: `normal`, `shed` or `re-enabling` |
+| `matrix intentionally disarmed; service loop remains active` | Default Main image: the matrix is off by design (not a fault) |
+| `Power: VBAT N mV: matrix ceiling N (<state>, N failed re-enables)` | Load shedding changed state: `normal`, `shed` or `re-enabling`. With the matrix loading the rail, the reading is marked `loaded` (Main + matrix) |
 | `..., LOW BATTERY` | Below the low-battery threshold (PROPOSED values, docs/power.md) |
 | `Power: battery low; System OFF until USB is attached or the switch is cycled` | Entering System OFF (measure the off current with the debugger detached) |
 | `Power: USB attached; staying on` | System OFF skipped because USB is present |
