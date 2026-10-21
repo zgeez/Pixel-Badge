@@ -31,7 +31,7 @@ against that contract; optional KiCad XML compares the contract with U401 nets.
 |---|---|
 | Matrix | SPIM3 at 8 MHz; P0.12 SCK, P0.04 MOSI, P0.08 MISO; P1.09 LAT |
 | Matrix control | P0.05 BLANK, P0.06 ARM, P0.26 SAFE, P0.07 LED_EN; TIMER3, one GPIOTE task, two PPI connections |
-| IMU and charger | TWIM0 at 400 kHz, P0.15/P0.17; IMU interrupt P0.09 |
+| IMU and charger | TWIM0 at 100 kHz (the BQ25620 needs extra bus-free and repeated-START time at 400 kHz in low-power mode, SLUSEG2D §8.5), P0.15/P0.17; IMU interrupt P0.09 |
 | NTAG | TWIM1 at 100 kHz, P0.22/P0.24; P1.00 VCC, P1.02 FD |
 | Microphone | PDM, P0.20 CLK/P0.13 DIN |
 | Sense inputs | SAADC AIN6 VBAT, AIN0 CC1, AIN1 CC2, AIN5 VLED |
@@ -207,9 +207,14 @@ ceiling on every slot, whatever level the application sets:
 The application treats a held display like the intentional disarm: no display
 IO, no new pairing, configuration writes or recording (which need a visible
 display), and no display-recovery restart. A stalled manager also holds the
-display and stops the watchdog feed. The thresholds and the input-current
-estimate are PROPOSED; the estimate uses datasheet maxima and stated
-assumptions until validation §4 and §12 measure them.
+display and stops the watchdog feed. The manager also reports unhealthy, so the
+watchdog resets the badge, when VBAT or CC readings stay invalid for 5 s, or
+while USB is attached and the charger has not answered for 5 s or the USB
+stack did not start. The matrix stays held until VLED has been read near 0 V
+with the rail off, and while a suspended host still waits for a confirmed HIZ.
+The thresholds and the input-current estimate are PROPOSED; the estimate uses
+datasheet maxima and stated assumptions until validation §4 and §12 measure
+them.
 
 **Power states** (`CONFIG_APP_POWER_STATES`, product image), as in
 [power.md](power.md#power-states):
