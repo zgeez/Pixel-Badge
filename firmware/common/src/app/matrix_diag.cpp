@@ -8,8 +8,9 @@
  *   (bring-up step 13). No LAT pulse is sent, so no output latch changes.
  * - run_matrix_bench(): button-stepped staged tests for the current-limited
  *   matrix bench (steps 14-19): rows with zero column current, single LEDs
- *   at minimum brightness, row/column walks, patterns, then rising brightness.
- *   MODE advances, ACTION toggles blanking (stop) at any time.
+ *   at minimum brightness, row/column walks, patterns, rising brightness,
+ *   then the scan-stall test (bring-up step 16). MODE advances, ACTION toggles
+ *   blanking (stop), or repeats the stall test on its step.
  */
 
 #include "badge/matrix_diag.hpp"
@@ -171,6 +172,7 @@ enum class Step {
 	kAllOn8,
 	kAllOn32,
 	kAllOn128,
+	kStall,
 	kCount,
 };
 
@@ -202,6 +204,9 @@ const char *step_name(Step step)
 		return "all on, brightness 32: record current and VLED";
 	case Step::kAllOn128:
 		return "all on, brightness 128: record current and VLED";
+	case Step::kStall:
+		return "scan stall: one LED lit with LAT stopped; the one-shot must blank it "
+		       "(ACTION repeats)";
 	case Step::kCount:
 		break;
 	}
@@ -285,6 +290,44 @@ int show_retry(const struct device *display, const Frame &frame)
 	return err;
 }
 
+/* The one-shot's width by calculation (docs/hardware.md); to be measured. */
+constexpr unsigned kStallMinUs = 760;
+constexpr unsigned kStallMaxUs = 1410;
+/* Hard limit: the driver's timer re-blanks through PPI if SAFE stays low. */
+constexpr unsigned kStallLimitUs = 3000;
+
+int run_stall(const struct device *display)
+{
+	unsigned safe_us = 0;
+	int err = display_blanking_on(display);
+
+	if (err == 0) {
+		err = badge_display_stall_test(display, kStallLimitUs, &safe_us);
+	}
+	if (err == 0) {
+		LOG_INF("Matrix stall: one-shot blanked the LED %u us after the last LAT pulse",
+			safe_us);
+		if (safe_us < kStallMinUs || safe_us > kStallMaxUs) {
+			LOG_WRN("Matrix stall: CHECK, outside the calculated %u-%u us; measure "
+				"the one-shot on a scope",
+				kStallMinUs, kStallMaxUs);
+		}
+		return 0;
+	}
+	if (err == -ETIMEDOUT) {
+		LOG_ERR("Matrix stall: FAIL, MTX_SAFE_SENSE still low after %u us; the timer "
+			"re-blanked it. Do not scan the matrix until the one-shot is fixed",
+			kStallLimitUs);
+	} else if (err == -EIO) {
+		LOG_ERR("Matrix stall: FAIL, MTX_SAFE_SENSE did not drop at the LAT pulse "
+			"(one-shot not triggered)");
+	} else {
+		LOG_ERR("Matrix stall: error %d", err);
+	}
+	/* The driver left the matrix blanked; the bench stays on this step. */
+	return 0;
+}
+
 } // namespace
 
 int run_matrix_bench(const struct device *display)
@@ -309,7 +352,11 @@ int run_matrix_bench(const struct device *display)
 	while (true) {
 		const bool next = next_button.pressed();
 
-		if (stop_button.pressed()) {
+		const bool stop = stop_button.pressed();
+
+		if (stop && step == Step::kStall) {
+			err = run_stall(display);
+		} else if (stop) {
 			stopped = !stopped;
 			if (stopped) {
 				(void)display_blanking_on(display);
@@ -333,6 +380,8 @@ int run_matrix_bench(const struct device *display)
 				step_name(step));
 			if (step == Step::kBlanked) {
 				err = display_blanking_on(display);
+			} else if (step == Step::kStall) {
+				err = run_stall(display);
 			} else {
 				const uint8_t level = prepare(step, frame);
 
@@ -349,7 +398,9 @@ int run_matrix_bench(const struct device *display)
 				}
 			}
 		}
-		const bool active = !stopped && step != Step::kBlanked && err == 0;
+		/* The stall step leaves the matrix blanked: nothing to keep scanning. */
+		const bool active =
+			!stopped && step != Step::kBlanked && step != Step::kStall && err == 0;
 
 		if (active && (step == Step::kRowWalk || step == Step::kColumnWalk) &&
 		    tick % 6 == 0) {

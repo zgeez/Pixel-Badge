@@ -176,11 +176,13 @@ config APP_CHARGE_ICHG_MA
 config APP_MATRIX_BENCH
 	bool "Rev A matrix bench: button-stepped staged LED tests"
 	depends on APP_BRINGUP_CHECKS && DISPLAY && REVA_MATRIX_OUTPUT
+	select REVA_MATRIX_STALL_TEST
 	help
 	  Replaces the display demo with staged tests for a current-limited
 	  bench supply: rows with zero column current, single LEDs at minimum
-	  brightness, row/column walks, patterns, then all-on at rising
-	  brightness. MODE advances, ACTION stops (blanks) and resumes.
+	  brightness, row/column walks, patterns, all-on at rising brightness,
+	  then the scan-stall test. MODE advances, ACTION stops (blanks) and
+	  resumes, or repeats the stall test on its step.
 
 config APP_WATCHDOG_TEST_LOOP
 	bool "Bench fault injection: reset until safe mode"

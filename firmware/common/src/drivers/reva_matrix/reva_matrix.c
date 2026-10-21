@@ -357,6 +357,72 @@ bool badge_display_rail_on(const struct device *dev)
 	k_mutex_unlock(&data->mutex);
 	return on;
 }
+#if defined(CONFIG_REVA_MATRIX_STALL_TEST)
+int badge_display_stall_test(const struct device *dev, unsigned limit_us, unsigned *safe_us)
+{
+	const struct matrix_config *cfg = dev->config;
+	struct matrix_data *data = dev->data;
+	/* TIMER runs at 16 MHz (prescaler 0). */
+	const uint32_t limit = limit_us * 16U;
+	k_mutex_lock(&data->mutex, K_FOREVER);
+	/* Blanked: the worker is parked or waits for this mutex, and stops on the
+	 * blanked state when it gets it. */
+	if (!data->blanked || data->power_cap == 0) {
+		k_mutex_unlock(&data->mutex);
+		return -EBUSY;
+	}
+	int rc = gpio_pin_set_dt(&cfg->enable, 1);
+	if (rc == 0) {
+		data->rail_on = true;
+		/* VLED settles; an in-flight worker row transfer also ends. */
+		k_sleep(K_MSEC(5));
+		uint8_t levels[32] = {255};
+		uint8_t bytes[8];
+		(void)badge_matrix_encode_row(bytes, levels, 0, 7);
+		struct spi_buf buffer = {.buf = bytes, .len = sizeof(bytes)};
+		const struct spi_buf_set tx = {.buffers = &buffer, .count = 1};
+		rc = spi_write(cfg->spi, &spi_config, &tx);
+	}
+	if (rc == 0) {
+		unsigned key = irq_lock();
+		/* COMPARE1 sets BLANK through PPI (off_link): the hard limit, even if
+		 * the CPU stopped here. COMPARE0 then stops the timer. */
+		nrf_timer_task_trigger(cfg->timer, NRF_TIMER_TASK_STOP);
+		nrf_timer_task_trigger(cfg->timer, NRF_TIMER_TASK_CLEAR);
+		nrf_timer_cc_set(cfg->timer, NRF_TIMER_CC_CHANNEL1, limit);
+		nrf_timer_cc_set(cfg->timer, NRF_TIMER_CC_CHANNEL0, limit + 16U);
+		nrf_timer_event_clear(cfg->timer, NRF_TIMER_EVENT_COMPARE0);
+		nrf_timer_event_clear(cfg->timer, NRF_TIMER_EVENT_COMPARE1);
+		(void)gpio_pin_set_dt(&cfg->arm, 1);
+		(void)gpio_pin_set_dt(&cfg->lat, 1);
+		k_busy_wait(1);
+		(void)gpio_pin_set_dt(&cfg->lat, 0);
+		/* The pulse triggers the one-shot: SAFE must now read low. */
+		if (gpio_pin_get_dt(&cfg->safe) != 0) {
+			rc = -EIO;
+		} else {
+			/* Timed from here, a few microseconds after the pulse. */
+			nrf_timer_task_trigger(cfg->timer, NRF_TIMER_TASK_START);
+			nrf_gpiote_task_trigger(cfg->gpiote->p_reg,
+						nrf_gpiote_clr_task_get(data->blank_channel));
+			while (gpio_pin_get_dt(&cfg->safe) == 0 &&
+			       !nrf_timer_event_check(cfg->timer, NRF_TIMER_EVENT_COMPARE1)) {
+			}
+			nrf_timer_task_trigger(cfg->timer, NRF_TIMER_TASK_CAPTURE3);
+			const uint32_t ticks = nrf_timer_cc_get(cfg->timer, NRF_TIMER_CC_CHANNEL3);
+			if (gpio_pin_get_dt(&cfg->safe) == 0) {
+				rc = -ETIMEDOUT;
+			}
+			*safe_us = MIN(ticks, limit) / 16U;
+		}
+		irq_unlock(key);
+	}
+	/* BLANK high, ARM low, LED rail off: as left by blanking_on(). */
+	off(cfg, data);
+	k_mutex_unlock(&data->mutex);
+	return rc;
+}
+#endif
 static DEVICE_API(display, matrix_api) = {.blanking_on = blanking_on,
 					  .blanking_off = blanking_off,
 					  .write = write_frame,

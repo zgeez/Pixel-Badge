@@ -122,8 +122,10 @@ Board: ____  Serial/batch: ____  Firmware commit: ____  Date: ____
       rows scanning with no LED lit, then one LED at minimum brightness, then
       walks, patterns and all-on at rising brightness; record supply current
       and VLED at each all-on step
-- [ ] Stalled-scan safety: halt the MCU in the debugger mid-scan; the
-      matrix must go dark within about 1-1.5 ms (monostable)
+- [ ] Stalled-scan safety: matrix bench step 12 lights one LED with the scan
+      stopped and logs when the monostable blanks it (calculated 0.76-1.41
+      ms); then halt the MCU in the debugger mid-scan; the matrix must go
+      dark within about 1-1.5 ms (monostable)
 - [ ] Single-pixel and row/column test patterns
 - [ ] Brightness control
 - [ ] Refresh timing (see validation.md), including during BLE activity: the

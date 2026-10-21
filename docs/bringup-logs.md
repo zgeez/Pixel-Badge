@@ -146,8 +146,25 @@ blanked, LED rail off`. Each MODE press advances one step and logs
 | 9 | all on, brightness 8 | Record supply current and VLED |
 | 10 | all on, brightness 32 | Record supply current and VLED |
 | 11 | all on, brightness 128 | Record supply current and VLED |
+| 12 | scan stall: one LED lit with LAT stopped | The one-shot blanks it; see below |
 
-The press after step 11 returns to step 0 (blanked).
+The press after step 12 returns to step 0 (blanked).
+
+Step 12 runs the scan-stall test once on entry, and again on each ACTION
+press. One LED (top-left) is lit after a single LAT pulse with no further
+pulses, so only the external one-shot can blank it. The firmware times
+MTX_SAFE_SENSE from the pulse; a timer re-blanks the LED through PPI after
+3000 us if the one-shot does not.
+
+| Line | Meaning |
+|---|---|
+| `Matrix stall: one-shot blanked the LED N us after the last LAT pulse` | Pass if N is inside the calculated 760 to 1410 us; confirm on a scope that the LED current stops |
+| `Matrix stall: CHECK, outside the calculated 760-1410 us; measure the one-shot on a scope` | Blanked, but not at the calculated width: measure it before relying on it |
+| `Matrix stall: FAIL, MTX_SAFE_SENSE still low after 3000 us; the timer re-blanked it...` | The one-shot did not blank. Stop: do not scan the matrix |
+| `Matrix stall: FAIL, MTX_SAFE_SENSE did not drop at the LAT pulse (one-shot not triggered)` | The LAT pulse did not trigger the one-shot; the LED was not lit |
+
+The debugger-halt, reset-during-scan and ARM-low cases of the stalled-scan
+check are done from outside the firmware (bringup.md).
 
 ACTION logs `Matrix bench: STOPPED (blanked)` and resumes with `Matrix bench:
 resumed`. `Matrix bench: driver error N (matrix blanked); back to step 0` is a
