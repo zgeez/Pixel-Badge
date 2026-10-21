@@ -315,4 +315,19 @@ ZTEST(power_policy, test_input_recovery_follows_source)
 	zassert_equal(g.policy.state(), ShedState::kShed, "HIZ or unknown limit: shed");
 }
 
+ZTEST(power_policy, test_gap_does_not_keep_a_lost_input)
+{
+	Feed f;
+
+	f.run(3900, false, 100);
+	f.shed();
+	f.run(3550, false, 100, 100, true, 1500);
+	f.run(3550, true, 3 * kRampStepMs, 100, true, 1500);
+	zassert_equal(f.policy.state(), ShedState::kNormal);
+	f.invalid();
+	f.run(3600, false, 100); /* source gone during the gap */
+	zassert_equal(f.policy.state(), ShedState::kShed, "a lost source sheds after the gap");
+	zassert_equal(f.policy.ceiling(), 0);
+}
+
 ZTEST_SUITE(power_policy, NULL, NULL, NULL, NULL, NULL);

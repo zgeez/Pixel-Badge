@@ -87,6 +87,7 @@ public:
 private:
 	void shed(uint32_t now);
 	void reenable(uint32_t now, bool battery_ok, uint8_t input_ceiling);
+	bool follow_input(const Sample &sample, uint32_t now);
 
 	ShedState state_ = ShedState::kNoReading;
 	bool valid_ = false;

@@ -763,6 +763,7 @@ void power_thread(void *, void *, void *)
 	int sw_candidate = -1;
 	unsigned sw_stable = 0;
 	bool hiz_warned = false;
+	bool hiz_pack_latched = false; /* left HIZ on a low pack: stay out until resume */
 	bool hiz_want = false;
 	bool cc_fresh = false; /* last fast-tick CC read succeeded */
 	const char *reason = charger_present ? "starting" : "charger not present";
@@ -771,9 +772,21 @@ void power_thread(void *, void *, void *)
 	 * (USB 2.0 suspend rules): run from the pack in HIZ if it can carry the load. */
 	auto update_hiz = [&]() {
 		const bool suspended = usb_host() == power::UsbHost::kSuspended;
-		const bool pack =
-			r.vbat_mv >= (hiz_on ? kHizExitMv : kHizMinMv) && !(probed && !pack_ok);
+
+		if (!suspended) {
+			hiz_pack_latched = false;
+		}
+		/* Leaving HIZ on a low pack is latched until the host resumes: on
+		 * VBUS the pack rebounds above the entry level, and re-entering would
+		 * toggle HIZ and keep loading the suspended host. */
+		const bool pack = !hiz_pack_latched &&
+				  r.vbat_mv >= (hiz_on ? kHizExitMv : kHizMinMv) &&
+				  !(probed && !pack_ok);
 		const bool want = charger_present && suspended && pack;
+
+		if (hiz_on && suspended && charger_present && !pack) {
+			hiz_pack_latched = true;
+		}
 
 		hiz_want = want;
 

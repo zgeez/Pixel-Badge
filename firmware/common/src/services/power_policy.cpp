@@ -112,6 +112,8 @@ void LoadShedPolicy::update(const Sample &s)
 			retry_at_ = now;
 		} else {
 			state_ = ShedState::kNormal;
+			/* After a gap, input-backed operation needs its source too. */
+			(void)follow_input(s, now);
 		}
 		return;
 	}
@@ -144,22 +146,8 @@ void LoadShedPolicy::update(const Sample &s)
 		capped_ = false;
 		input_ceiling_ = 255;
 		input_basis_ = false;
-	} else if (input_basis_) {
-		/* Running on the input's capacity: follow the current source. Lost
-		 * (unplugged, suspended into HIZ, deconfigured, below 500 mA): shed
-		 * without counting a failure; downgraded: lower the ceiling. */
-		const uint8_t budget = s.usb_present && s.input_limit_ma >= kInputOkLimitMa
-					       ? input_budget_level(s.input_limit_ma)
-					       : 0;
-
-		if (budget == 0) {
-			state_ = ShedState::kShed;
-			attempt_ = false;
-			input_basis_ = false;
-			retry_at_ = now;
-			return;
-		}
-		input_ceiling_ = budget;
+	} else if (!follow_input(s, now)) {
+		return;
 	}
 	if (attempt_ && now - enabled_at_ >= kRetryWindowMs) {
 		attempt_ = false;
@@ -205,6 +193,29 @@ void LoadShedPolicy::shed(uint32_t now)
 		backoff = backoff < kBackoffMaxMs ? backoff : kBackoffMaxMs;
 	}
 	retry_at_ = now + backoff;
+}
+
+/* Running on the input's capacity: follow the current source. Lost
+ * (unplugged, suspended into HIZ, deconfigured, below 500 mA): shed without
+ * counting a failure and return false; downgraded: lower the ceiling. */
+bool LoadShedPolicy::follow_input(const Sample &s, uint32_t now)
+{
+	if (!input_basis_) {
+		return true;
+	}
+	const uint8_t budget = s.usb_present && s.input_limit_ma >= kInputOkLimitMa
+				       ? input_budget_level(s.input_limit_ma)
+				       : 0;
+
+	if (budget == 0) {
+		state_ = ShedState::kShed;
+		attempt_ = false;
+		input_basis_ = false;
+		retry_at_ = now;
+		return false;
+	}
+	input_ceiling_ = budget;
+	return true;
 }
 
 void LoadShedPolicy::reenable(uint32_t now, bool battery_ok, uint8_t input_ceiling)
