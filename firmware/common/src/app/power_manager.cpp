@@ -120,7 +120,11 @@ bool adc_ready; /* all four SAADC channels set up; retried every 1 s */
 /* Uptime of the last valid VBAT sample and CC read: sensing health. */
 atomic_t last_vbat_ok;
 atomic_t last_cc_ok;
+atomic_t last_charger_ok; /* last successful charger status read */
+bool usb_start_failed;    /* USB stack not started: a host suspend would go unseen */
 bool charger_present;
+bool vled_checked;      /* VLED read with the rail off at least once this boot */
+bool hiz_pending;       /* HIZ wanted (host suspended) but not confirmed */
 bool vled_fault;        /* VLED present with LED_EN low at start: matrix held for this boot */
 bool configure_pending; /* configure_charger() failed: retried every 240 ms */
 bool charging;
@@ -616,6 +620,41 @@ const char *shed_state_name(power::ShedState state)
 	return "?";
 }
 
+/* The matrix ceiling the driver enforces: the battery policy's, or 0 while
+ * the rail-off check has not passed (VLED unread or present with LED_EN low)
+ * or a suspended host still waits for a confirmed HIZ. */
+uint8_t apply_ceiling();
+
+/* VLED must read near 0 V with LED_EN low before the matrix may run: a rail
+ * that cannot be switched off cannot be shed. Retried until a reading succeeds. */
+void check_vled_off()
+{
+	int pin = 0;
+
+	if (adc_pin_mv(adc_vled, pin) != 0) {
+		return;
+	}
+	const int vled_mv = power::vled_from_pin_mv(pin);
+
+	vled_checked = true;
+	if (vled_mv > 500) {
+		LOG_ERR("Power: FAIL, VLED %d mV while LED_EN is low; matrix held off", vled_mv);
+		vled_fault = true;
+	}
+	(void)apply_ceiling();
+}
+
+uint8_t apply_ceiling()
+{
+	const uint8_t ceiling = (!vled_checked || vled_fault || hiz_pending) ? 0 : policy.ceiling();
+
+#if defined(CONFIG_APP_LOAD_SHED)
+	badge_display_set_power_cap(display, ceiling);
+	atomic_set(&held, ceiling == 0 ? 1 : 0);
+#endif
+	return ceiling;
+}
+
 /* One VBAT reading into the load-shed policy; the driver enforces its ceiling. */
 void apply_policy(const power::Sample &sample)
 {
@@ -624,13 +663,8 @@ void apply_policy(const power::Sample &sample)
 	const bool was_low = policy.low_power();
 
 	policy.update(sample);
-	/* A rail that cannot be switched off cannot be shed: keep the matrix off. */
-	const uint8_t ceiling = vled_fault ? 0 : policy.ceiling();
+	const uint8_t ceiling = apply_ceiling();
 
-#if defined(CONFIG_APP_LOAD_SHED)
-	badge_display_set_power_cap(display, ceiling);
-	atomic_set(&held, ceiling == 0 ? 1 : 0);
-#endif
 	atomic_set(&low_battery, policy.low_power() ? 1 : 0);
 	if (policy.state() != before || ceiling != old_ceiling || policy.low_power() != was_low) {
 		LOG_INF("Power: VBAT %d mV%s%s: matrix ceiling %u (%s, %u failed re-enables)%s",
@@ -809,6 +843,15 @@ void power_thread(void *, void *, void *)
 					suspended ? "suspended" : "active");
 			}
 		}
+		/* Until HIZ is confirmed the host carries the load: hold the
+		 * matrix, the largest one. */
+		if ((want && !hiz_on) != hiz_pending) {
+			hiz_pending = want && !hiz_on;
+			if (hiz_pending) {
+				LOG_WRN("Charger: HIZ not confirmed; matrix held");
+			}
+			(void)apply_ceiling();
+		}
 	};
 
 	/* A USB state change is handled between the I2C-heavy steps too, not
@@ -851,6 +894,8 @@ void power_thread(void *, void *, void *)
 				input_limit_ma = -1;
 				last_vbus_stat = 0xFF; /* unknown, not the last value */
 			} else {
+				atomic_set(&last_charger_ok,
+					   static_cast<atomic_val_t>(k_uptime_get_32()));
 				if (!cc_ok) {
 					set_charging(false, "CC read failed");
 				}
@@ -969,6 +1014,9 @@ void power_thread(void *, void *, void *)
 			LOG_INF("Power: SAADC ready");
 		}
 		/* ---- slow: charger state, gates, watchdog, log ---- */
+		if (tick % kSlowEvery == 0 && !vled_checked && !rail_on()) {
+			check_vled_off();
+		}
 		if (tick % kSlowEvery == 0 && !probing) {
 			bool ok = false;
 
@@ -1111,6 +1159,7 @@ int power_manager_start(bool verbose_logs)
 	adc_ready = adc_setup() == 0;
 	atomic_set(&last_vbat_ok, static_cast<atomic_val_t>(k_uptime_get_32()));
 	atomic_set(&last_cc_ok, static_cast<atomic_val_t>(k_uptime_get_32()));
+	atomic_set(&last_charger_ok, static_cast<atomic_val_t>(k_uptime_get_32()));
 	if (!adc_ready) {
 		/* Retried every 1 s; unhealthy after kSenseStaleMs without VBAT. */
 		LOG_ERR("Power: FAIL, SAADC setup; retrying");
@@ -1123,7 +1172,9 @@ int power_manager_start(bool verbose_logs)
 	}
 #if defined(CONFIG_APP_USB_DEVICE)
 	if (const int err = badge_usb_start(&usb_event); err != 0) {
-		LOG_ERR("USB: FAIL, device start (%d); input stays at 100 mA on host ports", err);
+		/* A host suspend would go unseen: unhealthy while VBUS is present. */
+		LOG_ERR("USB: FAIL, device start (%d)", err);
+		usb_start_failed = true;
 		failed++;
 	}
 #endif
@@ -1135,9 +1186,9 @@ int power_manager_start(bool verbose_logs)
 			r.vbat_mv);
 		LOG_INF("Power: VLED %d mV (LED rail is off at start: expect ~0)", r.vled_mv);
 	}
-	if (r.vled_mv > 500) {
-		LOG_ERR("Power: FAIL, VLED present while LED_EN is low; matrix held off");
-		vled_fault = true;
+	/* The rail is off at start; an unreadable VLED is retried by the thread. */
+	check_vled_off();
+	if (vled_fault) {
 		failed++;
 	}
 	LOG_INF("Power manager started: %d failed checks; charging %s", failed,
@@ -1161,6 +1212,15 @@ bool power_manager_healthy()
 	    (now - static_cast<uint32_t>(atomic_get(&last_vbat_ok)) >= kSenseStaleMs ||
 	     (charger_present &&
 	      now - static_cast<uint32_t>(atomic_get(&last_cc_ok)) >= kSenseStaleMs))) {
+		return false;
+	}
+	/* With USB attached the charger must be under control (input limit, HIZ)
+	 * and the USB stack running (host suspend). A charger that never answered
+	 * or went silent, or a USB stack that did not start, fails closed. On
+	 * battery alone neither matters, and System OFF waits for the charger. */
+	if (started && atomic_get(&stop_state) == 0 && nrf_vbus_present() &&
+	    (usb_start_failed ||
+	     now - static_cast<uint32_t>(atomic_get(&last_charger_ok)) >= kSenseStaleMs)) {
 		return false;
 	}
 	return started &&

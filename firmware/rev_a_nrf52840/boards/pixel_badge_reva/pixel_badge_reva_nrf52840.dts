@@ -72,7 +72,10 @@
 };
 &i2c0 {
 	compatible = "nordic,nrf-twim";
-	status = "okay"; clock-frequency = <I2C_BITRATE_FAST>;
+	/* Standard mode: at 400 kHz the BQ25620 in low-power mode needs >= 68 us
+	 * bus-free and repeated-START setup time (SLUSEG2D 8.5), which TWIM
+	 * cannot insert; 100 kHz has no extra requirement. */
+	status = "okay"; clock-frequency = <I2C_BITRATE_STANDARD>;
 	pinctrl-0 = <&i2c0_default>; pinctrl-1 = <&i2c0_sleep>; pinctrl-names = "default", "sleep";
 	imu: icm42688@68 {
 		compatible = "invensense,icm42688p-i2c"; reg = <0x68>;
