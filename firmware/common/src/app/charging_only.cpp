@@ -20,7 +20,12 @@ namespace badge
  * charging and the input limit. USB removal turns the rail off in hardware. */
 void run_charging_only()
 {
-	power_enter_charging_only();
+	LOG_INF("charging-only state (switch off, USB present)");
+	bool imu_asleep = power_enter_charging_only() == 0;
+
+	if (!imu_asleep) {
+		LOG_WRN("IMU sleep failed; retrying");
+	}
 
 	const device *watchdog = DEVICE_DT_GET(DT_NODELABEL(wdt0));
 	wdt_timeout_cfg timeout{};
@@ -38,6 +43,9 @@ void run_charging_only()
 			LOG_INF("power switch on: restarting into normal operation");
 			LOG_PANIC();
 			sys_reboot(SYS_REBOOT_COLD);
+		}
+		if (!imu_asleep) {
+			imu_asleep = power_enter_charging_only() == 0;
 		}
 		/* A stalled manager stops the feed: the reset drops CHG_EN. */
 		if (channel >= 0 && power_manager_healthy()) {

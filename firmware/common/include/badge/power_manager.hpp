@@ -32,9 +32,9 @@ bool power_display_held();
 /* Unloaded VBAT stayed below the lowest-power threshold on battery. */
 bool power_low_battery();
 
-/* Charging-only state: puts the IMU to sleep; the matrix, microphone, NFC
- * I2C side and Bluetooth are never started in that state. */
-void power_enter_charging_only();
+/* Charging-only state: puts the IMU to sleep (retry until 0); the matrix,
+ * microphone, NFC I2C side and Bluetooth are never started in that state. */
+int power_enter_charging_only();
 
 /* Lowest-power state: stops the manager, turns the LED rail, charging, VBAT
  * divider, NFC supply and IMU off and enters System OFF, woken by a charger

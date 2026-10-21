@@ -82,7 +82,8 @@ constexpr unsigned kProbeEvery = 1500;       /* 30 s between pack-presence probe
 constexpr unsigned kDiscoverEvery = 50;      /* 1 s between charger discovery retries */
 constexpr unsigned kSwitchStableTicks = 5;   /* 100 ms power-switch debounce */
 constexpr uint32_t kHealthyMs = 1000;        /* thread heartbeat age */
-constexpr uint32_t kAdcGraceMs = 5000;       /* SAADC down this long: unhealthy */
+constexpr uint32_t kSenseStaleMs = 5000;     /* no valid VBAT/CC this long: unhealthy */
+constexpr uint32_t kAdcResetupMs = 2000;     /* no valid VBAT this long: set the SAADC up again */
 constexpr int kVbatSettleMs = 25;            /* blocking read at start-up only */
 constexpr int kHizMinMv = 3400;     /* pack needed to enter HIZ while USB is suspended ... */
 constexpr int kHizExitMv = 3300;    /* ... and to stay in it (hysteresis) */
@@ -115,8 +116,10 @@ const struct device *const display = DEVICE_DT_GET(DT_CHOSEN(zephyr_display));
 #endif
 
 bool adc_calibrated;
-bool adc_ready;                           /* all four SAADC channels set up; retried every 1 s */
-atomic_t adc_down_since = ATOMIC_INIT(0); /* uptime ms of the first failure, 0 = ready */
+bool adc_ready; /* all four SAADC channels set up; retried every 1 s */
+/* Uptime of the last valid VBAT sample and CC read: sensing health. */
+atomic_t last_vbat_ok;
+atomic_t last_cc_ok;
 bool charger_present;
 bool configure_pending; /* configure_charger() failed: retried every 240 ms */
 bool charging;
@@ -761,6 +764,7 @@ void power_thread(void *, void *, void *)
 	unsigned sw_stable = 0;
 	bool hiz_warned = false;
 	bool hiz_want = false;
+	bool cc_fresh = false; /* last fast-tick CC read succeeded */
 	const char *reason = charger_present ? "starting" : "charger not present";
 
 	/* A suspended USB host needs suspend current within 10 ms of bus idle
@@ -819,6 +823,12 @@ void power_thread(void *, void *, void *)
 			uint8_t status1 = 0;
 
 			const bool cc_ok = read_cc(r) == 0;
+
+			cc_fresh = cc_ok;
+			if (cc_ok) {
+				atomic_set(&last_cc_ok,
+					   static_cast<atomic_val_t>(k_uptime_get_32()));
+			}
 
 			if (reg_read8(chg::kStatus1, status1) != 0) {
 				set_charging(false, "status read failed");
@@ -886,11 +896,16 @@ void power_thread(void *, void *, void *)
 			vbat_busy = false;
 			r.vbat_mv = read_ok ? power::vbat_from_pin_mv(pin) : -1;
 			sample.valid = read_ok && r.vbat_mv >= 0 && r.vbat_mv <= kVbatMaxMv;
+			if (sample.valid) {
+				atomic_set(&last_vbat_ok,
+					   static_cast<atomic_val_t>(k_uptime_get_32()));
+			}
 			sample.vbat_mv = r.vbat_mv;
 			/* Loaded only if the LED rail stayed on across the reading. */
 			sample.loaded = vbat_loaded && rail_on();
-			/* In HIZ the pack carries the load: VBUS is present but not an input. */
-			sample.usb_present = hiz_maybe() || nrf_vbus_present() ||
+			/* USB presence from VBUS itself. An uncertain HIZ state only
+			 * withholds input capacity (input_limit_ma below). */
+			sample.usb_present = nrf_vbus_present() ||
 					     (last_vbus_stat != 0 && last_vbus_stat != 0xFF) ||
 					     (s.fresh && s.vbus_mv >= 4300);
 			sample.input_limit_ma = hiz_maybe() ? -1 : input_limit_ma;
@@ -924,9 +939,16 @@ void power_thread(void *, void *, void *)
 		if (!charger_present && tick % kDiscoverEvery == 0) {
 			(void)discover_charger();
 		}
+		if (adc_ready && tick % kDiscoverEvery == 0 &&
+		    k_uptime_get_32() - static_cast<uint32_t>(atomic_get(&last_vbat_ok)) >=
+			    kAdcResetupMs) {
+			/* Reads keep failing after a good setup: set it up again. */
+			LOG_WRN("Power: no valid VBAT for %u ms; SAADC setup again",
+				static_cast<unsigned>(kAdcResetupMs));
+			adc_ready = false;
+		}
 		if (!adc_ready && tick % kDiscoverEvery == 0 && adc_setup() == 0) {
 			adc_ready = true;
-			atomic_clear(&adc_down_since);
 			LOG_INF("Power: SAADC ready");
 		}
 		/* ---- slow: charger state, gates, watchdog, log ---- */
@@ -953,6 +975,10 @@ void power_thread(void *, void *, void *)
 				if (hiz_want) {
 					/* The I2C watchdog and a re-plug clear EN_HIZ. */
 					(void)set_hiz(true);
+				}
+				if (ok && !cc_fresh) {
+					ok = false;
+					reason = "CC read failed";
 				}
 				if (hiz_on) {
 					ok = false;
@@ -1065,10 +1091,11 @@ int power_manager_start(bool verbose_logs)
 		return 1;
 	}
 	adc_ready = adc_setup() == 0;
+	atomic_set(&last_vbat_ok, static_cast<atomic_val_t>(k_uptime_get_32()));
+	atomic_set(&last_cc_ok, static_cast<atomic_val_t>(k_uptime_get_32()));
 	if (!adc_ready) {
-		/* Retried every 1 s; unhealthy after kAdcGraceMs (no VBAT, no CC). */
+		/* Retried every 1 s; unhealthy after kSenseStaleMs without VBAT. */
 		LOG_ERR("Power: FAIL, SAADC setup; retrying");
-		atomic_set(&adc_down_since, static_cast<atomic_val_t>(k_uptime_get_32() | 1U));
 		failed++;
 	}
 
@@ -1106,11 +1133,15 @@ bool power_manager_healthy()
 {
 	/* Never started (GPIO setup failed): unhealthy, so the application holds
 	 * the display and stops the watchdog feed instead of running unmanaged. */
-	/* An SAADC that stays down leaves no VBAT (no low-battery off) and no CC
-	 * reading: unhealthy, so the watchdog resets and setup runs again. */
-	const uint32_t adc_down = static_cast<uint32_t>(atomic_get(&adc_down_since));
+	/* Sensing that stays down (SAADC setup or reads) leaves no VBAT, so no
+	 * low-battery off, and no CC for the input limit: unhealthy, so the
+	 * watchdog resets the badge and setup runs again. */
+	const uint32_t now = k_uptime_get_32();
 
-	if (adc_down != 0 && k_uptime_get_32() - adc_down >= kAdcGraceMs) {
+	if (started && atomic_get(&stop_state) == 0 &&
+	    (now - static_cast<uint32_t>(atomic_get(&last_vbat_ok)) >= kSenseStaleMs ||
+	     (charger_present &&
+	      now - static_cast<uint32_t>(atomic_get(&last_cc_ok)) >= kSenseStaleMs))) {
 		return false;
 	}
 	return started &&
@@ -1144,10 +1175,9 @@ bool power_low_battery()
 	return atomic_get(&low_battery) != 0;
 }
 
-void power_enter_charging_only()
+int power_enter_charging_only()
 {
-	LOG_INF("Power: charging-only state (switch off, USB present)");
-	(void)sleep_imu();
+	return sleep_imu();
 }
 
 void resume_manager()

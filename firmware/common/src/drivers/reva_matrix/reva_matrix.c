@@ -29,6 +29,7 @@ struct matrix_config {
 struct matrix_data {
 	struct k_mutex mutex;
 	struct k_sem pulse;
+	struct k_sem wake; /* leaves the dark park: unblank or cap raised */
 	struct k_thread thread;
 	uint8_t fb[2][1024];
 	uint8_t front, brightness, blank_channel, power_cap;
@@ -99,7 +100,9 @@ static void worker(void *pointer, void *unused1, void *unused2)
 			powered = false;
 			row = plane = 0;
 			k_mutex_unlock(&data->mutex);
-			k_sleep(K_MSEC(2));
+			/* Parked while dark (blanked, shed, charging-only): woken at once
+			 * when that changes, otherwise once a second. */
+			(void)k_sem_take(&data->wake, K_SECONDS(1));
 			continue;
 		}
 		if (!powered) {
@@ -225,6 +228,7 @@ static int blanking_off(const struct device *dev)
 	data->fault = 0;
 	data->blanked = false;
 	k_mutex_unlock(&data->mutex);
+	k_sem_give(&data->wake);
 	return 0;
 }
 static int write_frame(const struct device *dev, uint16_t x, uint16_t y,
@@ -341,6 +345,9 @@ void badge_display_set_power_cap(const struct device *dev, uint8_t ceiling)
 		data->stale = true;
 	}
 	k_mutex_unlock(&data->mutex);
+	if (ceiling != 0) {
+		k_sem_give(&data->wake);
+	}
 }
 bool badge_display_rail_on(const struct device *dev)
 {
@@ -362,6 +369,7 @@ static int initialize(const struct device *dev)
 	struct matrix_data *data = dev->data;
 	k_mutex_init(&data->mutex);
 	k_sem_init(&data->pulse, 0, 1);
+	k_sem_init(&data->wake, 0, 1);
 	data->blanked = true;
 	data->stale = true;
 	data->brightness = 128;
