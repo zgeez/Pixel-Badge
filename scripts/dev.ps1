@@ -12,24 +12,45 @@
     recover Rev A only: erase the whole nRF52840 (ERASEALL) and keep its debug
             port open. Needed once for a new module, whose AP-Protect blocks
             SWD. Erases settings, bond and artwork; requires -EraseAll.
-    flash   Rev A only: program -BuildDir's merged.hex over SWD, erasing only the
-            ranges it touches (UICR, settings, bond and artwork are kept), verify
-            by readback and reset.
-    rtt     Rev A only: log RTT channel 0 to -RttLog (default build/rtt/<time>.log).
+    flash   Program -BuildDir's images over SWD, erasing only the ranges they
+            touch (UICR, settings, bond and artwork are kept), verify by readback
+            and reset. Rev A: merged.hex to the nRF52840. Prototype: the network
+            core image, then the application core image, to the DK's nRF5340.
+    rtt     Log RTT channel 0 to -RttLog (default build/rtt/<time>.log).
 
-    recover, flash and rtt use a J-Link probe (the nRF5340 DK's debug out, see
-    docs/bringup.md). They refuse to act unless the probe identifies an
-    nRF52840, so the DK's own nRF5340 is never erased or programmed by mistake;
-    recover also accepts a target that AP-Protect keeps from being identified.
-    recover and flash pass --family nrf52 to nrfutil, so the write itself fails
-    if the target changed after the check. -SwdSpeedKhz applies to every probe
-    access. Name the probe with -SerialNumber when more than one J-Link is
-    connected.
+    The three programs are selected with -Image:
+      Prototype    nRF5340 DK with BLE (build/prototype)
+      Diagnostics  Rev A bring-up checks, no BLE (build/reva-diagnostics)
+      Main         Rev A badge firmware (build/rev_a_nrf52840)
+    Add-ons stay explicit -ExtraConfFile fragments: matrix-stepper.conf and
+    diagnostics-charge.conf on Diagnostics, matrix-bench.conf and
+    recording-bench.conf on Main, audio-recording-bench.conf on Prototype.
+
+    recover, flash and rtt use a J-Link probe (the nRF5340 DK's debugger, see
+    docs/bringup.md) and refuse to act unless the probe identifies the chip the
+    image is for: an nRF52840 for Rev A, so the DK's own nRF5340 is never
+    erased or programmed by mistake (recover also accepts a target that
+    AP-Protect keeps from being identified), and the nRF5340 for Prototype, so
+    a badge on the debug-out cable never receives a DK image. Writes pass
+    --family to nrfutil, so they fail if the target changed after the check.
+    flash also checks that the build matches the chip and -Image, and refuses
+    images that would erase UICR, artwork or settings. -SwdSpeedKhz applies to
+    every probe access. Name the probe with -SerialNumber when more than one
+    J-Link is connected.
 
     The nRF Connect SDK at -NcsRoot\-NcsVersion and the toolchain it requires
     are always loaded, overriding any SDK environment already active. The
     command fails if the SDK version differs from -NcsVersion or its required
     toolchain is not installed.
+
+.EXAMPLE
+    .\scripts\dev.ps1 build -Image Diagnostics -Pristine
+
+.EXAMPLE
+    .\scripts\dev.ps1 flash -Image Diagnostics
+
+.EXAMPLE
+    .\scripts\dev.ps1 flash -Image Prototype
 
 .EXAMPLE
     .\scripts\dev.ps1 build
@@ -47,7 +68,7 @@
     .\scripts\dev.ps1 recover -Target RevA -EraseAll
 
 .EXAMPLE
-    .\scripts\dev.ps1 flash -Target RevA -BuildDir build/reva-diagnostics
+    .\scripts\dev.ps1 build -Image Diagnostics -ExtraConfFile firmware/rev_a_nrf52840/configs/matrix-stepper.conf -BuildDir build/reva-stepper
 
 .EXAMPLE
     .\scripts\dev.ps1 rtt -Target RevA
@@ -60,6 +81,11 @@ param(
 
     [ValidateSet('Prototype', 'RevA')]
     [string] $Target = 'Prototype',
+    # One of the three programs: Prototype (nRF5340 DK, BLE), Diagnostics (Rev A
+    # bring-up checks) or Main (Rev A badge firmware). Sets the target,
+    # application, board, build directory and base configuration.
+    [ValidateSet('Prototype', 'Diagnostics', 'Main')]
+    [string] $Image,
     [string] $Board,
     [string] $BuildDir,
     # Application directory relative to the repository root.
@@ -89,6 +115,29 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $RepoRoot = Split-Path -Parent $PSScriptRoot
+if ($Image) {
+    $imageTarget = if ($Image -eq 'Prototype') { 'Prototype' } else { 'RevA' }
+    if ($PSBoundParameters.ContainsKey('Target') -and $Target -ne $imageTarget) {
+        throw "-Image $Image is a $imageTarget image; omit -Target."
+    }
+    if ($App -or $Board) { throw '-Image sets the application and board; omit -App and -Board.' }
+    $Target = $imageTarget
+    switch ($Image) {
+        'Prototype' {
+            if (-not $BuildDir) { $BuildDir = 'build/prototype' }
+            if (-not $SysbuildConfFile) { $SysbuildConfFile = 'firmware/nrf5340_prototype/configs/ble-sysbuild.conf' }
+        }
+        'Diagnostics' {
+            if (-not $BuildDir) { $BuildDir = 'build/reva-diagnostics' }
+            # Add-ons (matrix stepper, watched first charge) follow the base.
+            $ExtraConfFile = @('firmware/rev_a_nrf52840/configs/diagnostics.conf') +
+                @($ExtraConfFile | Where-Object { $_ -and (Split-Path -Leaf $_) -ne 'diagnostics.conf' })
+        }
+        'Main' {
+            if (-not $BuildDir) { $BuildDir = 'build/rev_a_nrf52840' }
+        }
+    }
+}
 if (-not $App) { $App = if ($Target -eq 'RevA') { 'firmware/rev_a_nrf52840' } else { 'firmware/nrf5340_prototype' } }
 if (-not $Board) { $Board = if ($Target -eq 'RevA') { 'pixel_badge_reva/nrf52840' } else { 'nrf5340dk/nrf5340/cpuapp' } }
 if (-not $BuildDir) { $BuildDir = if ($Target -eq 'RevA') { 'build/rev_a_nrf52840' } else { 'build/nrf5340dk' } }
@@ -369,14 +418,27 @@ function Get-TargetIdentity {
     $identity
 }
 
-function Assert-RevATarget {
-    # With nothing powered on the debug-out connector the DK's debugger targets
-    # the DK's own nRF5340. Only an identified nRF52840 (the badge's E73) is
-    # accepted. -AllowProtected (recover only) also accepts a target that
-    # cannot be identified, since AP-Protect can hide the part; the recover
-    # command itself then refuses anything but the nRF52 family.
+function Assert-ProbeTarget {
+    # The DK's debugger targets the DK's own nRF5340 unless a powered board on
+    # the debug-out connector grounds its detect pin. Prototype accepts only an
+    # identified nRF5340; Rev A only an identified nRF52840 (the badge's E73).
+    # -AllowProtected (Rev A recover only) also accepts a target that cannot be
+    # identified, since AP-Protect can hide the part; the recover command
+    # itself then refuses anything but the nRF52 family.
     param([string] $Probe, [switch] $AllowProtected)
     $id = Get-TargetIdentity $Probe
+    if ($Target -eq 'Prototype') {
+        if ($id.Family -eq 'NRF53_FAMILY' -and $id.Version -match '^NRF5340_') {
+            Write-Host "Probe $Probe sees $($id.Version) (the DK)."
+            return
+        }
+        if ($id.Family -match '^NRF52' -or $id.Version -match '^NRF52' -or
+            (-not $id.Family -and $id.Text -match '(?i)nrf52')) {
+            throw "Probe $Probe sees an nRF52 (a board on the debug-out cable), not the DK's nRF5340. Unplug the debug-out cable to program the DK."
+        }
+        Write-Host $id.Text
+        throw "Probe $Probe could not identify the DK's nRF5340 (output above). Unplug the debug-out cable and check the DK power switch."
+    }
     if ($id.Family -eq 'NRF52_FAMILY' -and $id.Version -match '^NRF52840_') {
         Write-Host "Probe $Probe sees $($id.Version)."
         return
@@ -401,7 +463,7 @@ function Assert-RevAImage {
     # nor flash a DK image to the badge.
     param([string] $Hex)
     if (-not (Test-Path -LiteralPath $Hex)) {
-        throw "$Hex not found; build first (dev.ps1 build -Target RevA -BuildDir ...)."
+        throw "$Hex not found; build first (dev.ps1 build -Image Diagnostics or -Image Main)."
     }
     $config = Join-Path (Split-Path -Parent $Hex) 'rev_a_nrf52840\zephyr\.config'
     if (-not (Test-Path -LiteralPath $config) -or
@@ -411,16 +473,79 @@ function Assert-RevAImage {
     if (Select-String -LiteralPath $Hex -Pattern '^:020000041000' -Quiet) {
         throw "$Hex contains UICR data; programming it would erase UICR and re-lock the debug port."
     }
+    # The named image must match the build: Diagnostics has no BLE, Main has.
+    $ble = Select-String -LiteralPath $config -Pattern '^CONFIG_BT=y' -Quiet
+    if ($Image -eq 'Diagnostics' -and $ble) { throw "$Hex is not a diagnostics build (BLE is enabled)." }
+    if ($Image -eq 'Main' -and -not $ble) { throw "$Hex is not a main build (BLE is disabled)." }
+}
+
+function Test-HexInside {
+    # True when every data record of an Intel HEX file lies inside one of the
+    # ranges, given as flat start/end pairs (end exclusive).
+    param([string] $Hex, [long[]] $Ranges)
+    $base = 0L
+    foreach ($line in [IO.File]::ReadAllLines($Hex)) {
+        if ($line.Length -lt 11 -or $line[0] -ne ':') { continue }
+        $type = $line.Substring(7, 2)
+        if ($type -eq '04') { $base = [Convert]::ToInt64($line.Substring(9, 4), 16) -shl 16; continue }
+        if ($type -eq '02') { $base = [Convert]::ToInt64($line.Substring(9, 4), 16) -shl 4; continue }
+        if ($type -ne '00') { continue }
+        $start = $base + [Convert]::ToInt64($line.Substring(3, 4), 16)
+        $end = $start + [Convert]::ToInt64($line.Substring(1, 2), 16)
+        $inside = $false
+        for ($i = 0; $i -lt $Ranges.Count; $i += 2) {
+            if ($start -ge $Ranges[$i] -and $end -le $Ranges[$i + 1]) { $inside = $true; break }
+        }
+        if (-not $inside) { return $false }
+    }
+    $true
+}
+
+function Get-PrototypeImages {
+    # The DK prototype's flash images in programming order (network core
+    # first, as west flashes them). The application image (MCUboot + app)
+    # must stay below the MCUboot secondary slot, so the artwork, network
+    # update and settings partitions (0xb0000-0xfffff, pm_static.yml) are never
+    # erased; the network image must stay in network-core flash. A build
+    # without BLE has no network image and leaves that core as it is.
+    param([string] $Dir)
+    $app = Join-Path $Dir 'merged.hex'
+    $net = Join-Path $Dir 'merged_CPUNET.hex'
+    if (-not (Test-Path -LiteralPath $app)) {
+        throw "$app not found; build first (dev.ps1 build -Image Prototype)."
+    }
+    $config = Join-Path $Dir 'nrf5340_prototype\zephyr\.config'
+    if (-not (Test-Path -LiteralPath $config) -or
+        -not (Select-String -LiteralPath $config -Pattern '^CONFIG_BOARD="nrf5340dk"' -Quiet)) {
+        throw "$Dir is not a prototype (nrf5340dk) build."
+    }
+    if (-not (Test-HexInside $app @(0x0, 0x60000))) {
+        throw "$app writes outside MCUboot and the primary slot (0x0-0x5ffff); it could erase artwork or settings."
+    }
+    $images = @()
+    if (Test-Path -LiteralPath $net) {
+        if (-not (Test-HexInside $net @(0x01000000, 0x01040000))) {
+            throw "$net writes outside network-core flash."
+        }
+        $images += [pscustomobject]@{ Core = 'network'; Hex = $net }
+    } elseif ($Image -eq 'Prototype') {
+        throw "$net not found; -Image Prototype is the BLE build."
+    } else {
+        Write-Warning 'No network-core image (build without BLE); the network core is left as it is.'
+    }
+    $images + [pscustomobject]@{ Core = 'application'; Hex = $app }
 }
 
 function Invoke-Recover {
-    if ($Target -ne 'RevA') { throw 'recover is for the Rev A badge only (-Target RevA).' }
+    if ($Target -ne 'RevA') {
+        throw "recover is for the Rev A badge only; the DK's nRF5340 holds the prototype's settings, bond and artwork."
+    }
     if (-not $EraseAll) {
         throw 'recover erases the whole nRF52840, including settings, the BLE bond and artwork. Add -EraseAll to confirm.'
     }
     Initialize-NcsEnvironment
     $probe = Resolve-JLinkProbe
-    Assert-RevATarget $probe -AllowProtected
+    Assert-ProbeTarget $probe -AllowProtected
     Write-Host "Recovering the nRF52840 behind J-Link $probe (ERASEALL, debug port kept open)..."
     # --family repeats the target check inside the destructive command itself,
     # so a target that changed since identification (badge power lost, the
@@ -429,12 +554,27 @@ function Invoke-Recover {
 }
 
 function Invoke-Flash {
-    if ($Target -ne 'RevA') { throw 'flash is for the Rev A badge only (-Target RevA).' }
     Initialize-NcsEnvironment
+    if ($Target -eq 'Prototype') {
+        $images = @(Get-PrototypeImages (Join-Path $RepoRoot $BuildDir))
+        $probe = Resolve-JLinkProbe
+        Assert-ProbeTarget $probe
+        foreach ($image in $images) {
+            Write-Host "Programming the $($image.Core) core with $($image.Hex) through J-Link $probe..."
+            Invoke-Native nrfutil (@('device', 'program', '--serial-number', $probe, '--family', 'nrf53',
+                '--core', $image.Core, '--firmware', $image.Hex,
+                '--options', 'chip_erase_mode=ERASE_RANGES_TOUCHED_BY_FIRMWARE,verify=VERIFY_READ') +
+                (Get-SwdArguments))
+        }
+        # A pin reset restarts both cores (west's default for nRF53).
+        Invoke-Native nrfutil (@('device', 'reset', '--serial-number', $probe, '--family', 'nrf53',
+            '--reset-kind', 'RESET_PIN') + (Get-SwdArguments))
+        return
+    }
     $hex = Join-Path (Join-Path $RepoRoot $BuildDir) 'merged.hex'
     Assert-RevAImage $hex
     $probe = Resolve-JLinkProbe
-    Assert-RevATarget $probe
+    Assert-ProbeTarget $probe
     Write-Host "Programming $hex through J-Link $probe..."
     # --family: as in recover, the target is checked again by the write itself.
     Invoke-Native nrfutil (@('device', 'program', '--serial-number', $probe, '--family', 'nrf52', '--firmware', $hex,
@@ -456,17 +596,17 @@ function Get-JLinkTool {
 }
 
 function Invoke-Rtt {
-    if ($Target -ne 'RevA') { throw 'rtt is for the Rev A badge only (-Target RevA).' }
     Initialize-NcsEnvironment
     $probe = Resolve-JLinkProbe
-    Assert-RevATarget $probe
+    Assert-ProbeTarget $probe
     if (-not $RttLog) {
         $RttLog = Join-Path $RepoRoot ("build/rtt/{0:yyyyMMdd-HHmmss}.log" -f (Get-Date))
     }
     New-Item -ItemType Directory -Force -Path (Split-Path -Parent $RttLog) | Out-Null
     $logger = Get-JLinkTool 'JLinkRTTLogger.exe'
     Write-Host "Logging RTT channel 0 from J-Link $probe to $RttLog (Ctrl+C to stop)..."
-    & $logger -Device NRF52840_XXAA -If SWD -Speed $SwdSpeedKhz -USB $probe -RTTChannel 0 $RttLog
+    $device = if ($Target -eq 'Prototype') { 'NRF5340_XXAA_APP' } else { 'NRF52840_XXAA' }
+    & $logger -Device $device -If SWD -Speed $SwdSpeedKhz -USB $probe -RTTChannel 0 $RttLog
 }
 
 Push-Location $RepoRoot
