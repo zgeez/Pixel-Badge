@@ -124,6 +124,7 @@ atomic_t last_charger_ok; /* last successful charger status read */
 bool usb_start_failed;    /* USB stack not started: a host suspend would go unseen */
 bool charger_present;
 bool vled_checked;      /* VLED read with the rail off at least once this boot */
+bool hiz_confirmed;     /* EN_HIZ known set: a set_hiz(true) succeeded since */
 bool hiz_pending;       /* HIZ wanted (host suspended) but not confirmed */
 bool vled_fault;        /* VLED present with LED_EN low at start: matrix held for this boot */
 bool configure_pending; /* configure_charger() failed: retried every 240 ms */
@@ -723,6 +724,15 @@ int sleep_imu()
 	return 0;
 }
 
+bool usb_enable_failing()
+{
+#if defined(CONFIG_APP_USB_DEVICE)
+	return badge_usb_enable_failing();
+#else
+	return false;
+#endif
+}
+
 /* High-impedance input (SLUSEG2D 8.3.4.3): VBUS draws at most 20 uA and the
  * battery runs the system. Reset by the I2C watchdog and adapter plug-in. */
 int set_hiz(bool on)
@@ -832,21 +842,27 @@ void power_thread(void *, void *, void *)
 				kHizMinMv);
 		}
 		hiz_warned = suspended && !pack;
-		if (want != hiz_on) {
+		/* hiz_on means "on or unknown" (it starts unknown after a reset);
+		 * only a successful write confirms entry, so a wanted HIZ is
+		 * written until confirmed. */
+		if (want != hiz_on || (want && !hiz_confirmed)) {
 			if (want) {
 				set_charging(false, "USB host suspended (HIZ)");
 			}
 			if (set_hiz(want) == 0) {
+				if (want != hiz_on || want != hiz_confirmed) {
+					LOG_INF("Charger: %s HIZ (USB host %s)",
+						want ? "entering" : "leaving",
+						suspended ? "suspended" : "active");
+				}
 				hiz_on = want;
-				LOG_INF("Charger: %s HIZ (USB host %s)",
-					want ? "entering" : "leaving",
-					suspended ? "suspended" : "active");
+				hiz_confirmed = want;
 			}
 		}
 		/* Until HIZ is confirmed the host carries the load: hold the
 		 * matrix, the largest one. */
-		if ((want && !hiz_on) != hiz_pending) {
-			hiz_pending = want && !hiz_on;
+		if ((want && !hiz_confirmed) != hiz_pending) {
+			hiz_pending = want && !hiz_confirmed;
 			if (hiz_pending) {
 				LOG_WRN("Charger: HIZ not confirmed; matrix held");
 			}
@@ -1039,7 +1055,9 @@ void power_thread(void *, void *, void *)
 				}
 				if (hiz_want) {
 					/* The I2C watchdog and a re-plug clear EN_HIZ. */
-					(void)set_hiz(true);
+					/* A failed re-assert leaves HIZ unconfirmed: the
+					 * matrix is held until the next write succeeds. */
+					hiz_confirmed = set_hiz(true) == 0;
 				}
 				if (ok && !cc_fresh) {
 					ok = false;
@@ -1219,7 +1237,7 @@ bool power_manager_healthy()
 	 * or went silent, or a USB stack that did not start, fails closed. On
 	 * battery alone neither matters, and System OFF waits for the charger. */
 	if (started && atomic_get(&stop_state) == 0 && nrf_vbus_present() &&
-	    (usb_start_failed ||
+	    (usb_start_failed || usb_enable_failing() ||
 	     now - static_cast<uint32_t>(atomic_get(&last_charger_ok)) >= kSenseStaleMs)) {
 		return false;
 	}

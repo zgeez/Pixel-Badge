@@ -27,6 +27,10 @@ void badge_usb_poll(bool detection_done);
 
 enum badge_usb_host badge_usb_host_state(void);
 
+/* usbd_enable() has kept failing for 5 s with VBUS present: a host suspend
+ * would go unseen, so the power manager fails closed. */
+bool badge_usb_enable_failing(void);
+
 #ifdef __cplusplus
 }
 #endif

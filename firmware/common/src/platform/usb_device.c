@@ -26,6 +26,7 @@ LOG_MODULE_REGISTER(usb_device, CONFIG_APP_LOG_LEVEL);
 /* 250 x 2 mA = 500 mA (USB 2.0 bMaxPower). */
 #define BADGE_USB_MAX_POWER          250U
 #define BADGE_USB_ENABLE_FALLBACK_MS 1000U
+#define BADGE_USB_ENABLE_FAIL_MS     5000U
 
 USBD_DEVICE_DEFINE(badge_usbd, DEVICE_DT_GET(DT_NODELABEL(zephyr_udc0)), CONFIG_APP_USB_VID,
 		   CONFIG_APP_USB_PID);
@@ -39,6 +40,7 @@ USBD_CONFIGURATION_DEFINE(badge_config, 0, BADGE_USB_MAX_POWER, &badge_cfg_desc)
 static struct k_sem *event_sem;
 static atomic_t vbus, enabled, host_seen, configured, suspended;
 static atomic_t vbus_since;
+static atomic_t enable_fail_since; /* uptime of the first failed enable, 0 = none */
 
 static void notify(void)
 {
@@ -56,6 +58,7 @@ static void msg_cb(struct usbd_context *const ctx, const struct usbd_msg *msg)
 		break;
 	case USBD_MSG_VBUS_REMOVED:
 		atomic_clear(&vbus);
+		atomic_clear(&enable_fail_since);
 		atomic_clear(&host_seen);
 		atomic_clear(&configured);
 		atomic_clear(&suspended);
@@ -136,9 +139,21 @@ void badge_usb_poll(bool detection_done)
 
 	if (err == 0 || err == -EALREADY) {
 		atomic_set(&enabled, 1);
-	} else if (since < BADGE_USB_ENABLE_FALLBACK_MS + 100U) {
-		LOG_WRN("USB enable failed (%d); retrying", err);
+		atomic_clear(&enable_fail_since);
+		return;
 	}
+	if (atomic_get(&enable_fail_since) == 0) {
+		LOG_WRN("USB enable failed (%d); retrying", err);
+		atomic_set(&enable_fail_since, (atomic_val_t)(k_uptime_get_32() | 1U));
+	}
+}
+
+bool badge_usb_enable_failing(void)
+{
+	const uint32_t since = (uint32_t)atomic_get(&enable_fail_since);
+
+	return atomic_get(&vbus) != 0 && since != 0 &&
+	       k_uptime_get_32() - since >= BADGE_USB_ENABLE_FAIL_MS;
 }
 
 enum badge_usb_host badge_usb_host_state(void)
