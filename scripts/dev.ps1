@@ -34,7 +34,9 @@
     a badge on the debug-out cable never receives a DK image. Writes pass
     --family to nrfutil, so they fail if the target changed after the check.
     flash also checks that the build matches the chip and -Image, and refuses
-    images that would erase UICR, artwork or settings. -SwdSpeedKhz applies to
+    images that would erase UICR, artwork or settings. Rev A flash and recover
+    also refuse an nRF52840 whose UICR records a bootloader (a UF2 or DFU board
+    such as the Pro Micro bench), unless recover gets -EraseBootloader. -SwdSpeedKhz applies to
     every probe access. Name the probe with -SerialNumber when more than one
     J-Link is connected.
 
@@ -108,7 +110,9 @@ param(
     # rtt: output file.
     [string] $RttLog,
     # recover/flash/rtt: SWD clock in kHz (the flat cable to J501 is long).
-    [int] $SwdSpeedKhz = 1000
+    [int] $SwdSpeedKhz = 1000,
+    # recover: also erase an nRF52840 whose UICR records a bootloader.
+    [switch] $EraseBootloader
 )
 
 Set-StrictMode -Version Latest
@@ -536,6 +540,52 @@ function Get-PrototypeImages {
     $images + [pscustomobject]@{ Core = 'application'; Hex = $app }
 }
 
+function Get-BootloaderAddress {
+    # UICR.NRFFW[0] (0x10001014) holds the start address of a bootloader the
+    # MBR starts, such as the Adafruit UF2 bootloader at 0xf4000. Rev A images
+    # carry no UICR data and recover erases UICR, so on the badge it reads
+    # 0xffffffff. Returns the word, or $null when it cannot be read
+    # (AP-Protect, no target).
+    param([string] $Probe)
+    $read = Get-NrfutilLines (@('device', 'read', '--serial-number', $Probe, '--family', 'nrf52',
+        '--address', '0x10001014', '--bytes', '4', '--json') + (Get-SwdArguments))
+    if ($read.Code -ne 0) { return $null }
+    foreach ($line in $read.Text -split "`n") {
+        if (-not $line.Trim().StartsWith('{')) { continue }
+        try { $obj = $line | ConvertFrom-Json } catch { continue }
+        if ((Get-JsonValue $obj 'type') -ne 'task_end') { continue }
+        $data = Get-JsonValue $obj 'data'
+        if ((Get-JsonValue $data 'result') -ne 'success') { return $null }
+        $memory = @(Get-JsonValue (Get-JsonValue $data 'data') 'memoryData')
+        if ($memory.Count -ne 1) { return $null }
+        $values = @(Get-JsonValue $memory[0] 'values')
+        if ($values.Count -ne 4) { return $null }
+        return [BitConverter]::ToUInt32([byte[]]$values, 0)
+    }
+    $null
+}
+
+function Assert-NoBootloader {
+    # A board with its own bootloader is not a Rev A badge: programming merged.hex
+    # overwrites its MBR and recover erases the bootloader. -AllowUnreadable
+    # (recover) accepts a UICR that AP-Protect hides.
+    param([string] $Probe, [switch] $AllowUnreadable)
+    $address = Get-BootloaderAddress $Probe
+    if ($null -eq $address) {
+        if ($AllowUnreadable) {
+            Write-Warning "Probe $Probe could not read UICR.NRFFW[0]; continuing without the bootloader check."
+            return
+        }
+        throw "Probe $Probe could not read UICR.NRFFW[0] (bootloader address); check the cable and badge power."
+    }
+    if ($address -ne [uint32]::MaxValue) {
+        throw ("The nRF52840 behind J-Link $Probe records a bootloader at 0x{0:x8} (UICR.NRFFW[0]): " +
+            'a UF2 or DFU board such as the Pro Micro bench, not a Rev A badge. flash would overwrite its MBR ' +
+            'and recover would erase the bootloader. If this really is the badge, run recover with ' +
+            '-EraseBootloader, which clears UICR.') -f $address
+    }
+}
+
 function Invoke-Recover {
     if ($Target -ne 'RevA') {
         throw "recover is for the Rev A badge only; the DK's nRF5340 holds the prototype's settings, bond and artwork."
@@ -546,6 +596,11 @@ function Invoke-Recover {
     Initialize-NcsEnvironment
     $probe = Resolve-JLinkProbe
     Assert-ProbeTarget $probe -AllowProtected
+    if ($EraseBootloader) {
+        Write-Warning 'Bootloader check skipped (-EraseBootloader): a UF2 or DFU bootloader on this chip is erased.'
+    } else {
+        Assert-NoBootloader $probe -AllowUnreadable
+    }
     Write-Host "Recovering the nRF52840 behind J-Link $probe (ERASEALL, debug port kept open)..."
     # --family repeats the target check inside the destructive command itself,
     # so a target that changed since identification (badge power lost, the
@@ -575,6 +630,7 @@ function Invoke-Flash {
     Assert-RevAImage $hex
     $probe = Resolve-JLinkProbe
     Assert-ProbeTarget $probe
+    Assert-NoBootloader $probe
     Write-Host "Programming $hex through J-Link $probe..."
     # --family: as in recover, the target is checked again by the write itself.
     Invoke-Native nrfutil (@('device', 'program', '--serial-number', $probe, '--family', 'nrf52', '--firmware', $hex,

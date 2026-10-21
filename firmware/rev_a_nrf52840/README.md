@@ -88,7 +88,12 @@ no BLE, Main has), or that carries UICR data, since erasing UICR would lock the
 debug port again. The firmware writes the pin-reset and NFC-pin UICR settings
 itself on its first boot (`gpio-as-nreset`, `nfct-pins-as-gpios`), and keeps the
 debug port open while UICR allows it (`CONFIG_NRF_APPROTECT_USE_UICR`, the SDK
-default). Add `-SerialNumber` when more than one J-Link is connected.
+default). `flash` and `recover` also refuse an nRF52840 whose UICR records a
+bootloader (`UICR.NRFFW[0]`, for example the UF2 bootloader of the Pro Micro
+bench): `flash` would overwrite its MBR and `recover` would erase the
+bootloader. If that chip really is the badge, `recover -EraseAll
+-EraseBootloader` clears UICR. Add `-SerialNumber` when more than one J-Link is
+connected.
 
 [Bring-up logs](../../docs/bringup-logs.md) lists the expected log lines for each
 bring-up step.
