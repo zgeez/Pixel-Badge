@@ -23,6 +23,21 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Make this check required: a job skipped by its "if" counts as passed,
+  # so without it an unlabelled pull request shows green while nothing ran.
+  ci-label:
+    name: ci-label
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - name: Require the ci label on pull requests
+        if: >-
+          github.event_name == 'pull_request' &&
+          !contains(github.event.pull_request.labels.*.name, 'ci')
+        run: |
+          echo "::error::Add the ci label once the reviews pass; CI has not run on this pull request."
+          exit 1
+
   changes:
     name: changes
     runs-on: ubuntu-24.04
