@@ -4,21 +4,26 @@ First port increment for the Ebyte E73-2G4M08S1C on Rev A, board target
 `pixel_badge_reva/nrf52840`. Application, BLE host and Bluetooth controller run
 on one Cortex-M4F. Shared badge logic lives in `../common`.
 
+Two of the three programs ([firmware targets](../README.md)) come from this
+application: Diagnostics and Main.
+
 ```powershell
-# Full services, matrix output disarmed, recording disabled.
-./scripts/dev.ps1 build -Target RevA -Pristine
+# Main: full services, matrix output disarmed, recording disabled.
+./scripts/dev.ps1 build -Image Main -Pristine
 
-# Separate peripheral checks; no BLE/settings loop or recording. Charging off.
-./scripts/dev.ps1 build -Target RevA -BuildDir build/reva-diagnostics -ExtraConfFile firmware/rev_a_nrf52840/configs/diagnostics.conf -Pristine
+# Diagnostics: separate peripheral checks; no BLE/settings loop or recording.
+# Charging off.
+./scripts/dev.ps1 build -Image Diagnostics -Pristine
 
-# Staged matrix bench (current-limited supply): MODE = next step, ACTION = stop.
-./scripts/dev.ps1 build -Target RevA -BuildDir build/reva-stepper -ExtraConfFile @('firmware/rev_a_nrf52840/configs/diagnostics.conf','firmware/rev_a_nrf52840/configs/matrix-stepper.conf') -Pristine
+# Diagnostics add-on, staged matrix bench (current-limited supply):
+# MODE = next step, ACTION = stop.
+./scripts/dev.ps1 build -Image Diagnostics -BuildDir build/reva-stepper -ExtraConfFile firmware/rev_a_nrf52840/configs/matrix-stepper.conf -Pristine
 
-# The same checks for the watched first charge (480 mA, every gate must pass).
-./scripts/dev.ps1 build -Target RevA -BuildDir build/reva-diag-charge -ExtraConfFile @('firmware/rev_a_nrf52840/configs/diagnostics.conf','firmware/rev_a_nrf52840/configs/diagnostics-charge.conf') -Pristine
+# Diagnostics add-on for the watched first charge (480 mA, every gate must pass).
+./scripts/dev.ps1 build -Image Diagnostics -BuildDir build/reva-diag-charge -ExtraConfFile firmware/rev_a_nrf52840/configs/diagnostics-charge.conf -Pristine
 
-# Compile the current-limited matrix + recording development variant.
-./scripts/dev.ps1 build -Target RevA -BuildDir build/reva-matrix -ExtraConfFile @('firmware/rev_a_nrf52840/configs/matrix-bench.conf','firmware/rev_a_nrf52840/configs/recording-bench.conf') -Pristine
+# Main add-on: the current-limited matrix + recording development variant.
+./scripts/dev.ps1 build -Image Main -BuildDir build/reva-matrix -ExtraConfFile @('firmware/rev_a_nrf52840/configs/matrix-bench.conf','firmware/rev_a_nrf52840/configs/recording-bench.conf') -Pristine
 ```
 
 These commands build only. No Rev A hardware has been flashed or tested.
@@ -62,7 +67,11 @@ pads; logs come over RTT.
 
 # Program an image. Only the ranges in merged.hex are erased, so UICR (pin
 # reset, NFC pins as GPIO, open debug port), settings, the bond and artwork stay.
-./scripts/dev.ps1 flash -Target RevA -BuildDir build/reva-diagnostics
+./scripts/dev.ps1 flash -Image Diagnostics
+./scripts/dev.ps1 flash -Image Main
+
+# An add-on build: name its program and its build directory.
+./scripts/dev.ps1 flash -Image Diagnostics -BuildDir build/reva-stepper
 
 # Log RTT channel 0 to build/rtt/<time>.log (Ctrl+C to stop).
 ./scripts/dev.ps1 rtt -Target RevA
@@ -74,11 +83,11 @@ holds the prototype firmware and its data. `recover` also accepts a target that
 AP-Protect keeps from being identified; `recover` and `flash` pass `--family
 nrf52` to nrfutil, so the erase or write itself fails if the target is not an
 nRF52 (for example, badge power lost after the check). `flash` also refuses an
-image that is not a Rev A build or that carries UICR data, since erasing UICR
-would lock the debug port again. The firmware writes the pin-reset and NFC-pin
-UICR settings itself on its first boot (`gpio-as-nreset`, `nfct-pins-as-gpios`),
-and keeps the debug port open while UICR allows it
-(`CONFIG_NRF_APPROTECT_USE_UICR`, the SDK default). Add `-SerialNumber` when
-more than one J-Link is connected.
+image that is not a Rev A build, that does not match `-Image` (Diagnostics has
+no BLE, Main has), or that carries UICR data, since erasing UICR would lock the
+debug port again. The firmware writes the pin-reset and NFC-pin UICR settings
+itself on its first boot (`gpio-as-nreset`, `nfct-pins-as-gpios`), and keeps the
+debug port open while UICR allows it (`CONFIG_NRF_APPROTECT_USE_UICR`, the SDK
+default). Add `-SerialNumber` when more than one J-Link is connected.
 
 [Implementation, memory, chip trade-offs and bring-up gates](../../docs/rev-a-firmware.md)
