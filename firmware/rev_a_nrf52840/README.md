@@ -49,4 +49,36 @@ power cycling and related erratum recovery are follow-up work. No automatic tag
 personalization occurs. Rev A capture is 16 kHz at 1.28 MHz PDM clock; voice packets
 remain compatible with Pixel Badge. Microphone response/gain require measurement.
 
+## Flashing and logs
+
+Rev A is programmed over SWD through the nRF5340 DK's debug out to J501 (setup
+in [bringup.md](../../docs/bringup.md#debug-and-programming)). Rev A has no UART
+pads; logs come over RTT.
+
+```powershell
+# Once per new module: newer nRF52840 build codes ship with AP-Protect on, so
+# SWD is blocked until an ERASEALL. This erases everything on the chip.
+./scripts/dev.ps1 recover -Target RevA -EraseAll
+
+# Program an image. Only the ranges in merged.hex are erased, so UICR (pin
+# reset, NFC pins as GPIO, open debug port), settings, the bond and artwork stay.
+./scripts/dev.ps1 flash -Target RevA -BuildDir build/reva-diagnostics
+
+# Log RTT channel 0 to build/rtt/<time>.log (Ctrl+C to stop).
+./scripts/dev.ps1 rtt -Target RevA
+```
+
+Each command refuses to act unless the J-Link identifies an nRF52840. With
+nothing powered on the debug-out cable the DK debugs its own nRF5340, which
+holds the prototype firmware and its data. `recover` also accepts a target that
+AP-Protect keeps from being identified; `recover` and `flash` pass `--family
+nrf52` to nrfutil, so the erase or write itself fails if the target is not an
+nRF52 (for example, badge power lost after the check). `flash` also refuses an
+image that is not a Rev A build or that carries UICR data, since erasing UICR
+would lock the debug port again. The firmware writes the pin-reset and NFC-pin
+UICR settings itself on its first boot (`gpio-as-nreset`, `nfct-pins-as-gpios`),
+and keeps the debug port open while UICR allows it
+(`CONFIG_NRF_APPROTECT_USE_UICR`, the SDK default). Add `-SerialNumber` when
+more than one J-Link is connected.
+
 [Implementation, memory, chip trade-offs and bring-up gates](../../docs/rev-a-firmware.md)

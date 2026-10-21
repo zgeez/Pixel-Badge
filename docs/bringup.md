@@ -92,9 +92,18 @@ Board: ____  Serial/batch: ____  Firmware commit: ____  Date: ____
       and stable operation at idle and with the radio active. The E73's DC/DC
       inductors are inside the module, so there are no external regulator
       nodes to probe
-- [ ] Flash and run bootstrap firmware; P0.18 pin reset and NFC pins as GPIO
-      configured in UICR, then reset through J501 pin 10
-- [ ] RTT log output (the only log path: Rev A has no UART pads)
+- [ ] Probe check before any write: with the badge unpowered,
+      `dev.ps1 flash -Target RevA` must refuse because it sees the DK's
+      nRF5340; with the badge powered it must see an nRF52840
+- [ ] New module: `dev.ps1 recover -Target RevA -EraseAll` once (AP-Protect
+      ships enabled on newer nRF52840 build codes and blocks SWD until
+      ERASEALL); record the module's build code from `nrfutil device device-info`
+- [ ] Flash the diagnostics image (`dev.ps1 flash -Target RevA -BuildDir
+      build/reva-diagnostics`) and run it; the first boot writes P0.18 pin
+      reset and NFC pins as GPIO to UICR, then reset through J501 pin 10 and
+      confirm SWD still connects after a power cycle (debug port stays open)
+- [ ] RTT log output (`dev.ps1 rtt -Target RevA`; the only log path: Rev A
+      has no UART pads)
 
 ## MCU and clocks
 
