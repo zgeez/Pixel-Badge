@@ -1,5 +1,7 @@
 # P3 audio - software evidence
 
+Personal identifiers/URLs in excerpts are redacted; raw artifacts are unchanged.
+
 Date:2026-10-14. Local uncommitted fw/prototype-audio, based on merged
 PR24/main602bd8779e08e5a259da2d2947d63fa403491992. NCS3.4.1, nRF5340 DK
 application/HUB75/PDM plus IPC radio. Flutter3.38.5, Android app0.3.0+4.
@@ -14,7 +16,7 @@ HMAC/counter controls and fresh per-recording AES-GCM; REC full-scan capture
 gate; manual/automatic stops and encrypted transport timeout cleanup; Android
 Keystore/private encrypted recording, playback, deletion and explicit WAV export.
 Recording remains disabled by default; a separate bench fragment enables it.
-Owner bench: [P3 audio](../../../docs/audio-prototype.md).
+Bench checks: [P3 audio](../../../docs/audio-prototype.md).
 Wire contract: [audio protocol](../../../docs/audio-protocol.md).
 
 ## Verification
@@ -60,7 +62,7 @@ reset-recovery failure is separate; this run does not restore or validate it.
 
 ## Audio-tab correction follow-up
 
-Owner reported RangeError0..3:4 opening Audio. The phone/tablet navigation
+Reported RangeError0..3:4 opening Audio. The phone/tablet navigation
 regression reproduced the four-entry title/subtitle lists; the fix supplies
 both fifth entries. Pixel Badge0.3.1+5: Flutter49 and analysis pass, APK rebuilt
 and installed in place on Nothing A069P. Package version confirmed; actual
@@ -71,7 +73,7 @@ p3-mic-analyze.log, p3-mic-apk.log and p3-mic-phone-after.xml under build/.
 
 ## Audio control/start correction follow-up
 
-Owner reports Level/Spectrum rejected and recording stopping immediately. The
+Manual observation: Level/Spectrum rejected and recording stopping immediately. The
 BLE staging validator still capped modes at3; corrected to Mode::kAudioSpectrum
 and regression-tested successful Apply for4/5 and invalid6 in both errno builds
 (2configs/20cases pass). Runtime DMIC reads used20ms for20ms blocks despite the
@@ -88,7 +90,7 @@ flashed with --no-erase, preserving stored settings and bonds. The RTT capture
 contains only partial startup, including NFC-13; it does not prove healthy
 runtime or microphone activity. Wireless ADB was restored; package0.3.2/build6
 was installed in place and verified, and the app reconnected to the badge.
-Live meter/recording confirmation is pending the owner's foreground retest.
+Live meter/recording confirmation is pending my foreground retest.
 No microphone samples or keys logged; hardware/security/visibility gates remain.
 
 The final bench/normal sysbuilds also queue each capture block's bounded pair
@@ -96,13 +98,13 @@ of encrypted10ms notifications before awaiting both callbacks under one40ms
 completion deadline. This removes the mandatory serial completion waits; it
 is not a measured throughput result. The final bench image was flashed without
 erasing NVS. Default firmware still disables recording and coredumps. Phone
-interaction was stopped when the owner switched away from Pixel Badge; no
+interaction was stopped when I switched away from Pixel Badge; no
 recording was initiated by automation. No new hardware acceptance is claimed.
 
 
-## Simple recording controls (owner amendment, ADR0016)
+## Simple recording controls (design amendment, ADR0016)
 
-Owner removed separate audio enrollment and selectable duration. Audio Statev2
+I removed separate audio enrollment and selectable duration. Audio Statev2
 prepares an ephemeral session automatically on the authenticated bonded phone
 connection. No persistent app key or matching-code confirmation; trust is in
 the phone rather than a separately authenticated app. Wire/private storage
@@ -125,7 +127,7 @@ No new recording, endurance, low-storage hardware or security acceptance.
 
 ### Audio UI test teardown correction
 
-Owner local script reproduced the10minute UI-test timeout. Explicitly pump
+A local script reproduced the10minute UI-test timeout. Explicitly pump
 Flutter's fake-clock microtasks before awaiting detach and stream-close futures;
 remove runAsync teardown and add a15second test timeout. The targeted UI test
 passes; full53Flutter cases pass in about4seconds and analysis reports no issues.
@@ -135,7 +137,7 @@ Local logs: p3-widget-timeout-fix.log, p3-widget-fix-full-tests.log and
 p3-widget-fix-analyze.log in ignored build/.
 
 
-Deployment completed after owner restored wireless ADB: installed0.3.3/build7,
+Deployment completed after I restored wireless ADB: installed0.3.3/build7,
 verified package version, flashed matching recording bench with --no-erase.
 Phone UI reconnects and shows Ready to record with Record, no enrollment button
 or duration selector. Record was not initiated by automation; owner10s record/
@@ -144,7 +146,7 @@ stop/playback retest requested. No capture or sustained-duration acceptance.
 
 ## Phone audio queue correction
 
-Owner reports immediate stop and then specifically Phone could not keep up.
+Manual observation: immediate stop and then specifically Phone could not keep up.
 Phone UI has four~0.1s files and confirms automatic Ready state. This identifies
 the eight-packet phone overflow path; the earlier observed firmware-11 is not
 proof of the recording stop cause. RTT Logger/PyLink captures obtained only
@@ -163,17 +165,17 @@ Flutter55 pass; analysis clean; Android JVM7 pass, including wrapped-key/file/
 sequence tampering, legacy-file decoding and WAV limits. APK0.3.4/build8 built,
 installed in place and package verified. Phone reconnects/Ready; owner10s record/
 stop/playback requested. No Record action initiated by automation. Candidate
-firmware display-wait change was discarded after owner identified phone overflow;
+firmware display-wait change was discarded after I identified phone overflow;
 no firmware flash in this correction. Default recording gate remains unchanged.
 Source/recording endurance/security/low-storage hardware acceptance not claimed.
 Local logs p3-phone-queue-tests/analyze/jvm/apk.log; ignored UI/evidence in build/.
 
 
-### Owner short recording pass, build8
+### Short recording pass, build8
 
-2026-10-14, owner report, Nothing A069P/Pixel Badge0.3.4/build8 and existing
+2026-10-14, manual observation, Nothing A069P/Pixel Badge0.3.4/build8 and existing
 nRF5340 DK recording-bench image: after the requested foreground Record,
-speak10seconds, Stop and Play sequence, owner reports Recording and playback
+speak10seconds, Stop and Play sequence, manual observation: Recording and playback
 work. Short functional check passed. No raw audio was collected or inspected by
 automation. Sustained recording/endurance, stop/fault/privacy/security/REC
 visibility and Rev A acceptance remain pending; default recording gate unchanged.
@@ -181,7 +183,7 @@ visibility and Rev A acceptance remain pending; default recording gate unchanged
 
 ## Recording level correction
 
-Owner supplied three quiet16kHz/mono/PCM16 WAV exports and authorized a fix.
+I supplied three quiet16kHz/mono/PCM16 WAV exports and authorized a fix.
 Originals inspected read-only. Their whole-clip AC RMS levels were-47.43,
 -51.41,-37.23dBFS; peaks-29.26,-37.11,-18.60dBFS, no clipping. Bench records name
 MP34DT01-M, distinct from the Rev A microphone. Source had no recording gain.
@@ -206,17 +208,17 @@ follow-up recorded below when complete. No hardware risk closed by these tests.
 Gain-correction deployment: normal and bench sysbuilds passed, as did source/
 hygiene checks. Default recording/coredumps remain disabled. Bench app-core
 221932Bflash/107676BRAM linker allocations; not stack peaks or a port forecast.
-J-Link flash both cores succeeded with --no-erase. Owner fresh same-position/
+J-Link flash both cores succeeded with --no-erase. A fresh same-position/
 distance10s recording requested. Existing app0.3.4+8/wire format works unchanged;
 no new capture/listening acceptance is claimed yet.
 
 
-### Owner recording level/clarity pass
+### Recording level/clarity pass
 
-2026-10-14, owner report, existing nRF5340 DK gain-correction bench and Nothing
+2026-10-14, manual observation, existing nRF5340 DK gain-correction bench and Nothing
 A069P/Pixel Badge0.3.4+8: requested a new10s clip from the same position/distance,
 then playback check for louder audio without crackling/distortion/obvious pumping.
-Owner reports Louder and clear. Short functional loudness/clarity check passed.
+Manual observation: Louder and clear. Short functional loudness/clarity check passed.
 No raw audio collected by automation. Sustained recording, failure/visibility/
 security/privacy and Rev A acceptance remain pending; release gate unchanged.
 
@@ -243,10 +245,10 @@ further taps were stopped. No new recording/firmware flash or acceptance claim.
 
 ### Playback and background lease corrections
 
-Owner reports app0.4.0 all good for now; this is general functional feedback,
+Manual observation: app0.4.0 all good for now; this is general functional feedback,
 not a new endurance/visibility/security acceptance. Follow-up audit found two
 edge cases, corrected in Pixel Badge0.4.1+10. Connection service start/stop now
-carry a per-link owner token, enforced by a native lease. Stale teardown cannot
+carry a per-link ownership token, enforced by a native lease. Stale teardown cannot
 stop the replacement service. The app closes the old GATT client before opening
 a new one, including reconnecting the same device ID.
 
@@ -347,7 +349,7 @@ from PATH. Add android-actions/setup-android@v4 before installing pinned SDK
 packages, pinning command-line tools build15859902. The action installs tools,
 accepts licenses and exports their PATH; see its
 [action definition](https://github.com/android-actions/setup-android/blob/v4/action.yml).
-The hosted rerun is pending owner signing/push; local YAML validation alone
+The hosted rerun is pending commit signing/push; local YAML validation alone
 does not establish hosted success. Android source/tests are unchanged, so the
 previous19-case clean-snapshot JVM result is retained, not rerun here.
 
@@ -370,7 +372,7 @@ which is28.2.13676358 in the pinned Flutter3.38.5, while CI only installed27.
 The AGP error's preferred27 version was misleading for the app's explicit
 Flutter NDK selection. Local SDKs already had both and masked this omission.
 Source: [Flutter3.38.5 extension](https://github.com/flutter/flutter/blob/3.38.5/packages/flutter_tools/gradle/src/main/kotlin/FlutterExtension.kt).
-Failure: [hosted Android job](https://github.com/zgeez/smart-led-badge/actions/runs/38687377818/job/116265223506).
+Failure: project history (personal repository URL omitted).
 
 CI now installs both AGP's default27.0.12077973 and Flutter's28.2.13676358,
 passes an explicit SDK root to sdkmanager and prints both installed metadata
@@ -384,7 +386,7 @@ NDK-not-configured error. Added only the28.2 directory to that view and reran
 the same task: all19 app JVM tests (six suites) and plugin JVM tests passed,
 build successful in42s. No global tool or installed SDK directory was changed.
 Windows/Android Studio JBR verification; hosted Ubuntu/Temurin17 rerun remains
-pending owner signing/push. YAML/formatting/hygiene and whitespace checks pass.
+pending commit signing/push. YAML/formatting/hygiene and whitespace checks pass.
 
 Ignored artifacts: build/pr25-ndk-check/missing-ndk.log, with-ndk.log, prepare.log,
 app/build/app/test-results/testDebugUnitTest/ under that snapshot;

@@ -31,7 +31,7 @@ prototype. Firmware/protocol/partitions are unchanged by this follow-up.
 menus and dialogs were inspected in light/dark themes. Source captures remain
 in ignored `app/build/ui`; [capture inventory](capture-inventory.json) records
 names. [Selected review sheet](visual-review.png) contains synthetic fixtures only.
-Owner media is not redistributed.
+Personal media is not redistributed.
 
 | Area | Captured/inspected |
 | --- | --- |
@@ -70,7 +70,7 @@ Android file-picker/share UI is system-owned, outside this app-owned visual pass
   saved draft/library hash matches before/after installation. No app data clear,
   badge flash, reset, tag provisioning or recording was initiated.
 - Phone is locked at deployment verification. Interactive on-device walkthrough,
-  owner acceptance of these revised imports, and actual sending of the revised
+  bench verification of these revised imports, and actual sending of the revised
   Cat clip remain unverified. The widget screenshots include actual local media;
   they are not a substitute for the pending physical display check.
 
@@ -78,13 +78,13 @@ Reproduce the normal suite with `flutter test` from `app/`; capture with
 `--dart-define=CAPTURE_UI=true` and `--dart-define=UI_FONTS=<Flutter material_fonts>`.
 Optional local cached GIF checks use `--dart-define=GLYPH_REVIEW=<local directory>`
 containing `source-0.gif` through `source-3.gif`. They are deliberately not test
-assets. No new owner design decision; existing firmware optical/load and Rev A
+assets. No new design decision; existing firmware optical/load and Rev A
 port gates remain open. No commit or push.
 
 
-## Owner grid follow-up - 0.9.1/build 26
+## Grid follow-up - 0.9.1/build 26
 
-Owner requests the grid always visible as before, retaining black/white coloring.
+I requested the grid always visible as before, retaining black/white coloring.
 All previews (including imports and thumbnails) again show neutral dark-gray
 unlit cells and grayscale/white lit cells. Import's grid toggle is removed.
 Glyph extraction and pixel data are unchanged. [Updated preview](grid-restored.png)
@@ -96,7 +96,7 @@ APK SHA-256: `eac039c925746e8dd62f697196210d72dcaac88fe4c1b29c96dbba334aed3aac`.
 
 ## Selection-menu follow-up - 0.9.2/build 27
 
-Owner requests better-looking selection menus. Replaced the small mixed dropdowns
+I requested better-looking selection menus. Replaced the small mixed dropdowns
 with one controlled choice-sheet component for display mode, text layout,
 alignment/size, brush size, playback and import source. Labeled sheets have
 consistent spacing, icons, a subtle current-value highlight and explicit Close.

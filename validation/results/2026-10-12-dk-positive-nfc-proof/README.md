@@ -1,16 +1,18 @@
 # DK positive NFC provisioning proof — 2026-10-12
 
+Personal identifiers/URLs in excerpts are redacted; raw artifacts are unchanged.
+
 Result: **provisioning completed; verification retained after restoring normal
 BLE firmware; GitHub/LinkedIn QR and NFC agreement and LinkedIn power-off/restart
-retention passed by owner report**. Broader P1/P2 acceptance remains pending.
+retention passed by manual observation**. Broader P1/P2 acceptance remains pending.
 
-Hardware: nRF5340 DK, NFC Tag 2 Click and HUB75 panel. Owner's Nothing 4a Pro
+Hardware: nRF5340 DK, NFC Tag 2 Click and HUB75 panel. My Nothing 4a Pro
 reports model A069P / Android 16 through ADB. Helper installed version0.5/code5;
 proof/mailbox/receipt version3 per accepted ADR0014. Source is main11cfc23 plus
 uncommitted local development on fw/prototype-ble, not a published release.
 
-After an earlier session expired without a challenge fetch, the owner unlocked
-the phone and the host started a fresh one-use session. Owner reported both
+After an earlier session expired without a challenge fetch, I unlocked
+the phone and the host started a fresh one-use session. Reported both
 checks passed and phone removed. Direct host output then showed:
 
 ```text
@@ -20,11 +22,11 @@ NFC provisioning verified; no irreversible configuration locks set.
 ```
 
 These are transcribed tool outputs, not a complete archived raw host capture.
-Confirmation was sent only after host acceptance and owner field-removal report.
+Confirmation was sent only after host acceptance and manual field-removal report.
 Cached non-secret status before normal restore:
 
 ```json
-{"result": 0, "ready": true, "address": 2, "desired": "HTTPS://ZIADG.COM", "verified": "HTTPS://ZIADG.COM"}
+{"result": 0, "ready": true, "address": 2, "desired": "[redacted URL]", "verified": "[redacted URL]"}
 ```
 
 After flashing both normal BLE domains, matching-ELF read-only control metadata
@@ -42,7 +44,7 @@ Artifact SHA256:
 | NFC helper APK | FAAEF7FA3E1CB2EE235094DB72A1B97CF46668445F98456A21EC6E0D08A0183F |
 | Pixel Badge APK | 231802FA7FDA7C1554DA4BCAC7B9CE31CA5A803E018B7647FE11BDE38B6291BA |
 
-Limits: field removal is owner-reported, with Android removal gating; no RF gap
+Limits: field removal is manually reported, with Android removal gating; no RF gap
 or FD latency measurement. This method establishes two positive generated-PWD/
 PACK sessions under NXP's component model, not directly observed factory-PWD
 rejection. No credentials/PACK dumps, bearer nonce or BLE passkey recorded.
@@ -63,24 +65,24 @@ Corrected normal ELF SHA256:
 5836A2E2C5F2A02EB9C02733D062F46E4E3E29649978FFD6D0CCCA5709C30A96.
 Installed D2APK0.1.1/code2 SHA256:
 2B73B7286318EA336BF95E2CA93229C873BA73D32AE6DC8035334D209AD102CA.
-Android installed base.apk hash matched the local artifact; owner sees D2.
+Android installed base.apk hash matched the local artifact; I see D2.
 
-After correction, owner reports Applied and confirmed with QR changed. Direct
-NFC runtime desired=verified HTTPS://ZIADG.COM/G with prooftrue/ready1/result0.
+After correction, manual observation: Applied and confirmed with QR changed. Direct
+NFC runtime desired=verified [redacted URL] with prooftrue/ready1/result0.
 Last sampled completed request id1/field4/result0 was a mode request, so it is
 not evidence of the earlier reported URL command's ID. No raw pending RF/ATT
 packet was captured.
 
 ## Contact-link and power-cycle checks
 
-On the corrected normal firmware and installed D2 app above, the owner used
+On the corrected normal firmware and installed D2 app above, I used
 the Nothing phone to scan the QR and tap NFC for GitHub, then selected LinkedIn
-in Pixel Badge, applied it and repeated both checks. Owner reports both QR
+in Pixel Badge, applied it and repeated both checks. Manual observation: both QR
 scans and NFC taps opened the correct selected destination.
 
-With LinkedIn selected, the owner powered the DK off with both buttons released,
+With LinkedIn selected, I powered the DK off with both buttons released,
 tapped NFC, removed the phone from the tag, restored power and checked the QR
-and refreshed app link. Owner reports off-state NFC and restored QR/app were
+and refreshed app link. Manual observation: off-state NFC and restored QR/app were
 correct. This passes the two-destination agreement and LinkedIn persistence
 checks for this DK/Click/panel setup; supply details and a raw decoded QR/NDEF
 phone trace were not captured. It does not establish Rev A enclosure/coil or
@@ -94,8 +96,8 @@ NFC proof True
 NFC ready_state 1
 NFC last_result 0
 NFC operation_active 0
-NFC public URL desired HTTPS://ZIADG.COM/L
-NFC public URL verified HTTPS://ZIADG.COM/L
+NFC public URL desired [redacted URL]
+NFC public URL verified [redacted URL]
 ```
 
 These are transcribed non-secret tool outputs. No reset, halt, flash, setting

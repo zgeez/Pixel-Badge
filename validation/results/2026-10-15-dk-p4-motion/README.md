@@ -8,10 +8,10 @@ Some raw log timestamps are 2026-10-16 UTC (2026-10-15 America/New_York).
 Source: uncommitted `fw/prototype-motion` worktree at `build/prototype-audio`,
 based on merged PR25/main `361935a7cfaa7a55c0ee8cb020a982c6b4f4ba0b`.
 The existing worktree/build directory names are retained for cache reuse.
-Root owner hardware routing changes were not modified.
+Other hardware routing changes were not modified.
 
 Target fixture: existing nRF5340 DK, HUB75 panel and ICM-42688-P breakout.
-Owner reports that the IMU is loose/separate from the panel. The new right/down
+Manual observation: that the IMU is loose/separate from the panel. The new right/down
 axis mapping is not physically established. This is not an nRF52840/Rev A test.
 Tools: NCS v3.4.1/toolchain 4f5b6ad6dd, Linux native_sim in the pinned CI
 toolchain container, Flutter 3.38.5 and the installed Android SDK/JBR.
@@ -43,7 +43,7 @@ catch-up, QR entry lock/re-entry and safe restart. Settings/protocol checks cove
 atomic motion payload/reload and independent motion/NFC-action staging. Flutter
 checks cover old/new capabilities, validation, exact Apply/readback, status
 parsing and motion controls. These are software assertions, not physical
-measurements or owner-approved numerical acceptance criteria.
+measurements or agreed numerical acceptance criteria.
 
 ## Artifact and linker evidence
 
@@ -77,7 +77,7 @@ locally. New sources are picked up by the existing CI discovery/build paths.
 
 ## Remaining acceptance
 
-App follow-up: owner reports `double is not a subtype of bool` below Fluid
+App follow-up: `double is not a subtype of bool` below Fluid
 amount in installed 0.5.0/build 14. A full Badge-page test reproduces the exact
 exception after scrolling, expanding Sensor mounting and navigating away/back.
 The ExpansionTile lacked a PageStorageKey, so it read the parent ListView's
@@ -86,7 +86,7 @@ key fixes the failure and preserves expansion independently. The regression
 passes after the change. All 78 Flutter tests, analyzer, APK build and repository
 checks pass (`app/build/p4-mounting-{tests,analyze,apk}.log` and
 `build/p4-mounting-check.log`). App 0.5.1/build 15 is installed/version verified
-and launched on the connected Nothing phone; owner UI recheck is pending.
+and launched on the connected Nothing phone; a UI recheck is pending.
 Firmware is unchanged and was not reflashed.
 
 Follow [motion-prototype.md](../../../docs/motion-prototype.md): establish axes,

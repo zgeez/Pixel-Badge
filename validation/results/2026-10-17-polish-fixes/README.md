@@ -52,11 +52,11 @@ resume point or altered fingerprint without changing the index.
 Raw logs/reports remain ignored under build/polish-fixes-* and Android/Flutter
 build output. Synthetic fixtures and regression sources are public. No phone
 recording, firmware flash, APK install, provisioning, bond/settings erase, commit
-or push was performed. Owner routing/root tracked hardware/index are untouched.
+or push was performed. Hardware routing/root tracked hardware/index are untouched.
 
 ## Remaining physical checks
 
 Scope/optical refresh, binary QR brightness after the common duty schedule,
 perceived grayscale, combined BLE/audio/motion load, maximum transfer and changed
 recording-view visibility remain bench gates. Existing Rev A power/port/security
-acceptance remains separate. No new owner design decision was needed.
+acceptance remains separate. No new design decision was needed.

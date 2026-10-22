@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
-"""Owner-triggered NFC debug commands. Credentials exist in RAM only."""
+"""NFC development commands. Credentials exist in RAM only."""
 import argparse
 import hmac
 import json

@@ -1,6 +1,6 @@
 # Local NFC synchronization — 2026-10-15
 
-Owner request: remove the NFC verifier requirement. Accepted
+Change: remove the NFC verifier requirement. Accepted
 [ADR 0017](../../../docs/decisions/0017-local-nfc-synchronization.md) replaces the
 runtime RF receipt/two-tap prerequisite with guarded local policy/NDEF checks.
 This does not prove RF password authentication or close physical security gates.
@@ -54,7 +54,7 @@ app/build/app/outputs/flutter-apk/app-debug.apk
 2aabf873aea347cf9fe27c610d194a5aabd83e8693c4a96c98dfab8187a488e4
 ```
 
-## Owner check still needed
+## Bench check still needed
 
 Keep the phone away from the tag. Reconnect Pixel Badge, Refresh settings and
 apply a different contact link (or Sync again if needed). Confirm success, scan
@@ -66,7 +66,7 @@ Existing P3/P4 and Rev A hardware gates remain open. No commit or push.
 
 ## Subsequent sync-failure diagnosis
 
-Owner reports Sync again fails even away from the tag. RTT captures the normal
+Manual observation: Sync again fails even away from the tag. RTT captures the normal
 image's boot `NFC boot result -13` at 202 ms. This indicates local readable policy
 rejection; the exact offending field has not been identified. Raw capture is
 `build/p4-nfc-sync-error-rtt.log`. It does not establish a nearby reader cause or
@@ -77,7 +77,7 @@ Automatic approval review rejected flashing the wired setup image and running
 configure because replacing persistent tag credentials/protection was not
 explicitly authorized by the failure report. The command did not execute;
 no setup flash, tag repair or credential change occurred in this follow-up.
-Owner approval is pending. Normal firmware remains installed.
+Approval is pending. Normal firmware remains installed.
 
 Independent app correction: policy error -13 now says setup needs repair,
 missing-tag error -19 points to power/wiring, and the returned error is retained.
@@ -90,7 +90,7 @@ or new native/build run is claimed in this follow-up.
 
 ## Approved wired repair
 
-Owner explicitly approved the repair. Existing wired-setup image flashed with
+I explicitly approved the repair. Existing wired-setup image flashed with
 `--no-erase --no-rebuild`; configure generated transient credentials, completed
 commands 3/6 and reported local policy/URL success. Normal firmware was restored
 in finally, network core then application/MCUboot. No phone helper/taps or prompt.
@@ -99,7 +99,7 @@ Live public state from the matching normal ELF confirms `nfc_result=0` and
 `nfc_ready=true`, CPU running. However, settings are defaults (Portfolio, BADGE,
 brightness 128, QR) and no Bluetooth bond is loaded. The promised preservation
 was not met. This is an unresolved restoration issue, not a preservation pass.
-Owner was informed and asked to re-pair, retry Sync and reapply preferences.
+I was informed and asked to re-pair, retry Sync and reapply preferences.
 
 Both image segment maps exclude settings storage at 0xf8000–0x100000; partition
 and NVS CRC/sector settings match. No explicit mass erase or factory reset was
@@ -117,10 +117,10 @@ with explicit cleanup and no such warning. No new source/build/test changes.
 Physical app Sync/QR/NFC/passive checks and RF protection acceptance remain
 pending. A local ready flag does not prove radio password authentication.
 
-## Owner app-sync result
+## App-sync result
 
 After the requested Android forget/re-pair, physical Button 2 pairing, Refresh
-settings and Sync again sequence, the owner reports **Applied and confirmed /
+settings and Sync again sequence, my manual notes record **Applied and confirmed /
 Link synchronized**. This is a functional app-driven synchronization pass on
 the repaired DK/Click with Pixel Badge 0.5.3/build 17 and normal firmware. It is
 consistent with the earlier direct local result 0/ready state.

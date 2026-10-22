@@ -1,29 +1,11 @@
-# Architecture decision records
+# Design decisions
 
-Significant architecture, hardware, and tooling decisions are recorded here as
-ADRs once the project owner formally accepts them. Provisional directions live
-in the other documents in `docs/` and are marked TBD or provisional.
+These records explain the main design choices and their dates. Later records
+identify the decisions they amend; historical choices are not current setup
+instructions. Acceptance records a design choice, not a hardware test result.
 
-## Process
-
-1. Copy [template.md](template.md) to `NNNN-short-title.md` (next number,
-   zero-padded).
-2. Fill it in with status `Proposed` and open a pull request.
-3. When the owner approves the decision, change the status to `Accepted` in
-   the pull request and record the approval date. Approval may be recorded in
-   the pull request or an explicit owner instruction; the repository publishes
-   the decision when the change is merged.
-4. Do not rewrite accepted ADRs; supersede them with a new ADR and update the
-   old one's status.
-
-## Index
-
-The records below capture the owner-selected Rev A scope and architecture.
-Owner approval is recorded in the introducing pull request or a dated explicit
-instruction, following the process above. ADRs 0012 and 0013 were explicitly
-accepted on 2026-10-12. Acceptance records a design choice, not
-measured validation; prototype-dependent values remain provisional within each
-decision.
+Use [template.md](template.md) for a new decision. Keep the context, choice,
+trade-off, and relevant sources brief.
 
 | ADR | Decision | Status |
 |---|---|---|
@@ -44,7 +26,7 @@ decision.
 | [0015](0015-nrf52840-e73-module.md) | Ebyte E73-2G4M08S1C (nRF52840) module for Rev A (amends 0002) | Accepted 2026-10-13 |
 | [0016](0016-simple-audio-controls.md) | Record/Stop using the bonded phone, automatic session setup and storage-based recording limits (amends 0011) | Accepted 2026-10-14 |
 | [0017](0017-local-nfc-synchronization.md) | NFC synchronization and wired setup without a phone verifier (amends 0013/0014) | Accepted 2026-10-15 |
-| [0018](0018-grayscale-studio-recording-view.md) | 8-bit Studio, bounded 32-frame artwork and recording visualizers | Accepted by owner 2026-10-16; hardware acceptance pending |
-| [0019](0019-large-artwork-fixed-workspaces.md) | 128-frame flash artwork and fixed app workspaces | Accepted by owner 2026-10-16; physical/port gates pending |
-| [0020](0020-separate-firmware-targets.md) | Separate nRF5340 prototype and nRF52840 Rev A applications with shared logic | Accepted by owner 2026-10-17; hardware acceptance pending |
+| [0018](0018-grayscale-studio-recording-view.md) | 8-bit Studio, bounded 32-frame artwork and recording visualizers | Accepted 2026-10-16; hardware acceptance pending |
+| [0019](0019-large-artwork-fixed-workspaces.md) | 128-frame flash artwork and fixed app workspaces | Accepted 2026-10-16; physical/port gates pending |
+| [0020](0020-separate-firmware-targets.md) | Separate nRF5340 prototype and nRF52840 Rev A applications with shared logic | Accepted 2026-10-17; hardware acceptance pending |
 | [0021](0021-rev-a-board-outline.md) | Rev A board outline 118 × 76 mm (amends 0006) | Accepted 2026-10-16 |

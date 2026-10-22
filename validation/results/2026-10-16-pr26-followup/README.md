@@ -1,7 +1,7 @@
 # PR26 NFC diagnostic and shared-bus follow-up - 2026-10-16
 
 Source: fw/prototype-motion after 9c331da, existing nRF5340 DK implementation.
-Changes below are local pending owner signing. No nRF52840 acceptance claim.
+Changes below are local pending commit signing. No nRF52840 acceptance claim.
 
 ## Per-badge NFC diagnostics
 

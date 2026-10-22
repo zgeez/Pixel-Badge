@@ -47,7 +47,7 @@ Post-flash persistent storage had zero changed or newly programmed bytes versus
 the backup. NFC ready/result0, loaded bond, healthy boot and running CPU were
 observed. A bonded reconnect restored enabled settings controls without a new
 code. Details are recorded in [deployment.json](deployment.json).
-No owner text/design was applied to exercise the new renderer. Panel motion and
+No saved text/design was applied to exercise the new renderer. Panel motion and
 readability remain a physical follow-up; software rendering tests and builds do
 not establish optical acceptance. Other grayscale/combined-load and nRF52840
 port gates remain open. No new design decision, commit or push.

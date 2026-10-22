@@ -1,13 +1,9 @@
-# Prototype BLE configuration protocol v2
+# BLE configuration protocol v2
 
-Status: Studio, P3 audio and P4 motion implementations for the nRF5340 DK;
-new motion phone/hardware acceptance is pending. Historical owner-reported
-checks do not validate every later extension. Android first. Audio controls
-are specified separately in [audio-protocol.md](audio-protocol.md); recording
-remains disabled in normal firmware. There is no firmware-update command.
-The badge is a peripheral/GATT
-server; its network core runs IPC radio, application core runs host/GATT and
-badge logic. No UART transport, credentials or personal identity in advertising.
+Authenticated GATT configuration for Pixel Badge. The DK uses an IPC radio
+core; Rev A runs host/controller on one core. Audio has a separate
+[wire format](audio-protocol.md). Recording is disabled in normal builds;
+there is no firmware-update command. Older capability sets remain supported.
 
 UUIDs use the suffix `-6e9b-4f4c-a8f8-731a9d46e1c0` below.
 
@@ -156,124 +152,28 @@ order. Service discovery must still find the newly added characteristics.
 
 ## Bench
 
-Follow the [remaining P2 bench checklist](ble-bench.md) for settings,
-persistence, connection interruption and security/reset checks.
-
-```powershell
-.\scripts\dev.ps1 build -BuildDir build/p2-ble -SysbuildConfFile firmware/nrf5340_prototype/configs/ble-sysbuild.conf
-west flash -d build/p2-ble --runner jlink
-.\scripts\app\dev.ps1 build
-adb install -r app/build/app/outputs/flutter-apk/app-debug.apk
-```
-
-Sysbuild produces `merged.hex` for MCUboot/application and `merged_CPUNET.hex`
-for the network radio. Use `west flash` with this build directory so its domain
-flash order programs both cores; application-only flashing does not install
-the radio. Keep the protected NFC tag. Firmware performs local policy/NDEF
-checks without an RF-proof receipt or helper. Fresh tags use explicit wired
-setup below; normal Apply/Sync again never changes credentials.
-
-Install `app/build/app/outputs/flutter-apk/app-debug.apk`. Wait for the boot QR,
-hold Action/Button 2 for about one second, then release it. The QR remains
-visible while the 60-second pairing window is open. Tap Find badge in Pixel
-Badge, select Smart LED Badge, then enter the passkey in the phone dialog;
-the two-row code appears when the phone starts pairing. Holding Button 2
-through a reboot instead triggers factory reset and removes settings/bond/NFC
-receipt. Verify URL readback,
-scan QR and tap NFC, then repeat after disconnect/reboot. Test unpaired writes,
-wrong passkey, pairing expiry, interrupted connection, dropped notification,
-tag contention, long names, persisted brightness/mode and factory reset.
-Software tests do not establish phone/radio/QR/NFC/security or RF-timing acceptance.
+Use the [BLE checks](ble-bench.md) with the Prototype image and Pixel Badge app.
+The [dated settings/pairing record](../validation/results/2026-10-13-dk-p2-settings/README.md)
+separates captured results from manual observations and unfinished checks.
 
 ### NFC setup and synchronization
 
-Current behavior follows [ADR 0017](decisions/0017-local-nfc-synchronization.md).
-With a configured tag, boot, Apply link and Sync again perform guarded local
-policy and NDEF checks. An old false readiness flag does not prevent requesting
-recovery. Success still requires the resulting synchronized flag and exact URL
-readback. The bit is not proof of RF password authentication. Factory reset no
-longer creates a phone-verifier requirement.
-
-For a fresh or misconfigured tag, use a matching debug build and trusted SWD
-host. Keep readers away. No phone/helper/taps or confirmation prompt is needed:
-
-```powershell
-.\scripts\dev.ps1 build -BuildDir build/p4-nfc-setup -ExtraConfFile firmware/nrf5340_prototype/configs/nfc-provisioning.conf
-west flash -d build/p4-nfc-setup --runner jlink --no-erase
-& C:/ncs/toolchains/4f5b6ad6dd/opt/bin/python.exe scripts/nfc/badge_nfc.py configure --elf build/p4-nfc-setup/nrf5340_prototype/zephyr/zephyr.elf
-```
-
-Restore the normal BLE firmware afterwards. `configure` sets transient random
-credentials and finalizes readable policy/NDEF; it does not claim RF password
-proof. It fails on incompatible/locked tags rather than bypassing protection.
+Boot, Apply link, and Sync again verify readable tag policy and exact NDEF URL.
+Success needs the synchronized flag and readback, not an RF-proof receipt.
+Fresh/misconfigured tags use [explicit wired setup](nfc-prototype.md).
+Existing tags retain their credentials; normal operations never personalize them.
 
 ### Restore NFC verification (historical optional RF diagnostic)
 
-The following proof3 procedure predates ADR 0017 and is **not required** for
-current link Apply, boot or Sync again. Its receipt no longer gates readiness.
-
-
-When NFC is unverified, contact-link Apply is unavailable. Name, brightness and
-mode can still be configured. A badge factory reset clears the NFC receipt;
-ordinary link-opening taps cannot restore it. Helper v0.5/proof3 uses the
-accepted [ADR 0014](decisions/0014-positive-nfc-provisioning-proof.md) amendment.
-Previously flashed proof2 firmware
-and v0.4 cannot be used with the new host tools.
-Keep the phone away from the tag while building, flashing and booting:
-
-```powershell
-.\scripts\dev.ps1 build -BuildDir build/p2-ble-provisioning -SysbuildConfFile firmware/nrf5340_prototype/configs/ble-sysbuild.conf -ExtraConfFile firmware/nrf5340_prototype/configs/nfc-provisioning.conf
-west flash -d build/p2-ble-provisioning --runner jlink
-.\scripts\nfc\build_android.ps1 -Jdk 'C:/Program Files/Android/Android Studio/jbr'
-adb devices
-adb -s PHONE_SERIAL install -r build/p1-nfc-helper/badge-nfc-helper.apk
-$nfcPython = 'C:/ncs/toolchains/4f5b6ad6dd/opt/bin/python.exe'
-& $nfcPython scripts/nfc/badge_nfc.py provision --elf build/p2-ble-provisioning/nrf5340_prototype/zephyr/zephyr.elf --android-serial PHONE_SERIAL
-```
-
-Replace PHONE_SERIAL with the connected Nothing phone from `adb devices`;
-wireless ADB is supported. Keep the DK connected. The explicit ELF argument
-must match this BLE/provisioning image. In the helper, authenticate and tap,
-lift the phone fully away, then start check 2 and tap again. After **Both RF
-checks passed** and the computer's **RF proof accepted**, remove the phone and
-press Enter on the computer. Both checks authenticate the generated password
-in separate sessions. A transport error or failed check cannot
-complete verification. See [the NFC bench workflow](nfc-prototype.md#provision-once-then-check-the-status).
-
-Once verified, restore the normal BLE image to turn off the provisioning
-mailbox, then reconnect Pixel Badge and refresh before Apply:
-
-```powershell
-west flash -d build/p2-ble --runner jlink
-```
-
-Do not hold Button 2 during boot, which would erase the receipt again.
+The old two-session proof is optional diagnostics only. It no longer gates
+boot or Apply. See [NFC tools](../scripts/nfc/README.md) and
+[ADR 0017](decisions/0017-local-nfc-synchronization.md).
 
 ## Software verification (2026-10-12)
 
-- Initial NCS 3.4.1 integration: DK default, BLE/provisioning and Linux
-  CI-wrapper BLE builds passed. Latest status correction: normal BLE and BLE
-  plus provisioning builds pass, generating both flash domains.
-- Full native_sim baseline: fourteen suites / 77 cases. Latest BLE protocol
-  check: two configurations / 14 cases pass, including simulated DK errno119;
-  its canonical pending-packet regression failed before the correction.
-- Flutter 3.38.5: 17 protocol/controller/screen tests and clean analyzer;
-  debug APK build and v2 signature verification pass.
-- Eight QR link configuration and two app define-whitelist tests pass;
-  repository format/YAML/hygiene and whitespace checks pass.
-
-These are local software results; unpublished CI changes have no remote result.
-On 2026-10-13 the full current native suite passed15 configurations/84 cases;
-Flutter17/analyzer, QR8/app-defines2 and NFC host12 also passed.
-[Remaining-check record](../validation/results/2026-10-13-dk-p2-settings/README.md)
-separates these results from the pending physical settings/security/recovery checks.
-Later DK/phone work completed [proof3 provisioning and receipt retention](../validation/results/2026-10-12-dk-positive-nfc-proof/README.md).
-Pixel Badge D2 (0.1.1/code2) and the pending-status fix are installed. Owner
-reports Applied and confirmed/QR changed, matching GitHub and LinkedIn QR/NFC,
-and correct LinkedIn NFC while off plus QR/app after restart. Read-only matching
-ELF metadata confirms proof retained, ready/no error and desired=verified
-HTTPS://ZIADG.COM/L after restart. These DK/Click/panel results do not establish
-broader security, interrupted recovery, RF timing or Rev A acceptance.
+Historical build/test/deployment counts are in the
+[validation records](validation.md). Use their firmware versions when interpreting
+results; later protocol extensions need their own tests.
 
 ## Motion extension
 
@@ -402,13 +302,13 @@ new manifest; use the matching backup for downgrade. No automatic provisioning,
 bond reset or settings erase occurs on upgrade. A failed manifest-write
 acknowledgement pins both banks until restart/reload, because the manifest may
 have committed despite its error result. The app requests a restart before retry.
-The remaining24KiB reserve no
-longer holds a full network update. Rev A/nRF52840 allocation is still a later port.
+The remaining 24 KiB reserve does not hold a full network update.
+The [Rev A layout](rev-a-firmware.md#flash-and-ram) budgets the controller and app together.
 
 An upload lease lasts10s after its latest fragment and holds through Apply.
 Recording starts are refused while it is held; uploads refuse active/requested/
 draining recording or an NFC operation. Local visualization DMA is stopped by
-the main owner before the worker can erase/write (bounded500ms handoff), then
+the main thread before the worker can erase/write (bounded500ms handoff), then
 resumes when the lease ends. These are implementation bounds, not measured
 combined-load acceptance. Library/read-only metadata work remains available.
 

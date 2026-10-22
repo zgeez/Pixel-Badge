@@ -91,5 +91,5 @@ Do not publish settings backups or credentials.
    complex local projects can exceed the transfer budget and remain saveable.
 
 Release recording remains disabled by default. New-view visibility, grayscale
-optics, power and Rev A resources are open acceptance, not owner decisions left
-unanswered. No new unresolved owner decision; existing OD22/OD60 unchanged.
+optics, power and Rev A resources are open acceptance, not design decisions left
+unanswered. No new unresolved design decision; existing OD22/OD60 unchanged.

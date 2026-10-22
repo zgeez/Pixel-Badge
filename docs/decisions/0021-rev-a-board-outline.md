@@ -1,53 +1,21 @@
 # 0021: Rev A board outline 118 × 76 mm
 
-- Status: Accepted
-- Date: 2026-10-16
-- Deciders: Project owner
+Status: Accepted
 
-## Context
-
-[ADR 0006](0006-rev-a-mechanical-envelope.md) set 112 × 74 mm as the hard
-board maximum, with 108 × 72 mm nominal. The Rev A layout then outgrew it:
-
-- The E73 module ([ADR 0015](0015-nrf52840-e73-module.md)) is larger than the
-  module it replaced.
-- On 2026-10-15 the board grew 2 mm taller (112 × 76 mm) for routing room
-  under the shift registers.
-- The east side still could not be routed cleanly. The router-made east
-  routing averaged about 4.4 vias per net, left SYS unrouted and stacked
-  signals broadside in the routing corridor. Each remaining connection would
-  have crossed 5–18 existing nets.
-
-## Options considered
-
-1. Patch the existing east routing within 112 × 76 mm: keeps the outline;
-   many vias and crossings, with crosstalk risk in the corridor.
-2. Six-layer stack-up at the same size: more routing layers, a different
-   stack-up and higher board cost. Not chosen.
-3. Widen to 118 × 76 mm and re-plan the east side from a new floorplan: more
-   room for the power, charger, NFC and module area, at the cost of a larger
-   badge.
+Date: 2026-10-16
 
 ## Decision
 
-Option 3. The Rev A hard board maximum is **118 × 76 mm**, and Rev A uses it.
-The 108 × 72 mm nominal target and the rest of ADR 0006 are unchanged:
-rounded corners, edge-accessible USB-C, buttons and switch, and the rear
-3D-printed carrier.
+Use 118 × 76 mm as the Rev A hard maximum and actual board outline. The earlier
+112 × 74 mm envelope grew 2 mm for the lower routing corridor, then 6 mm east
+to route the module/power/NFC region cleanly.
 
-## Consequences
+Patching the smaller outline required many crossings/vias and left SYS
+unrouted. A six-layer board would change cost and stack-up. Widening keeps
+four layers and space for a more practical floorplan.
 
-- The badge is 6 mm wider and 2 mm taller than the ADR 0006 maximum. The
-  NFC coil, the module and its antenna keep-out, and one carrier screw move
-  6 mm east.
-- The rear carrier is designed to the routed board outline, not the earlier
-  envelope.
-- Wearability, retention, weight and NFC/BLE performance with the carrier,
-  battery and magnets still need physical validation.
-- A smaller outline remains a later-revision option.
-
-## References
-
-- [ADR 0006: Rev A PCB and mechanical envelope](0006-rev-a-mechanical-envelope.md)
-- [Hardware constraints](../hardware.md)
-- [Hardware design files](../../hardware/README.md)
+The coil, module/antenna region, and one carrier screw move east. Design the
+carrier to the routed board, not the original envelope. Rounded corners,
+accessible controls, and rear battery support remain. Retention, weight,
+wearability, and NFC/BLE behavior still need physical tests.
+[Hardware source](../../hardware/README.md) · [Original envelope](0006-rev-a-mechanical-envelope.md)

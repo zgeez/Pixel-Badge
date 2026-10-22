@@ -1,6 +1,6 @@
 # Complete prototype deployment — 2026-10-15
 
-Owner requested the current APK and firmware with all changes, and removal of
+I requested the current APK and firmware with all changes, and removal of
 the app Identity block. Source remains uncommitted `fw/prototype-motion` in
 `build/prototype-audio`, base main `361935a`. Target remains nRF5340 DK/HUB75/
 NTAG Click/IMU/microphone, not the deferred nRF52840/Rev A port.
@@ -62,7 +62,7 @@ REC visibility, motion timing, physical QR/NFC taps or Rev A acceptance.
 No recording was initiated by automation. No NFC reconfiguration, factory
 reset, commit or push. Existing hardware/port gates remain open.
 
-## Brief owner check
+## Brief bench check
 
 Reconnect and Refresh settings. Text should open directly into the composer;
 send a message. Audio should offer Record/Stop: record briefly, stop and play

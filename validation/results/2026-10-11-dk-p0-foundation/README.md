@@ -8,16 +8,16 @@
   watchdog-loop fragment for the forced-reset test. This predates the later
   display retry/schema recovery corrections. A committed tested-image revision
   and image hash were not retained for this session.
-- Equipment: owner's panel/power/phone setup for functional checks;
+- Equipment: my panel/power/phone setup for functional checks;
   J-Link RTT Logger V9.82, application-core device `nRF5340_xxAA_APP`, SWD
   4000 kHz, RTT channel 0 for the independent capture.
-- Method: six steps in [the firmware guide](../../../docs/firmware.md#owner-bench-acceptance).
+- Method: six steps in [the firmware guide](../../../docs/firmware.md#historical-foundation-checks).
 - Threshold: functional expected behavior from that procedure; no numerical
   optical acceptance or GPIO timing threshold was measured here.
 
 ## Outcomes and evidence limits
 
-The owner reports all six steps passed and confirms checking RTT: normal
+My manual notes record all six steps passing, with RTT checked: normal
 QR/name and brightness controls, reserved long presses, brightness surviving
 reset/power cycle, boot-button factory reset, watchdog-loop safe mode and
 restoration of the normal image. These outcomes were not independently

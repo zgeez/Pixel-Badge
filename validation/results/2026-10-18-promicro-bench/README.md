@@ -1,7 +1,7 @@
 # Bare Pro Micro nRF52840 bench
 
 Date: 2026-10-18. Source: uncommitted `fw/rev-a-nrf52840`, based on main
-`58a50197c0b278a0fcc95d849aad2d1132e657eb`. Hardware: owner's Teyleten Robot
+`58a50197c0b278a0fcc95d849aad2d1132e657eb`. Hardware: my Teyleten Robot
 Pro Micro-type nRF52840 board, USB serial identity C62A57C22E5050EF; no external
 peripherals. SDK/toolchain: pinned nRF Connect SDK v3.4.1.
 
@@ -45,14 +45,14 @@ JSON contains only whitelisted public counters; no pairing codes are saved.
 The bench getter is present in the bench ELF and absent from both production
 target ELFs. LESC/MITM and the shared one-bond policy remain enabled.
 
-Owner reports successful phone pairing and "Applied and confirmed" for name
+Manual observation: successful phone pairing and "Applied and confirmed" for name
 BENCH and 5% brightness. Direct USB status corroborates brightness13. During
 the content check, mode changed to Animation and frame CRC changed while
-uptime continued. Owner subsequently confirms matching content readback and
+uptime continued. I subsequently confirmed matching content readback and
 disconnect/reconnect without a new pairing code. After closing the USB helper
-and unplugging/replugging the board, the owner confirms name, 5% brightness
+and unplugging/replugging the board, I confirmed name, 5% brightness
 and saved content retained, with reconnect requiring no new code. The scoped
-bare-board BLE/app/persistence checks passed by owner report, corroborated by
+bare-board BLE/app/persistence checks passed by manual observation, corroborated by
 the narrower direct USB/advertising observations above. RAM frame rendering is
 not evidence of physical display visibility or optical behavior.
 

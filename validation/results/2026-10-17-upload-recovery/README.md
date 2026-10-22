@@ -1,6 +1,6 @@
 # Large-animation upload and reconnect recovery
 
-Owner report, 2026-10-17: BLE stopped during a reported 96-frame animation upload
+Manual observation, 2026-10-17: BLE stopped during a reported 96-frame animation upload
 and would not reconnect; some connection/text-size labels appeared garbled.
 Worktree `app/prototype-polish`, uncommitted prototype-polish/grayscale/128-frame
 work based on `39593e8`. No commit or push performed.
@@ -50,13 +50,13 @@ this is a label normalization rather than a proven diagnosis of its origin.
   diagnostic. This does not measure optical shades or full combined load.
 - Install **Pixel Badge 0.8.2/build 24** over the existing app on Nothing A069P.
   Package version verified. Retry the existing imported clip (93 frames, 36297
-  encoded bytes / 35.4 KiB; owner called it 96 frames). Artwork Apply id 3/field 6 and
+  encoded bytes / 35.4 KiB; I called it 96 frames). Artwork Apply id 3/field 6 and
   subsequent animation-mode Apply id 4/field 4 both return phase 2/result 0. The app
   cannot proceed to the mode Apply until exact artwork readback succeeds.
 - Runtime sample of the actual animation: mode 3 and writable throughout 35 samples
   over 34.2 s; scan counter 30248 -> 32620; watchdog retention 0xa0 throughout. See
   [numeric runtime summary](runtime-summary.json). Physical optical appearance is
-  still owner acceptance; advancing software scan counters alone do not prove it.
+  still bench verification; advancing software scan counters alone do not prove it.
 - Restart the app process and reconnect using the existing bond. Current process
   logs **MTU 247** before settings reads. Before/after status snapshots match
   phase 0/id 0/flags 3; connected Animation dashboard and preview observed. Snapshot
@@ -71,7 +71,7 @@ this is a label normalization rather than a proven diagnosis of its origin.
 
 Ignored raw evidence: `build/upload-*`, `build/upload2-*` logs, encrypted recovery
 backup, phone/UI captures and numeric samples. Do not publish backups, credentials
-or the owner's imported media. Previous 128-frame/131718-byte software tests remain
+or my imported media. Previous 128-frame/131718-byte software tests remain
 capacity evidence; this physical clip exercises 93 frames only.
 
 ## Remaining gates
@@ -79,4 +79,4 @@ capacity evidence; this physical clip exercises 93 frames only.
 Optical grayscale/refresh/ghosting, maximum-size physical upload, measured combined
 BLE/audio/motion load and Rev A/nRF52840 resources remain open. The scan-counter
 rate under debug sampling is not the optical refresh acceptance measurement.
-No new unresolved owner decision; existing OD22/OD60 remain unrelated/open.
+No new unresolved design decision; existing OD22/OD60 remain unrelated/open.

@@ -3,7 +3,7 @@
 Date: 2026-10-13. Target: existing nRF5340 DK/HUB75 prototype, NCS3.4.1,
 Flutter3.38.5. Work is isolated on `app/pixel-studio`, based on merged PR22
 (`51b2d7f`). App0.2.0/build3 is installed on the Nothing phone and matching
-normal firmware is flashed to both DK cores. The first owner-reported upload
+normal firmware is flashed to both DK cores. The first manually reported upload
 is recorded below; broader physical acceptance remains pending. The separate
 E73 hardware-module change and
 single-core port are outside this implementation.
@@ -42,7 +42,7 @@ single-core port are outside this implementation.
   do not establish runtime stack high-water values or the Rev A port budget.
 - Debug Android APK builds and APK Signature Scheme v2 verification passes.
   Version0.2.0/build3. Release signing no longer defaults to the debug key;
-  an owner-signed store artifact has not been produced or tested.
+  an release-signed store artifact has not been produced or tested.
   Final debug APK SHA256:
   `6a41adca96841f772172e8f362bafb1c147f15cb132614b2d81fe3f65ed392f3`.
 - Repository format, YAML, hygiene and `git diff --check` pass. Phone-size
@@ -121,7 +121,7 @@ matches all153504 executable bytes checked against the ELF. No factory reset
 or NFC provisioning was performed. Boot reports BLE ready and NFC unverified
 (-13).
 
-The owner reports **"Applied and confirmed; panel changed"** after a prompt
+My manual notes record **"Applied and confirmed; panel changed"** after a prompt
 to send text or drawing. The specific upload kind was not supplied, so this
 confirms one Studio upload rather than independent acceptance of both paths,
 animation playback or persistence.

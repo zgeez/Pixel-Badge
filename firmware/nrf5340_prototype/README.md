@@ -37,4 +37,4 @@ Never flash an nRF52840 image to this DK.
 The merged app 0.10.3/build 31 and matching pre-split prototype recording image
 were installed with settings/bond retention checks. Later port edits have only
 been built/tested, not flashed. Final functional checks are deferred to Rev A
-bring-up at the owner's request; this does not mark them passed.
+bring-up during the port; this does not mark them passed.

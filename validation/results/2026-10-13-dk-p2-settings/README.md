@@ -1,18 +1,20 @@
 # P2 remaining bench checks — 2026-10-13
 
-Result: **current software checks and owner-reported identity/mode/brightness,
+Personal identifiers/URLs in excerpts are redacted; raw artifacts are unchanged.
+
+Result: **current software checks and manually reported identity/mode/brightness,
 offline settings retention, bonded reconnect,32-character name and interrupted-
 connection readback/QR/NFC agreement checks passed; closed-window pairing,
 wrong-passkey rejection and own-window expiry passed; reset recovery incomplete**.
 This is not a full P2 acceptance result. The controlled reset has now been
 performed; both recovery phone checks passed but firmware finalization failed.
-The owner ended further bench tests and requested the commit handoff. Normal
+I ended further bench tests and requested the commit handoff. Normal
 firmware is restored with default settings and NFC unverified.
 
 Hardware: nRF5340 DK with HUB75 and NFC Tag 2 Click; Nothing phone A069P /
 Android 16 used over wireless ADB (disconnected at handoff). Source: main11cfc23 plus uncommitted
 local fw/prototype-ble work. Normal BLE firmware and Pixel Badge D2 remain
-installed. Initial checks used the existing bond/receipt; the later owner reset
+installed. Initial checks used the existing bond/receipt; the later manual reset
 and phone bond removal are recorded below. A later normal-image flash adds
 non-secret pairing outcome logs; provisioning restoration is still pending.
 
@@ -42,84 +44,81 @@ remain recorded. Follow the [remaining bench checklist](../../../docs/ble-bench.
 
 ## Direct non-secret status
 
-Matching-ELF read-only J-Link access before owner settings confirmation shows
+Matching-ELF read-only J-Link access before manual settings confirmation shows
 NFC prooftrue, ready_state1, last_result0, operation_active0 and public
-desired=verified HTTPS://ZIADG.COM/L. A later public applied-settings snapshot
+desired=verified [redacted URL] A later public applied-settings snapshot
 reads:
 
 ```json
-{"active_mode": 1, "brightness": 16, "default_mode": 1, "name": "Ziad Ghanem", "url": "HTTPS://ZIADG.COM/L"}
+{"active_mode": 1, "brightness": 16, "default_mode": 1, "name": "[redacted name]", "url": "[redacted URL]"}
 ```
 
 These are transcribed tool outputs, not an archived phone ATT/QR trace. They
 corroborate current applied values, not the physical display, observed brightness
-changes or a new restart. Subsequent owner confirmation is recorded below.
+changes or a new restart. Subsequent manual confirmation is recorded below.
 No key, passkey, provisioning credential or private phone data was read.
 
-## Owner identity/display result
+## Identity/display result
 
-Owner answered **All three settings work** to the requested name Apply, Name
+The recorded response was **All three settings work** to the requested name Apply, Name
 mode selection and lower/higher brightness checks. This records correct name
-display, visible brightness change and confirmed operations by owner report.
+display, visible brightness change and confirmed operations by manual observation.
 
 After that report, matching-ELF public status reads:
 
 ```json
-{"active_mode": 1, "brightness": 16, "default_mode": 1, "name": "Firmware", "url": "HTTPS://ZIADG.COM/L"}
+{"active_mode": 1, "brightness": 16, "default_mode": 1, "name": "Firmware", "url": "[redacted URL]"}
 ```
 
 NFC remains prooftrue/ready1/last_result0/operation_active0. The last sampled
 Apply is id3/field2/result0/not pending (name). This corroborates a completed
-name operation and current public settings; the owner-selected current name
+name operation and current public settings; the selected current name
 differs from the earlier snapshot. No stored value was changed by the reader.
 Separate mode/brightness request IDs were not captured.
 
-## Owner persistence and reconnect result
+## Persistence/reconnect result
 
-Owner answered **All settings retained; reconnect needs no new code** after
+The recorded response was **All settings retained; reconnect needs no new code** after
 disconnecting, restarting with both buttons released, observing the name
 offline and reconnecting/refreshing without reopening the pairing window.
 This passes settings and bond persistence on the tested DK/phone setup by
-owner report.
+manual observation.
 
 After that report, matching-ELF read-only public snapshot shows:
 
 ```json
-{"active_mode": 1, "brightness": 255, "default_mode": 1, "name": "MS student", "url": "HTTPS://ZIADG.COM/L"}
+{"active_mode": 1, "brightness": 255, "default_mode": 1, "name": "MS student", "url": "[redacted URL]"}
 ```
 
 NFC prooftrue/ready1/last_result0/operation_active0 and desired=verified /L
-remain intact. Protocol is idle (id0/result0/not pending). The sampled owner
-settings differ from the earlier Firmware/Low snapshot; the owner was allowed
-to choose preferred values before restart. No exact pre-restart capture of
-MS student/Full is available, so persistence is owner-reported and post-restart
+remain intact. Protocol is idle (id0/result0/not pending). The sampled settings differ from the earlier Firmware/Low snapshot; I chose preferred values before restart. No exact pre-restart capture of
+MS student/Full is available, so persistence is manually reported and post-restart
 values directly corroborated. No J-Link probe ran during the requested power
-cycle; reading resumed after the owner confirmed restoration.
+cycle; reading resumed after I confirmed restoration.
 
-## Owner fragmented-name result
+## Fragmented-name result
 
-Owner reports **Exact32-character readback and full scrolling work** after
+Manual observation: **Exact32-character readback and full scrolling work** after
 applying `ABCDEFGHIJKLMNOPQRSTUVWXYZ123456` and refreshing settings. This passes
-the maximum-name fragmentation/readback/display check by owner report.
+the maximum-name fragmentation/readback/display check by manual observation.
 
 After the restore-preferred-name instruction, direct current snapshot shows
-name Ziad, active/default Name, brightness255 and /L. Last sampled Apply is
+name [redacted name], active/default Name, brightness255 and /L. Last sampled Apply is
 id4/field2/result0/not pending; NFC prooftrue/ready1/result0/operation_active0.
 This is a successful current name command, not a captured32-character transfer.
 No actual ATT name fragments or earlier long-name snapshot were captured.
 
-## Owner interrupted-connection result
+## Interrupted-connection result
 
-Owner reports **Interrupted; refreshed app, QR and NFC agree** after the
+Manual observation: **Interrupted; refreshed app, QR and NFC agree** after the
 requested QR/GitHub Apply, immediate Home while Applying and reopen/reconnect/
-Refresh sequence. This passes functional post-interruption agreement by owner
-report. A cancelled or already-running request can leave either the old or
+Refresh sequence. This passes functional post-interruption agreement by manual observation. A cancelled or already-running request can leave either the old or
 new applied link; successful refresh and actual QR/NFC agreement determine the
 accepted state, not automatic reapplication of the requested destination.
 
 Direct read-only matching-ELF status afterward shows current name Ws in the
 chat, active QR/default Name,brightness255, applied URL /L. NFC desired=verified
-HTTPS://ZIADG.COM/L, prooftrue/ready1/result0/operation_active0. Protocol is idle
+[redacted URL], prooftrue/ready1/result0/operation_active0. Protocol is idle
 (id0/result0/not pending) after reconnect. Thus current retained LinkedIn is
 verified; no successful GitHub commit is claimed for this interrupted request.
 No request IDs or ATT traffic across disconnect were captured; cancellation
@@ -130,7 +129,7 @@ Check4 functional recovery agreement passes; checks5–7 remain pending.
 
 ## Single-phone security/reset recovery preparation
 
-Owner reports only the Nothing phone is available. The installed firmware has
+Manual observation: only the Nothing phone is available. The installed firmware has
 MAX_PAIRED1 and no oldest-bond overwrite; the pinned SDK allocates a key slot
 before sending its security request. An occupied slot can reject a second
 central before passkey entry, so that rejection cannot prove wrong-passkey or
@@ -149,8 +148,8 @@ Current provisioning ELF SHA256:
 E69C16108DF856EEB3C80B226186FED63747D9179CDAACC2D9790183C3DB9E68.
 Public pre-reset settings saved locally in
 `build/p2-pre-reset-public-settings.json` (no keys or provisioning credentials).
-Owner reset step requested; no tool-initiated reset, flash or bond deletion at
-preparation time. Do not probe J-Link during the owner power-cycle operation.
+Factory-reset step requested; no tool-initiated reset, flash or bond deletion at
+preparation time. Do not probe J-Link during the manual power-cycle operation.
 
 Security bench constraint: Windows reports zero present Bluetooth devices.
 This setup has not yet exercised fresh unbonded protected writes or wrong
@@ -159,11 +158,11 @@ reconnect counts as their proof.
 
 ## Controlled factory reset
 
-Owner reports default QR appears and phone bond forgotten after the requested
+Manual observation: default QR appears and phone bond forgotten after the requested
 Button2-at-power-on reset. Matching-ELF read-only snapshot shows:
 
 ```json
-{"active_mode": 0, "brightness": 128, "default_mode": 0, "name": "BADGE", "url": "HTTPS://ZIADG.COM"}
+{"active_mode": 0, "brightness": 128, "default_mode": 0, "name": "BADGE", "url": "[redacted URL]"}
 ```
 
 NFC prooffalse/ready_state0/last_result-13/operation_active0; protocol idle.
@@ -175,7 +174,7 @@ Actual RTT capture contains `factory reset: settings partition erased`, all
 five defaulted fields and `badge ready: QR mode`. Local raw capture:
 `build/p2-reset-closed-window-rtt-20261013.log`. This independently confirms the
 badge settings-partition erase that also contains Bluetooth keys and receipt;
-phone bond removal is owner-reported. Reset half of check7 passes; provisioning/
+phone bond removal is manually reported. Reset half of check7 passes; provisioning/
 normal configuration restoration remains pending. No tool-initiated reset or
 setting write occurred during the read/capture.
 
@@ -185,7 +184,7 @@ unauthorized ATT-write evidence remain separate pending gates.
 
 ## Closed-window attempt remains inconclusive
 
-Owner reports a pairing dialog appeared; cancelling it produced an error.
+Manual observation: a pairing dialog appeared; cancelling it produced an error.
 Cancellation alone does not establish whether the badge rejected pairing.
 Asked whether the panel continued showing QR or displayed a six-digit code,
 and for the non-secret error text. No pass or security failure is recorded yet.
@@ -198,7 +197,7 @@ during the dialog. Pinned universal_ble2.3.0 Android implementation invokes
 BluetoothDevice.createBond; a phone-system prompt is not itself proof of badge
 authorization. No raw SMP/ATT rejection captured and no policy change made.
 
-Owner clarification: the badge stayed on QR; the dialog was only on the phone.
+Bench clarification: the badge stayed on QR; the dialog was only on the phone.
 No badge code display was observed. Cancellation still does not establish the
 firmware's rejection outcome.
 
@@ -228,7 +227,7 @@ automatic rejection from waiting/code display. Outcome remains pending.
 
 ## Closed-window new pairing rejected
 
-Owner reports accepting the phone Pair prompt, followed by Android's error
+Manual observation: accepting the phone Pair prompt, followed by Android's error
 that pairing failed because of an incorrect pairing code. Actual matching-image
 RTT shows repeated `BLE new pairing policy: rejected`, then security level1
 and error9, pairing failure and resumed advertising. See the
@@ -239,7 +238,7 @@ the first complete event sequence is preserved. Full local capture:
 In this SDK error9 is BT_SECURITY_ERR_UNSPECIFIED; it is not interpreted as
 proof of an entered wrong passkey. The explicit policy-rejected log establishes
 the application decision. After capture, read-only control state is enabledtrue,
-writabletrue,job_activefalse,pairing_deadline0,passkey_visiblefalse. Owner had
+writabletrue,job_activefalse,pairing_deadline0,passkey_visiblefalse. I had
 not opened the window. Closed-window new-pairing rejection passes; Android's
 generic error text does not indicate a firmware code mismatch in this test.
 No raw unauthorized ATT setting write was sent/captured.
@@ -251,7 +250,7 @@ configuration restoration follows.
 
 ## Deliberate wrong-code rejection
 
-Owner reports wrong code rejected, badge returned to QR and settings remained
+Manual observation: wrong code rejected, badge returned to QR and settings remained
 inaccessible after opening Button2's window and deliberately entering a
 different code. Actual RTT first records policy allowed, then security level1/
 error1, pairing failed1 and advertising resumed. In this pinned SDK error1 is
@@ -273,7 +272,7 @@ pending after this controlled reset.
 
 ## Unanswered pairing hit protocol timeout first
 
-Owner reports code appeared, cleared automatically and pairing failed.
+Manual observation: code appeared, cleared automatically and pairing failed.
 Actual RTT records policyallowed at00:32:38.472198, then `SMP Timeout` at
 00:33:08.533569 (about30.06 seconds later), level1/error9 and pairingfailed9.
 See [actual excerpt](protocol-timeout-rtt.log). This establishes safe unanswered
@@ -285,7 +284,7 @@ Prepared a read-only local monitor of pairing_deadline, passkey-visible flag,
 kernel curr_tick and RTT with the matching ELF. It never reads the displayed
 code or writes any policy. Announced ticks omit the driver's unannounced elapsed
 ticks, so remaining milliseconds are approximate; they are used only to leave
-a substantial late-connect margin. Owner requested to open Button2 window and
+a substantial late-connect margin. The next step was to open the Button2 window and
 wait for a connect cue based on the actual deadline. No new firmware edit,
 build or flash for this monitor. NFC/configuration restoration still pending.
 
@@ -295,7 +294,7 @@ Rev A acceptance remain verification dependencies.
 
 ## Controlled badge-window expiry passed
 
-Owner opened the physical window and waited for the timed cue. Read-only
+I opened the physical window and waited for the timed cue. Read-only
 monitor observed deadline3123473ms, a declining remaining-time estimate and
 passkey_visibletrue shortly before that deadline. Actual fresh RTT records
 policyallowed00:52:01.575500 followed by `BLE pairing window expired` at
@@ -304,7 +303,7 @@ policyallowed00:52:01.575500 followed by `BLE pairing window expired` at
 `build/p2-expiry-controlled-rtt-20261013.log`. The earlier SMP-timeout records
 in that capture were excluded from this excerpt.
 
-Owner confirms code appeared, cleared automatically and pairing failed.
+My bench notes confirm code appeared, cleared automatically and pairing failed.
 Unlike the earlier attempt, the explicit badge-expired event establishes
 check6: the badge clears the in-progress code and refuses completion when its
 window ends. Observed timestamps/deadline are from firmware, not an external
@@ -314,14 +313,14 @@ Normal configuration recovery has started: both matching BLE/provisioning
 domains flashed (ELF0990D67E... above). Non-secret mailbox reports needs
 verification with default Portfolio desired and no verified URL. The
 uninitialized driver's address field is85 before explicit provisioning; it
-does not establish the tag's actual RF/I2C address. Waiting for owner phone
+does not establish the tag's actual RF/I2C address. Waiting for test phone
 readiness before starting the fresh one-use two-tap proof session. No proof
 accepted or receipt restored yet. After verification, restore normal firmware,
 pair correctly and restore saved public settings.
 
 ## Recovery failed finalization; normal firmware restored
 
-In fresh session73447, the owner reported both RF checks passed and phone
+In fresh session73447, I reported both RF checks passed and phone
 removed; the host printed `RF proof accepted`. After computer confirmation,
 firmware command4 returned -13. The host also reported ADB reverse cleanup
 failure and the phone disconnected. ADB loss does not establish the cause of
@@ -333,14 +332,14 @@ identity mismatch, guarded-policy failure and RF transition; no guard changed
 and no UID/password/PACK/bearer is logged. Diagnostic image built and repository
 checks passed, SHA256
 `2C8F19ED8301B49C7383829B1A0DE0347E537A861CD4D00CA33AAA3EEE9B1D95`.
-It was briefly flashed, but no further phone retry occurred after the owner
+It was briefly flashed, but no further phone retry occurred after I
 ended bench testing. The earlier failure's RTT buffer did not capture a reason,
 so the exact cause remains unresolved.
 
 Both normal BLE domains restored using the existing tested application ELF
 `943CE439E1C76E05C27791C0985FFE5F44BD186D63718445E28B3537E2B0DBF3`,
 with debug provisioning disabled and no erase. Read-only matching-ELF status:
-name BADGE, URL `HTTPS://ZIADG.COM`, brightness128, default/active QR;
+name BADGE, URL `[redacted URL]`, brightness128, default/active QR;
 NFC prooffalse, ready0, result-13, operation inactive and no Apply pending.
 QR/NFC agreement and a working bond are not claimed for this reset state.
 Recovery check7 remains incomplete; prior functional results remain historical.

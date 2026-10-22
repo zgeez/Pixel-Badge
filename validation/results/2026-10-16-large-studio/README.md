@@ -1,8 +1,8 @@
 # 128-frame Studio and fixed workspaces
 
-Date: 2026-10-16 owner session. Worktree `app/prototype-polish`, base `39593e8`
+Date: 2026-10-16 bench session. Worktree `app/prototype-polish`, base `39593e8`
 with uncommitted changes. This includes the earlier prototype-polish/grayscale
-work and the owner-approved ADR0019 extension; no commit or push performed.
+work and the agreed ADR0019 extension; no commit or push performed.
 
 ## Implementation
 
@@ -55,7 +55,7 @@ ready/result 0 and CPU running. Healthy boot captured; no automatic tag setup,
 factory reset, pairing reset or recording.
 
 Pixel Badge 0.8.0/build 22 installed in place over wireless ADB on Nothing
-A069P after the owner reconnected it. Package version and foreground process
+A069P after I reconnected it. Package version and foreground process
 verified; screenshot inspected and no fatal/unhandled/overflow errors in the
 launch log. Automatic bonded reconnect produced a badge status read and the
 connected dashboard was observed. App data retained by install -r. No recording
@@ -74,7 +74,7 @@ Ignored evidence: `build/large-*` build/check/flash/capture logs, encrypted back
 and state JSON. Public evidence includes [a filtered healthy-boot excerpt](healthy-boot-rtt.log),
 not settings or credential data.
 
-## Remaining owner bench checks
+## Remaining bench checks
 
 1. Install the matching APK, reconnect with the existing bond, Refresh. Visit all
    pages, edit a custom link, save/rename/load a library entry, and open the
@@ -88,5 +88,5 @@ not settings or credential data.
    acceptance. Recording stays disabled in the default release configuration.
 
 No hardware risk is closed by software checks. Rev A single-core code/controller,
-RAM, scan timing and update/asset allocation remain port gates. No new owner
+RAM, scan timing and update/asset allocation remain port gates. No new
 decision; existing OD22 carrier fit and OD60 iPhone redirect remain unrelated/open.

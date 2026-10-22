@@ -15,7 +15,7 @@ App draft/library hash remained unchanged. Flashed the rebuilt merged-main
 recording-enabled nRF5340 image without erase after a fresh locally encrypted
 320KiB persistent backup. Post-flash persistent bytes matched, with zero changed
 and zero newly programmed bytes; settings, loaded bond, NFCready/result0 and
-healthy-boot RTT were observed. No recording or owner functional tests run.
+healthy-boot RTT were observed. No recording or manual functional tests run.
 Later port source changes have been built, not deployed to the DK/phone.
 
 Local ignored evidence: `build/reva-start-app-install.json`,
@@ -70,7 +70,7 @@ The source pin contract and checker are versioned; schematic XML export is local
 
 ## Deferred and unfinished
 
-Owner explicitly deferred remaining final physical tests to Rev A bring-up.
+I explicitly deferred remaining final physical tests to Rev A bring-up.
 They are pending, not passed: optics/refresh/grayscale, current/scan-stall safety,
 maximum artwork transfers, BLE/audio/motion combined load, recording-view
 visibility, security/endurance, passive NFC and RF/antenna behavior.
@@ -139,7 +139,7 @@ Updated linker allocations: safe Rev A254120 flash/100869 RAM; enabled Rev A
 remain unchanged. Local logs: `build/pr28-disarmed-{safe,matrix,prototype}.log`,
 `build/pr28-disarmed-native.log` and `build/pr28-disarmed-native/twister.json`.
 No flash or physical reset-loop/visibility test was performed. Sources are a
-local correction on top of27277c4 until owner signing and push.
+local correction on top of27277c4 until commit signing and push.
 
 ## Healthy disarmed boot acknowledgement - PR28 follow-up
 
@@ -167,4 +167,4 @@ allocations are unchanged. Local evidence is
 and `build/pr28-boot-health-{safe,matrix,prototype}.log`.
 
 No firmware was flashed or phone/peripheral test repeated. Physical acceptance
-remains deferred to board bring-up. This correction awaits owner signing/push.
+remains deferred to board bring-up. This correction awaits commit signing/push.

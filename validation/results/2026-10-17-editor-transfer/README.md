@@ -53,7 +53,7 @@ flash, the0xb0000..0x100000 region had zero changed or newly programmed bytes
 versus that backup. Bond loaded, NFC ready/result0, healthy boot and running CPU
 were observed. [Sanitized deployment summary](deployment.json).
 
-The owner unlocked the Nothing phone for a read-only bonded reconnect. It
+I unlocked the Nothing phone for a read-only bonded reconnect. It
 reconnected without a new pairing code and returned to enabled settings controls.
 No text, artwork or setting was applied, and no recording was started. The actual
 Text page showed all navigation labels, compact size control and cursor arrows.
@@ -76,7 +76,7 @@ each artwork read carries236. A maximum131718-byte read needs559 pages; sequenti
 mode removes558 of the old per-page cursor writes, while retaining one initial
 selector. Upload staging still uses acknowledged writes, followed by Apply and
 complete verified readback. A new staging-upload rate and maximum-size end-to-end
-timing were not measured here; no owner design was overwritten for a benchmark.
+timing were not measured here; no design was overwritten for a benchmark.
 
 ## Artifact hashes (SHA-256)
 
@@ -91,4 +91,4 @@ timing were not measured here; no owner design was overwritten for a benchmark.
 Remaining physical checks include optical grayscale/refresh, per-line bounce on
 the panel, maximum-size transfers and combined audio/motion/display load. The
 nRF52840 Rev A port, resources and hardware acceptance remain separate. No new
-owner design decision was introduced.
+design decision was introduced.

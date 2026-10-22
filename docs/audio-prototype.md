@@ -1,133 +1,55 @@
-# P3 audio prototype
+# Audio development
 
-Firmware and Android app software are implemented on the nRF5340 DK/HUB75
-fixture. Hardware/phone acceptance remains pending. Default P3 firmware permits
-local Level/Spectrum visualization but **disables recording**. Only the explicit
-recording bench fragment enables it. The nRF52840 port remains after prototype
-firmware work.
+Level and Spectrum modes process microphone input locally. Recording is off in
+normal builds; the explicit bench configuration streams encrypted audio to the
+connected Android app.
 
-## Behavior and boundaries
+## Signal path
 
-Mode short cycles QR, Text, available Drawing/Animation, Level and Spectrum.
-Capture is nominal32kHz stereo with a selected lane, four static20ms DMA blocks,
-200ms startup discard, DC-removed RMS and a256-point Q15 Hann FFT. PDM stops and
-buffers are cleared outside audio modes. Actual sample/PDM clock and lane must
-be measured; these meters are not calibrated sound-pressure measurements.
+The DK captures at nominal 32 kHz, computes DC-removed RMS and a 256-point FFT,
+and decimates recording audio to 16 kHz. Rev A captures natively at 16 kHz.
+Recording uses independent 10 ms IMA ADPCM blocks, a rumble filter, gain control,
+and peak limiting. These meters are not calibrated sound-pressure measurements.
 
-Action (Button2) long opens the normal Bluetooth pairing window. Once paired,
-reconnect in Pixel Badge: audio setup is automatic and the Audio page shows
-Ready to record. There is no separate enrollment or recording-length selector.
-[ADR0016](decisions/0016-simple-audio-controls.md) records the owner amendment.
-After a failed settings Apply, Refresh before selecting a visualization.
+Recording requires an authenticated bond, app subscription/session proof, and
+a confirmed display frame. The recording view shows spectrum/level with lit
+corners in silence. Audio stays in volatile badge buffers; the phone stores
+encrypted files outside backups. WAV export is explicit.
 
-Recording starts from the app, or Mode (Button1) long requests a fresh accept
-from the foreground subscribed app within3s. Otherwise NO REC appears. Either
-badge button or app Stop stops recording. ADR0018 replaces REC lettering with a full-height spectrum and a
-full-width level meter, with lit corners in silence, at fixed DK brightness255 (candidate, not visibility acceptance).
-Capture starts only after the matrix driver confirms the recording-view buffer swap and full
-scan. Pending, active and draining recording view overrides a stale NO REC message; the
-visibility gate uses the kind of overlay actually rendered, not just recording
-state. Prior visualization DMA is stopped/erased. A31-tap anti-alias FIR precedes
-2:1 decimation to nominal16kHz; independent10ms IMA ADPCM blocks are encrypted
-and streamed, never stored on the badge. A gentle30Hz DC/rumble filter,
-automatic gain (up to24dB) and peak limiting run before compression so playback
-and exports both benefit. Quiet ambience is not gated. The raw local level/FFT
-measurements remain uncalibrated; recording gain is not acoustic sensitivity.
-New settings need the same-position/distance listening comparison on hardware.
+## Build
 
-Controls require LESC/MITM level4 plus automatic session proof and replay protection. Start
-also needs subscription, MTU>=108, healthy display and the explicit bench gate.
-Link loss, unsubscribe,1.5s app-heartbeat timeout, display/scan fault stop/discard capture. Recording continues until Stop, phone storage is low
-(16MiB reserve), or the WAV file boundary (about37.28hours). Private recordings
-use about40.32MB/hour; exported WAV uses115.2MB/hour. These are format sizes,
-not validated recording endurance. Stop
-waits boundedly for DMA release and zero-rate disable before erasing the pool;
-unconfirmed stop resets instead of claiming cleanup. No audio or keys in logs,
-telemetry or dumps. Settings cannot replace the recording view while recording.
-
-Android wraps one fresh recording-file key with Keystore before capture, then
-uses local chunk encryption in noBackupFilesDir (older files remain readable);
-backups are disabled. Plaintext/keys never cross Flutter's channel. Playback
-processes one block at a time. Delete removes the private file. Explicit Export
-WAV uses the document picker; the user may share that export. Leaving/locking
-the app stops recording; no automatic resume exists.
-
-**The externally powered HUB75 fixture has no panel power-good feedback.**
-Software blank/scan faults are detectable; unplugging its separate supply cannot
-be inferred from GPIO scanning. The later Rev A port must wire LED-rail and
-low-battery permission/stop handling. Recording remains release-disabled until
-that integration and ADR0011 visibility/privacy/security acceptance pass.
-
-## Build/install
-
-Use the existing [bring-up wiring](bringup.md), PDM CLK=P1.07, DATA=P1.09,
-correct supply/GND and selected lane. Standalone audio-screening.conf remains
-available: Button1 short meter/FFT, long pause; Button2 short brightness, long
-lane. Screening starts local capture on boot and has no BLE recording.
+Run from the repository root. Use the [DK wiring](prototype-wiring.md), including
+PDM CLK P1.07 and DATA P1.09.
 
 ```powershell
-Set-Location E:\Embedded\Nordic\smart-led-badge\build\prototype-audio
-# Default P3, recording disabled:
-.\scripts\dev.ps1 build -BuildDir build/p3-normal -SysbuildConfFile firmware/nrf5340_prototype/configs/ble-sysbuild.conf
-# Explicit development recording bench:
-.\scripts\dev.ps1 build -BuildDir build/p3-recording -SysbuildConfFile firmware/nrf5340_prototype/configs/ble-sysbuild.conf -ExtraConfFile firmware/nrf5340_prototype/configs/audio-recording-bench.conf
-west flash -d build/p3-recording --runner jlink --no-erase
+.\scripts\dev.ps1 build -Image Prototype -BuildDir build/prototype-recording -ExtraConfFile firmware/nrf5340_prototype/configs/audio-recording-bench.conf -Pristine
+.\scripts\dev.ps1 flash -Image Prototype -BuildDir build/prototype-recording
 .\scripts\app\dev.ps1 build
 adb install -r app/build/app/outputs/flutter-apk/app-debug.apk
 ```
 
-Boot with both buttons released. Preserve working bonds/NFC receipts with
---no-erase; do not factory reset for this bench. Missing .env leaves contact
-presets empty; scripts import only four validated public link defines.
+Back up settings first. Do not factory reset for this test.
 
-## Owner tests, in order
+## Bench checks
 
-1. **Regression/local audio:** reconnect and Refresh. QR/Text/Drawing/Animation
-   still work. Audio -> Level: speak/clap. Spectrum: use a known tone. Switch
-   to QR. Expected response/tone band; PDM clock stops outside audio. If silent,
-   use screening to test the other lane and report the clock.
-2. **Automatic setup:** reconnect using the existing Bluetooth bond. Audio
-   shows Ready to record without an enrollment button, extra code or duration
-   selector. Reconnect again and confirm it prepares automatically.
-3. **Recording/playback:** Record, speak5-10s, Stop. Expected
-   spectrum+level view throughout; prior mode returns after cleanup; a private
-   recording appears and Play sounds right. Export WAV to a chosen location,
-   verify playback, Delete the private copy. Nothing automatically in Media.
-   In app0.4.0+, pause, drag the seek slider forward/backward, resume and use
-   the ten-second skip controls. Progress follows played samples; seeking
-   authenticates each selected encrypted block, including legacy files. Also
-   seek to the last instant and resume: the tail should finish, not stay playing.
-   After a dropped link, reconnect, then repeat Home/reopen to check the service.
-4. **Button start:** keep Audio foreground/authenticated; Mode long about1s
-   requests a fresh recording. Either button stops. Disconnected app: NO REC.
-   Normal firmware refuses both app and button recording.
-   In normal firmware, Mode long-press shows NO REC even when the bonded app is
-   authenticated and subscribed; it does not create a button challenge.
-5. **Automatic stops:** separate recordings for Home, lock, Bluetooth off,
-   and disconnect. Expected capture/recording view ends; reopening never resumes.
-   Home/lock retain BLE; recording and playback stop/pause. Reopen and Refresh
-   without reconnecting, and check Back/reopen retains the link too. Bluetooth
-   off or badge power-off must end the connection/service. Force-stop still
-   ends the process. Play the saved recording; no automatic recording restart.
-   After Home/lock cleanup, return and try the Mode long-press without first
-   tapping Record: it must still start normally. Also leave and immediately
-   return while Record is starting; it must cancel, with a fresh Record press
-   still working afterward.
-6. **Sustained transport:** record past five minutes, listen for speed errors,
-   gaps/distortion, and check for resets/overruns. Report duration, phone/image
-   and non-secret status. Never capture audio/key data in RTT or dumps.
-7. **Visibility:** normal wear distance/angles, indoor, shade, bright outdoor
-   and direct sun. Record pass/fail/photos. Any failure keeps release recording
-   disabled; brightness255 is not proof.
+| Check | Expected result |
+|---|---|
+| Level/Spectrum, then QR | Sound changes the meters; PDM stops outside audio modes |
+| Reconnect the bonded phone | Audio prepares automatically; no extra enrollment |
+| Record 5–10 s, stop, play, seek, export | Complete recording, correct speed, usable WAV, no automatic media export |
+| Hold Mode with the app ready | Fresh recording request; either button stops it |
+| Repeat with normal firmware | App/button recording is refused |
+| Home, lock, unsubscribe, link loss | Recording stops; returning never resumes it automatically |
+| Return after cleanup, then hold Mode | A new button recording still works |
+| Record beyond five minutes | No legacy duration cap, resets, gaps, or overruns |
+| Check the recording view in sun/shade/indoors | Recording is visibly identifiable throughout |
 
-Engineering gates also exercise wrong-MAC/replay, cross-recording packets,
-repeat handshakes, low storage/WAV boundary, unsubscribe, software
-blank/scan faults, DMA/transport failures and persistence inspection. Use
-controlled fault injection, not an unmonitored HUB75 power unplug. Rail shedding
-and combined fluid/audio/refresh load need later hardware integration. Owner
-checks do not substitute for those gates.
+Log firmware/app versions, duration, and non-secret status. Never capture audio
+or keys in RTT/dumps. Test replay/MAC failures, display faults, DMA stop failure,
+low storage, and rail shedding using the [audio test plan](testing/sensors-audio.md#8-microphone-and-audio-processing).
 
-See [wire contract](audio-protocol.md), [ADR0011](decisions/0011-visible-voice-recording.md)
-and [software evidence](../validation/results/2026-10-14-p3-audio-start/README.md).
-
-The owner changed the recording view on 2026-10-16; see [ADR0018](decisions/0018-grayscale-studio-recording-view.md). Repeat visibility acceptance for this view; prior REC-label results do not validate it.
+The external HUB75 panel has no power-good feedback. Scan counters cannot detect
+its supply being unplugged. Recording remains disabled by default until display
+visibility, security, stop paths, and endurance pass on the intended hardware.
+[Wire format](audio-protocol.md) ·
+[Software record](../validation/results/2026-10-14-p3-audio-start/README.md)

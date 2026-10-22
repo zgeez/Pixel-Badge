@@ -1,5 +1,7 @@
 # Prototype cleanup and Pixel Badge library
 
+Personal identifiers/URLs in excerpts are redacted; raw artifacts are unchanged.
+
 2026-10-16. Software verification on `app/prototype-polish`, based on merged
 PR26 (`39593e8`). Target remains the nRF5340 DK. No badge flash, phone install,
 NFC provisioning, settings erase or hardware measurements were performed.
@@ -89,7 +91,7 @@ without importing its hardware SDK or artwork. QR sizing/capacity follows
 - Repository C/C++ formatting, YAML and hygiene checks passed; final whitespace
   checks include new source files. No new Android JVM tests were added or
   rerun; the debug APK compiles the changed native draft-store bound.
-- Debug APK built; aapt confirms `com.ziadg.badge_app`, 0.6.0/build 19,
+- Debug APK built; aapt confirms `[app package]`, 0.6.0/build 19,
   minSDK 24/targetSDK 36. SHA256:
   `CB501AFDC1DB560E2B0262374D41EA33E753D745473B8D4B28E18A1717360191`.
 
@@ -98,7 +100,7 @@ Local logs are ignored build artifacts: `build/polish-*-build.log`,
 `build/polish-repo-check.log`, `build/polish-apk-final.log`, and
 `app/build/polish-{tests,analyze,visual,import}-final.log`.
 
-## Short owner bench checklist
+## Short bench checklist
 
 Use matching firmware and APK after preserving the existing recovery artifacts.
 An incremental build is not a settings-retention guarantee; this run does not
@@ -127,7 +129,7 @@ recording/security, iOS, mechanical/RF/power and Rev A port acceptance stay open
 
 ## Requested installation completed (2026-10-16)
 
-Owner subsequently requested installation of firmware and app. Pixel Badge
+I subsequently requested installation of firmware and app. Pixel Badge
 0.6.0/build 19 installed in place on the connected Nothing A069P over wireless
 ADB; package-manager version verified, MainActivity launched and process found
 running. No uninstall or app-storage clearing was performed.
@@ -156,7 +158,7 @@ QR functional phone checks and broader physical acceptance remain pending.
 
 ## Interface follow-up installed (0.6.1/build 20)
 
-Owner requested removal of Sensor mounting and all homepage Create shortcuts,
+I requested removal of Sensor mounting and all homepage Create shortcuts,
 accurate already-paired connection messaging, and URL errors lasting one second.
 Removed the mounting controls and obsolete axis dropdown builder; applying the
 remaining motion controls preserves stored axis bytes. Removed Create for
@@ -175,7 +177,7 @@ truncated. Timer is cancelled when the dialog unmounts.
 The 16-frame limit is unchanged: 128 bytes per 32-square monochrome frame plus a
 4-byte header gives 2052 bytes. It bounds the current firmware buffers, transfer
 and persistent artwork format, rather than the MCU's theoretical capacity or
-phone storage. Frames loop continuously. No owner request to change that format
+phone storage. Frames loop continuously. No request to change that format
 was inferred from the question about its rationale.
 
 Verification: all 97 Flutter tests pass, including paired/unpaired progress,
@@ -190,6 +192,6 @@ recording, commit or push. APK SHA256:
 `D58180FE3FC5D791866A87301705C3CB7A79247856F94C6DE90B4372E8E4655F`.
 Local logs: `app/build/polish-followup-{tests,analyze}.log`,
 `build/polish-followup-{apk,repo-check}.log`. New phone interactions remain an
-owner check; source/widget tests do not prove on-phone reconnection acceptance.
+bench check; source/widget tests do not prove on-phone reconnection acceptance.
 Existing loose-sensor physical alignment and broader hardware/iPhone gates
 remain open. No new unresolved decision.

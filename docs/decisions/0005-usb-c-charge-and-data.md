@@ -1,63 +1,20 @@
 # 0005: USB-C charging and USB 2.0 data
 
-- Status: Accepted; charger direction, capacity target and power-switch
-  meaning superseded by [0007](0007-battery-charger-power-states.md)
-- Date: 2026-10-04
-- Deciders: Project owner
+Status: Accepted; charger/capacity/switch behavior amended by [0007](0007-battery-charger-power-states.md)
 
-## Context
-
-Rev A needs rechargeable battery power, charging with the badge switched off,
-and a routed USB data interface for future diagnostics/recovery. Independent
-battery protection is required for the wearable power system.
-
-## Options considered
-
-1. Charge-only USB-C: simpler routing, but omits the selected future data path.
-2. Standard 5 V USB-C sink with charge/power path and USB 2.0 data: supports the
-   selected interfaces without adding USB Power Delivery.
-3. For battery monitoring, a dedicated fuel gauge versus a switched divider to
-   SAADC: a gauge adds capacity estimation; voltage sensing addresses load
-   shedding with fewer BOM/firmware dependencies for Rev A.
+Date: 2026-10-04
 
 ## Decision
 
-Use USB-C as a standard 5 V sink for charging and USB 2.0 data, without USB PD.
-Fit separate 5.1 kΩ, 1% Rd resistors from CC1 and CC2 to ground, effective even
-without MCU/battery power; do not join the CC pins.
-VBUS supplies both the charger/power-path input and module VBUS pin 44 through
-the module USB supply conditioning/decoupling required by primary references.
-Route D+ to module pin 46 and D− to pin 48. Supply the normal MCU logic rail
-separately; dedicated VBUS is also required for USB operation.
+Use USB-C as a 5 V sink with USB 2.0 data and no PD. Fit independent 5.1 kΩ
+Rd resistors on both CC pins, present without MCU power. VBUS feeds both the
+charger and module USB supply; logic has its own regulator.
 
-Prefer a commercially protected 1-cell LiPo pack. An unprotected cell requires
-a dedicated hardware protection circuit; the provisional BQ24074 direction
-does not replace full independent battery protection. Charging remains possible
-with the physical switch off. Regulated logic and firmware-switchable LED rails
-support low-battery load shedding.
+Use a protected 1S pack, separate logic/LED rails, and a default-off switched
+VBAT divider for load shedding. A fuel gauge adds capacity estimation that
+Rev A does not require. Charging with the switch off is required.
 
-Use a default-off high-side-switched divider from protected-pack VBAT to an
-nRF5340 SAADC input for loaded battery-voltage sensing. A fuel gauge is not
-selected: accurate remaining-capacity/runtime estimation is not required for
-Rev A load shedding. Divider/switch values, measurement error/timing and final
-shed/recovery thresholds await calculations and pack characterization.
-
-## Consequences
-
-Pack, charger/regulator parts, protection limits, and final circuit/BOM values
-remain open/provisional. Check hot-plug, inrush, off-state back-powering, charge
-and load current margins, thermal behavior, and protection/recovery before
-release. Approximately 1200 mAh and eight hours of representative use are
-design targets, not measured claims. USB firmware features such as CDC and DFU
-are future work; hardware diagnostics can use a dedicated test image.
-Resolve source-compliant input-current limits before schematic freeze; Rd alone
-does not authorize fixed 500 mA or higher current. Validate both orientations
-and dead-battery attachment. Record a proposed load-shed policy/margin before
-freeze, then measure it before accepting thresholds; invalid/stale measurements
-keep the matrix disabled. This is additional control, not battery protection.
-
-## References
-
-- [Power, USB circuit references, and battery protection](../power.md)
-- [Nordic, Raytac, and TI primary specifications](../references.md)
-- [Electrical and runtime validation](../validation.md)
+The original BQ24074/1200 mAh direction was provisional and later replaced.
+USB current permission, inrush, off-state behavior, thermal limits, and pack
+protection must be verified; Rd alone does not authorize 500 mA.
+[Current power design](../power.md) · [Sources](../references.md)

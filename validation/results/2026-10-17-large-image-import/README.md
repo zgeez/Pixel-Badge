@@ -25,7 +25,7 @@ claim is made: native decoding still depends on the platform and its resources.
   valid PNG metadata, missing/corrupt file failures and a two-frame5000x100 GIF.
   Checks cover bounded retained dimensions, aspect ratio, durations and successful
   encoding/decoding of a badge-ready design. Fixtures are generated in tests;
-  no owner media is copied into the repository.
+  no personal media is copied into the repository.
 - Analyzer and Dart formatting pass. Android `:app:testDebugUnitTest` passes21
   cases in seven suites, compiling the modified native import handler. The
   correctly quoted `-Pkotlin.incremental=false` option avoids Windows cross-drive

@@ -48,6 +48,8 @@ on a specific document, cite the document revision and section.
   §5.1: module reference circuit.
 - [Ebyte product page, pin definitions](https://www.cdebyte.com/products/E73-2G4M08S1C/2)
 
+<a id="raytac-mdbt53-p1m"></a>
+
 ## Raytac MDBT53-P1M (superseded for Rev A by ADR 0015)
 
 - [MDBT53-1M & MDBT53-P1M Specification, Ver.E](https://www.raytac.com/document/act.php?act=1&index_id=78),

@@ -29,9 +29,9 @@ A second phone recording at 30 fps or more gives exact times; counting by eye
 is enough for screening but is recorded as such. Proposed pass rule (not yet
 accepted): at least 9 of 10 within 1 s and 10 of 10 within 3 s.
 
-## Result (2026-10-11, owner)
+## Result (2026-10-11, manual checks)
 
-Phone: Nothing 4a Pro (owner's wording), Google Lens, 3 tries per setting.
+Phone: Nothing 4a Pro (recorded device label), Google Lens, 3 tries per setting.
 All 18 settings decoded in all tries. The scanning distance had to be adjusted
 to the matrix brightness and the room lighting, so the fixed 40 cm condition
 was not held, and decode times were not recorded.

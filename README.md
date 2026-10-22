@@ -1,84 +1,101 @@
-# smart-led-badge
+# Pixel Badge
 
-A wearable smart identity/networking badge with a 32×32 monochrome white LED
-matrix, built on Nordic nRF5 SoCs with Zephyr RTOS. It shows a scannable QR
-link and name/identity, runs a motion-driven fluid simulation and an audio
-visualization, is configured over BLE from a companion phone app, and carries a
-passive NFC tag that shares the same link even when the badge is switched off.
+**A wearable LED badge with BLE configuration and passive NFC.**
 
-**Status:** the nRF5340 DK prototype implements QR/text, BLE configuration,
-synchronized passive NFC, 128-frame grayscale artwork, microphone spectrum/level
-visualization, encrypted phone recording and IMU fluid/orientation. Pixel Badge
-is the Android-first Flutter companion app. Recording is enabled only by an
-explicit development fragment pending physical acceptance.
+Pixel Badge displays contact links, text, and animations on a 32 × 32 LED matrix.
+The project covers custom PCB design, embedded firmware, and an Android companion
+app, developed first on an nRF5340 DK and then ported to an nRF52840 module.
 
-The firmware has separate [prototype and Rev A applications](firmware/README.md)
-with shared services. The E73/nRF52840 Rev A port builds the combined application/
-controller and matrix backend; charger/power policy and physical bring-up remain.
-Final prototype physical checks are deferred to board bring-up at the owner's
-request. Software tests and successful builds do not establish electrical,
-optical, RF, battery-safety or complete product acceptance.
+<p align="center">
+  <img src="docs/images/pcb-front-render.webp" width="820" alt="KiCad CAD render of the Rev A PCB, showing the LED matrix, NFC coil, and control electronics">
+  <br>
+  <em>Rev A PCB — KiCad CAD render.</em>
+</p>
 
-See [firmware](docs/firmware.md), [Rev A implementation](docs/rev-a-firmware.md),
-[app setup](app/README.md) and [validation](docs/validation.md) for scope/evidence.
+**Status · October 2026:** the DK prototype is running; Rev A boards are in
+production. Custom-board bring-up, battery runtime, thermals, and RF validation
+are pending. [Validation records](docs/validation.md).
 
-## Planned features
+## Features
 
-Rev A scope:
+- **Contact sharing:** QR display and a passive NFC tag with the same destination.
+- **Display content:** text, drawings, and up to 128 frames of grayscale artwork.
+- **Motion and audio:** automatic rotation, an IMU-driven particle fluid effect,
+  and microphone level/spectrum visualization.
+- **Phone control:** BLE configuration, artwork editing, and image/GIF/video import.
+- **Recording:** an opt-in development build streams encrypted audio to the phone;
+  audio is never stored on the badge.
 
-- QR link display (Version 1 fits the 32×32 display with a full quiet zone;
-  additional encoder versions only where the output geometry permits)
-- Name / identity display
-- Motion-driven Flip/fluid-style simulation (IMU)
-- Audio visualization and voice recording (PDM microphone). Recordings stream
-  to the phone app for playback and are never stored on the badge; the matrix
-  shows a recording indicator for the whole recording
-- BLE configuration through a companion phone app; usable without a phone
-  after configuration
-- Passive NFC contact link that works with the badge switched off
-- Battery-powered custom PCB with USB-C charging, two buttons, power switch,
-  and debug access
+## Hardware and firmware
 
-## Stack
-
-| | |
+| Area | Design |
 |---|---|
-| MCU | Nordic nRF52840 on the badge (Ebyte E73-2G4M08S1C module, [ADR 0015](docs/decisions/0015-nrf52840-e73-module.md)); separate nRF5340 DK prototype and [Rev A port](docs/rev-a-firmware.md) |
-| Firmware | nRF Connect SDK v3.4.1 / Zephyr RTOS, C++17 |
-| Tests | Ztest, Twister (`native_sim`) |
-| Hardware | KiCad 10.0.6, 4-layer PCB (≤ 118 × 76 mm), JLCPCB assembly (provisional) |
-| CI | GitHub Actions with the nRF Connect SDK toolchain container; pull requests run it once labelled `ci` (the `ci-label` check fails until then), and only for the changed parts of the tree |
+| MCU | Ebyte E73 nRF52840 module; nRF5340 DK development fixture |
+| PCB | 118 × 76 mm, four layers, designed in KiCad |
+| Display | 1024 white LEDs, 2 mm pitch, constant-current column sinks and switched rows |
+| Firmware | C++17 and C, Zephyr RTOS, nRF Connect SDK 3.4.1 |
+| Power | USB-C, BQ25620 charger, protected 1S LiPo, separate logic and LED rails |
+| App | Flutter with Android BLE, media, and encrypted recording support |
 
-## Repository layout
+The matrix uses SPI/DMA and TIMER/PPI blanking, with an independent hardware
+scan-stall circuit. Shared services use bounded buffers and queues; two artwork
+banks preserve the previous content during an interrupted upload. BLE changes
+require completion and readback, including QR/NFC agreement for link updates.
 
+See the [system architecture](docs/architecture.md) and
+[Rev A firmware design](docs/rev-a-firmware.md) for the implementation.
+
+## Prototype
+
+<p align="center">
+  <img src="docs/images/qr-bench.webp" height="320" alt="Physical prototype displaying a QR code on a HUB75 panel beside the nRF5340 DK and breadboard">
+  <img src="docs/images/bench-overview.webp" height="320" alt="Development fixture with the Nordic DK, breadboard, NFC breakout, and display wiring">
+</p>
+
+The nRF5340 DK and external HUB75 panel provide an accessible fixture for
+display, sensor, BLE, and NFC development. These photos show the RGB bench
+panel; Rev A uses white LEDs on the custom PCB.
+
+## Companion app
+
+<p align="center">
+  <img src="docs/images/app-badge.png" width="28%" alt="Pixel Badge app: device and display controls">
+  <img src="docs/images/app-text.png" width="28%" alt="Pixel Badge app: text composer and preview">
+  <img src="docs/images/app-studio.png" width="28%" alt="Pixel Badge app: grayscale artwork and animation editor">
+</p>
+
+Badge, Text, and Studio workspaces. UI review captures use test data.
+The app also supports recording playback and explicit WAV export.
+[App setup and behavior](app/README.md).
+
+## Build and test
+
+Install nRF Connect SDK **3.4.1** and its matching toolchain. From PowerShell:
+
+```powershell
+.\scripts\dev.ps1 build -Image Prototype -Pristine
+.\scripts\dev.ps1 build -Image Main -Pristine
+.\scripts\dev.ps1 test
+.\scripts\dev.ps1 check
 ```
-firmware/    Zephyr application (src/, include/, boards/, tests/)
-app/         Android-first Flutter BLE configuration app
-hardware/    KiCad project, libraries, mechanical files
-docs/        Architecture, firmware, hardware, validation, bring-up, ADRs
-scripts/     Developer (dev.ps1) and CI helper scripts
-.github/     CI workflows, issue and pull request templates
-```
 
-## Building
+Windows host tests require Docker. See [firmware setup](docs/firmware.md#building)
+for prerequisites, Linux commands, and the Diagnostics image. Main keeps matrix
+output, recording, and charging disabled by default; follow the
+[bring-up checklist](docs/bringup.md) before enabling hardware tests.
 
-See [docs/firmware.md](docs/firmware.md) for prerequisites.
+Tests cover portable services, interrupted writes, protocol bounds, display
+health, and power policy, alongside Flutter/Kotlin app tests. The
+[DK timing capture](validation/results/2026-10-09-dk-matrix-timing/README.md)
+records a 195.2 Hz standalone scan; current grayscale and Rev A timing need
+separate measurements.
 
-| Task | Windows (PowerShell) | Linux / WSL |
-|---|---|---|
-| Build firmware | `.\scripts\dev.ps1 build` | `make build` |
-| Run tests | `.\scripts\dev.ps1 test` (Docker) | `make test` |
-| Format sources | `.\scripts\dev.ps1 format` | `make format` |
-| Run checks | `.\scripts\dev.ps1 check` | `make check` |
-| Schematic ERC, pin/pad check, PDF/BOM (KiCad 10.0.6) | `.\scripts\dev.ps1 hardware` | `make hardware` |
+## Explore the source
 
-## Documentation
-
-Start with [docs/architecture.md](docs/architecture.md).
+[Firmware and tests](firmware/README.md) · [KiCad and carrier files](hardware/README.md) ·
+[Android app](app/README.md) · [Documentation](docs/README.md) ·
+[Design decisions](docs/decisions/README.md)
 
 ## License
 
-[MIT](LICENSE), except the Rev A board definition in
-`firmware/nrf5340_prototype/boards/smart_led_badge/`, which is modified from Zephyr's
-`raytac_mdbt53_db_40` board and stays under
-[Apache-2.0](LICENSES/Apache-2.0.txt) with its upstream copyright notices.
+[MIT](LICENSE), with [third-party notices and Apache-2.0 board files](docs/firmware.md#licenses).
