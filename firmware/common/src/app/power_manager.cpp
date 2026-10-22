@@ -441,9 +441,13 @@ int enforce_input_limit(int limit)
 	return err;
 }
 
+bool board_too_warm; /* TS gate state, with hysteresis */
+
 /* All gates for the bring-up charge (docs/bringup.md, first charge). */
 bool charge_gates_pass(const ChargerState &s, const Rails &r, int policy_limit, const char *&reason)
 {
+	/* Updated on every read, whichever gate decides. */
+	board_too_warm = power::ts_too_warm(s.ts_permille, board_too_warm);
 	if (!kChargeAllowed) {
 		reason = "disabled in this image (CONFIG_APP_CHARGING=n)";
 	} else if (chg::vbus_stat(s.status1) == 0 && s.vbus_mv < 4300) {
@@ -454,6 +458,8 @@ bool charge_gates_pass(const ChargerState &s, const Rails &r, int policy_limit, 
 		reason = "TS not normal";
 	} else if (chg::get_th456(s.ntc1) != kTh456Code) {
 		reason = "TS thresholds not set";
+	} else if (board_too_warm) {
+		reason = "board above 38 C (cell charge limit 40 C)";
 	} else if (chg::decode_ichg(s.ichg) != chg::decode_ichg(chg::encode_ichg(kIchgMa))) {
 		reason = "ICHG readback mismatch";
 	} else if (input_limit_ma != policy_limit ||

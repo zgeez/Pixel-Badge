@@ -2,6 +2,7 @@
 #include "badge/bq25620.hpp"
 #include "badge/power_sense.hpp"
 #include <zephyr/ztest.h>
+#include <math.h>
 #include <string.h>
 
 using namespace badge;
@@ -82,6 +83,30 @@ ZTEST(power, test_sense_scaling)
 	zassert_within(power::vled_from_pin_mv(110), 4790, 5);
 	/* CC: 12/112. 0.746 V at CC -> 80 mV at the pin. */
 	zassert_within(power::cc_from_pin_mv(80), 746, 1);
+}
+
+/* TS as a fraction of REGN for the board NTC network at t degC. */
+static int ts_permille_at(double t)
+{
+	const double r = 10000.0 * exp(3380.0 * (1.0 / (t + 273.15) - 1.0 / 298.15));
+	return static_cast<int>(1000.0 * r / (10000.0 + r) + 0.5);
+}
+
+ZTEST(power, test_ts_charge_gate)
+{
+	/* The thresholds sit at about 38 and 36 degC, below the 40 degC limit
+	 * and above the charger's own WARM step. */
+	zassert_within(power::kTsChargeOffPermille, ts_permille_at(38.0), 1);
+	zassert_within(power::kTsChargeOnPermille, ts_permille_at(36.0), 1);
+	zassert_true(power::kTsChargeOffPermille > ts_permille_at(40.0));
+	/* Hysteresis: off below 38.4 %, back on only at 40.0 %. */
+	zassert_false(power::ts_too_warm(ts_permille_at(30.0), false));
+	zassert_false(power::ts_too_warm(390, false));
+	zassert_true(power::ts_too_warm(383, false));
+	zassert_true(power::ts_too_warm(395, true));
+	zassert_false(power::ts_too_warm(400, true));
+	/* An unread TS (0) blocks charging. */
+	zassert_true(power::ts_too_warm(0, false));
 }
 
 ZTEST(power, test_cc_policy)
