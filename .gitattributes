@@ -9,6 +9,7 @@ firmware/common/lib/qrcodegen/qrcodegen.h whitespace=-blank-at-eol
 
 *.png binary
 *.jpg binary
+*.webp binary
 *.pdf binary
 *.zip binary
 *.sr binary

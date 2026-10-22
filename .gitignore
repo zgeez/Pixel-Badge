@@ -42,3 +42,6 @@ Thumbs.db
 .private/
 AGENTS.md
 CLAUDE.md
+.mcp.json
+.codex/
+.agents/
