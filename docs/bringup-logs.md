@@ -118,7 +118,8 @@ The status LED blinks while the image runs.
 
 Every reason charging is held off is logged once as `Charger: charging off
 (<reason>)`. Reasons include `no VBUS`, `charger fault`, `TS not normal`,
-`TS thresholds not set`, `ICHG readback mismatch`, `VREG not 4200 mV`,
+`TS thresholds not set`, `board above 38 C (cell charge limit 40 C)`,
+`ICHG readback mismatch`, `VREG not 4200 mV`,
 `input limit not at policy`, `VBAT out of range / no pack`,
 `VBAT readings disagree (SAADC vs charger)`, `pack presence probe`,
 `input source changed`, `USB host suspended (HIZ)` and read failures.

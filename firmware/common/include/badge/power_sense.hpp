@@ -25,6 +25,22 @@ constexpr int vled_from_pin_mv(int pin_mv)
 	return pin_mv * 2047 / 47;
 }
 
+/* Board NTC on the charger's TS pin: RT1 10 kOhm from REGN, 10 kOhm
+ * B25/50 3380 K NTC to GND, no RT2 (docs/power.md), so TS falls as the board
+ * warms. One pack specification limits charging to 0-40 degC, and the
+ * charger's own HOT threshold sits at 41.7-44.5 degC, so firmware stops
+ * charging below TS 38.4 % of REGN (38.0 degC nominal, 37.3-38.7 degC with
+ * 1 % RT1, R25 and B) and allows it again at 40.0 % (36.1 degC). */
+constexpr int kTsChargeOffPermille = 384;
+constexpr int kTsChargeOnPermille = 400;
+
+/* True while the board is too warm to charge. An unread TS (0) counts as too
+ * warm. */
+constexpr bool ts_too_warm(int ts_permille, bool was_too_warm)
+{
+	return ts_permille < (was_too_warm ? kTsChargeOnPermille : kTsChargeOffPermille);
+}
+
 /* CC1/CC2_SENSE: CC -> 100k (R303/R306) -> pass FET -> pin, 12k to GND
  * (R304/R307), ratio 12/112. */
 constexpr int cc_from_pin_mv(int pin_mv)

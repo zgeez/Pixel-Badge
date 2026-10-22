@@ -252,7 +252,10 @@ the comparator limits, ±1% resistor, and the NTC's ±1% R25 and ±1% B):
 | HOT: charging suspended above | 33.9–34.9 | 41.7–44.5 °C |
 
 Firmware selects `TS_TH4_TH5_TH6 = 011`, which moves WARM to about 38–40 °C
-and leaves HOT unchanged. Only a power-on or register reset returns to the
+and leaves HOT unchanged. Because one specification for the pack limits
+charging to 0–40 °C, firmware also holds CHG_EN low while the charger's TS
+reading is below 38.4 % of REGN (38.0 °C nominal, 37.3–38.7 °C with 1 % parts)
+and releases it at 40.0 % (36.1 °C). Only a power-on or register reset returns to the
 table above; the I²C watchdog does not. Rev A has no RT2 footprint: a 30.1 kΩ resistor
 added across the NTC (TH301) restores TI's 0–60 °C network if the
 board-to-cell offset proves it necessary. The charger's ADC
