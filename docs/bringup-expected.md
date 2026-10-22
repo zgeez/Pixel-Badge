@@ -36,15 +36,17 @@ boost efficiency, which is not stated here.
 
 | Bench step | Lit LEDs | Duty | Average VLED current (18.0 / 19.4 mA) |
 |---|---|---|---|
-| 2, 3: single LED, brightness 1 | 1 | 0.0044 | 0.08 / 0.09 mA |
+| 2, 3: single LED, brightness 1 | 1 | 0.0044 | 0.0025 / 0.0027 mA |
 | 9: all on, brightness 8 | 1024 | 0.0166 | 9.6 / 10.3 mA |
 | 10: all on, brightness 32 | 1024 | 0.0625 | 36.0 / 38.8 mA |
 | 11: all on, brightness 128 | 1024 | 0.2418 | 139 / 150 mA |
 | (product, brightness 255) | 1024 | 0.4194 | 242 / 260 mA |
 
 Duty is the sum of on-times over the sum of slot periods for the eight bit
-planes. Each slot drives one row, so with all LEDs on the average current is
-32 columns × column current × duty. The minimum frame period (32 rows × 8
+planes. Each slot drives one of the 32 rows, so an LED is lit only during its
+own row's slots: average current = (lit LEDs / 32) × column current × duty.
+With all 1024 LEDs on that is 32 × column current × duty; a single LED gets
+1/32 of the column current × duty. The minimum frame period (32 rows × 8
 planes) is 4.10 ms up to brightness 32, 4.23 ms at 128 and 4.86 ms at 255.
 
 ## Timing
