@@ -33,6 +33,15 @@ public:
 	{
 		return mode_;
 	}
+	/* Bench screening: light the dark modules instead of the light ones. */
+	void toggle_qr_polarity()
+	{
+		qr_inverted_ = !qr_inverted_;
+	}
+	bool qr_inverted() const
+	{
+		return qr_inverted_;
+	}
 
 private:
 	bool available(Mode mode) const;
@@ -41,6 +50,7 @@ private:
 	mutable ArtworkPlayer artwork_player_;
 	Mode mode_ = Mode::kQr;
 	bool safe_ = false;
+	bool qr_inverted_ = false;
 	Rotation current_rotation_ = Rotation::k0;
 	Rotation qr_rotation_ = Rotation::k0;
 	uint32_t entered_at_ = 0;

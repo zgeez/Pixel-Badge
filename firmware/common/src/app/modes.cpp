@@ -148,6 +148,11 @@ void Modes::render(Frame &output, uint32_t now) const
 	Frame content;
 	if (mode_ == Mode::kQr) {
 		content = qr_;
+		if (qr_inverted_) {
+			for (uint8_t &byte : content.bytes) {
+				byte = static_cast<uint8_t>(~byte);
+			}
+		}
 	} else if (mode_ == Mode::kName) {
 		render_text(content, settings_.text, settings_.name, now - entered_at_);
 	} else if (mode_ <= Mode::kAnimation) {

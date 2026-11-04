@@ -27,6 +27,26 @@ ZTEST(modes, test_default_and_safe_mode)
 	zassert_mem_equal(frame.bytes, expected.bytes, sizeof(frame.bytes));
 }
 
+ZTEST(modes, test_qr_polarity_toggle_inverts_every_pixel)
+{
+	Modes modes;
+	modes.start(kDefaultSettings, false);
+	Frame normal, inverted;
+	modes.render(normal, 0);
+	modes.toggle_qr_polarity();
+	zassert_true(modes.qr_inverted());
+	modes.render(inverted, 0);
+	for (int y = 0; y < kMatrixSize; ++y) {
+		for (int x = 0; x < kMatrixSize; ++x) {
+			zassert_not_equal(normal.get(x, y), inverted.get(x, y), "(%d, %d)", x, y);
+		}
+	}
+	zassert_false(inverted.get(0, 0), "quiet zone and border stay dark");
+	modes.toggle_qr_polarity();
+	modes.render(inverted, 0);
+	zassert_mem_equal(normal.bytes, inverted.bytes, sizeof(normal.bytes));
+}
+
 ZTEST(modes, test_qr_rotation_locks_until_reentry)
 {
 	Modes modes;

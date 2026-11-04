@@ -87,6 +87,14 @@ config APP_MOTION_DOWN_AXIS
 	default 2
 	range 0 5
 
+config APP_QR_POLARITY_BENCH
+	bool "Action button toggles QR polarity (bench)"
+	depends on APP_PROTOTYPE
+	help
+	  QR scan screening on Rev A: in QR mode a short Action press switches
+	  between lit light modules (normal) and lit dark modules (inverted)
+	  instead of stepping the brightness. Not saved; QR starts normal.
+
 config APP_PROTOTYPE
 	bool "Prototype badge application"
 	default y if BOARD_NRF5340DK_NRF5340_CPUAPP || BOARD_PIXEL_BADGE_REVA

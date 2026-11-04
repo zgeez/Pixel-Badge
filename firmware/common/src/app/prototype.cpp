@@ -371,6 +371,13 @@ void run_prototype()
 					LOG_INF("mode %s",
 						modes.active() == Mode::kQr ? "QR" : "name");
 					changed = true;
+#if defined(CONFIG_APP_QR_POLARITY_BENCH)
+				} else if (modes.active() == Mode::kQr) {
+					modes.toggle_qr_polarity();
+					LOG_INF("QR polarity %s",
+						modes.qr_inverted() ? "inverted" : "normal");
+					changed = true;
+#endif
 				} else if (load_rc == 0 && display_ready) {
 					const uint8_t previous = settings.values().brightness;
 					const uint8_t brightness = next_brightness(previous);

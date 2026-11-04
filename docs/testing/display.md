@@ -11,6 +11,11 @@ angle, lighting, phones, and reader apps. Record decode times and failures.
 Repeat with the assembled Rev A optics; HUB75 screening is not transferable.
 Numerical pass limits still need agreement.
 
+For polarity on Rev A, add `firmware/rev_a_nrf52840/configs/qr-polarity-bench.conf`
+to a Main build. In QR mode a short Action press then switches between
+normal (lit light modules) and inverted (lit dark modules). This is not
+saved. Change brightness from the app, or with Action in another mode.
+
 ## 3. Matrix timing, flicker, and ghosting
 
 - Capture SCK, LAT, BLANK, row select, and LED current. Check row mapping,
