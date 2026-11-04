@@ -12,9 +12,12 @@ app, developed first on an nRF5340 DK and then ported to an nRF52840 module.
   <em>Rev A PCB — KiCad CAD render.</em>
 </p>
 
-**Status · October 2026:** the DK prototype is running; Rev A boards are in
-production. Custom-board bring-up, battery runtime, thermals, and RF validation
-are pending. [Validation records](docs/validation.md).
+**Status · November 2026:** Rev A boards are assembled and running. Board
+bring-up found and fixed an assembly defect, replaced the CPU-driven LED scan
+with a hardware-sequenced one (about 215 frames/s), and measured 22 h to load
+shed on the battery. NFC range, BLE range, thermals, and System OFF on the pack
+are still to test. [Rev A bring-up record](validation/results/2026-11-03-rev-a-bringup/README.md)
+· [All validation records](docs/validation.md).
 
 ## Features
 
