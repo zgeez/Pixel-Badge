@@ -8,6 +8,8 @@ Run in the NCS Python environment, which provides pylink-square.
 
   python scripts/bench/battery_log.py read --csv build/battery-log.csv
   python scripts/bench/battery_log.py clear
+
+clear refuses a chip whose UICR records a bootloader (a Pro Micro bench).
 """
 import argparse
 import csv
@@ -33,6 +35,11 @@ FLAGS = {
 NVMC_READY = 0x4001E400
 NVMC_CONFIG = 0x4001E504
 NVMC_ERASEPAGE = 0x4001E508
+# UICR.NRFFW[0]: start of a bootloader the MBR starts (nRF52840 PS, UICR
+# chapter). Erased (0xffffffff) on a Rev A badge; 0xf4000 on a Pro Micro
+# with the UF2 bootloader, which the log pages would overlap.
+UICR_NRFFW0 = 0x10001014
+NO_BOOTLOADER = 0xFFFFFFFF
 
 
 def decode(blob):
@@ -118,9 +125,24 @@ def read(args):
     return 0
 
 
+def bootloader_refusal(address):
+    """Why clear must not erase this chip, or None for a Rev A badge."""
+    if address == NO_BOOTLOADER:
+        return None
+    return (
+        f"Refusing to clear: UICR.NRFFW[0] records a bootloader at 0x{address:08x}. "
+        "This is a UF2 or DFU board such as the Pro Micro bench, not a Rev A badge, "
+        "and erasing the log pages would damage its bootloader. Nothing was erased."
+    )
+
+
 def clear(_args):
     link = connect()
     try:
+        refusal = bootloader_refusal(link.memory_read32(UICR_NRFFW0, 1)[0])
+        if refusal:
+            print(refusal)
+            return 1
         link.halt()
         link.memory_write32(NVMC_CONFIG, [2])  # erase enable
         for page in range(LOG_ADDRESS, LOG_ADDRESS + LOG_SIZE, PAGE_SIZE):
