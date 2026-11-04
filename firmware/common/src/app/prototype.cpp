@@ -226,6 +226,9 @@ void run_prototype()
 	const bool display_disarmed = IS_ENABLED(CONFIG_REVA_MATRIX) &&
 				      !IS_ENABLED(CONFIG_REVA_MATRIX_OUTPUT) &&
 				      display_rc == -EPERM;
+	/* Bench only: BLE treats a disarmed matrix as ready and logs the passkey. */
+	[[maybe_unused]] const bool bench_pairing =
+		IS_ENABLED(CONFIG_APP_BLE_PAIRING_BENCH) && display_disarmed;
 	DisplayHealth display_health;
 	display_health.report(display_rc, 0, display_disarmed);
 	if (display_disarmed) {
@@ -322,7 +325,7 @@ void run_prototype()
 #endif
 #if defined(CONFIG_APP_BLE)
 		config_context.now = now;
-		const bool stageable = !safe && load_rc == 0 && display_ready &&
+		const bool stageable = !safe && load_rc == 0 && (display_ready || bench_pairing) &&
 				       !nfc_update_busy()
 #if defined(CONFIG_APP_AUDIO)
 				       && !audio_ui_busy()
@@ -352,7 +355,7 @@ void run_prototype()
 #endif
 			if (event == Press::kLong) {
 #if defined(CONFIG_APP_BLE)
-				if (i == 1 && !safe && display_ready) {
+				if (i == 1 && !safe && (display_ready || bench_pairing)) {
 					open_ble_pairing();
 				}
 #else
@@ -474,8 +477,10 @@ void run_prototype()
 			if (rc == 0 && audio_ui_busy() && !display_health.recovering()) {
 				rc = badge_display_wait_visible(display, kVisibleTimeoutMs);
 			}
+			/* Bench pairing: a disarmed matrix must not close the pairing window. */
+			const int audio_rc = bench_pairing && rc == -EPERM ? 0 : rc;
 			audio_display_result(audio_recording() && !recording_indicator ? -EAGAIN
-										       : rc);
+										       : audio_rc);
 #endif
 			const uint32_t completed =
 				static_cast<uint32_t>(k_uptime_get() - started_at);

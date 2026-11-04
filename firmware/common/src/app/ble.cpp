@@ -459,8 +459,13 @@ void security_changed(bt_conn *conn, bt_security_t level, bt_security_err error)
 	}
 }
 bt_conn_cb connection_callbacks{};
-bt_security_err pairing_accept(bt_conn *, const bt_conn_pairing_feat *const)
+bt_security_err pairing_accept(bt_conn *, const bt_conn_pairing_feat *const feat)
 {
+	if (IS_ENABLED(CONFIG_APP_BLE_PAIRING_BENCH)) {
+		LOG_WRN("BLE bench pairing request: io %u oob %u auth 0x%02x key %u",
+			feat->io_capability, feat->oob_data_flag, feat->auth_req,
+			feat->max_enc_key_size);
+	}
 	k_mutex_lock(&ble_mutex, K_FOREVER);
 	bool allowed =
 		writable && !job_active && pairing_deadline > static_cast<uint64_t>(k_uptime_get());
@@ -480,6 +485,9 @@ void passkey_display(bt_conn *conn, unsigned key)
 	displayed_passkey = key;
 	passkey_visible = allowed;
 	k_mutex_unlock(&ble_mutex);
+	if (IS_ENABLED(CONFIG_APP_BLE_PAIRING_BENCH) && allowed) {
+		LOG_WRN("BLE bench passkey: %06u", key);
+	}
 	if (!allowed) {
 		bt_conn_auth_cancel(conn);
 		bt_conn_disconnect(conn, BT_HCI_ERR_AUTH_FAIL);

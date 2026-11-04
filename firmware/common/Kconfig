@@ -266,4 +266,13 @@ config APP_BLE
 	  builds the network-core radio. One authenticated client; settings are
 	  applied asynchronously and read back before reporting success.
 
+config APP_BLE_PAIRING_BENCH
+	bool "Bench only: pair with the matrix disarmed, passkey in the log"
+	depends on APP_BLE
+	help
+	  For a board whose matrix cannot show the passkey. The ACTION long
+	  press opens the pairing window while the matrix is disarmed, and the
+	  passkey is printed in the debug log. Anyone with the log can pair:
+	  never enable this in a product image.
+
 endmenu
