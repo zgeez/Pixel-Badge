@@ -22,6 +22,7 @@ UUIDs use the suffix `-6e9b-4f4c-a8f8-731a9d46e1c0` below.
 | f3b0000b | NFC sync | Read / Write | Seven-byte NFC state / staged `[1]` action |
 | f3b0000c | Motion | Read / Write | Applied/staged eight-byte motion setting |
 | f3b0000d | Motion status | Read | 16-byte sensor/orientation snapshot |
+| f3b0000e | Battery | Read | Six-byte battery estimate, layout below |
 
 Info is public; all other reads, writes and CCC subscriptions require
 authenticated LE Secure Connections, security level 4. Just Works and legacy
@@ -93,6 +94,22 @@ settings/tag storage does not provide physical power-loss atomicity.
 Golden Apply URL ID `12345678h`: `02 78 56 34 12 01`.
 Completed URL ID 1, access denied, writes available:
 `02 01 00 00 00 01 02 F3 FF FF FF 01`.
+
+## Battery
+
+An authenticated read-only snapshot, `[1, level, flags, 0, mv:u16le]`,
+appended after Motion status. No Info flag advertises it: clients discover
+the characteristic and treat its absence as older firmware.
+
+| Byte | Meaning |
+|---|---|
+| level | Unknown=0, almost empty=1, low=2, about half=3, mostly full=4, full=5 |
+| flags | Bit 0 USB power; bit 1 charging; bit 2 matrix shed or lowest-power state (level reads almost empty); others zero |
+| mv | The near-rest pack voltage behind the level, 0 before the first reading |
+
+The level is a coarse estimate from voltage, not a measured state of charge
+([power.md](power.md#battery-state-measurement)). Badges without a power
+manager (the DK) report level 0. Clients poll it; it has no notifications.
 
 ## Studio content and NFC action
 

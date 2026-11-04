@@ -1,4 +1,5 @@
 /* SPDX-License-Identifier: MIT */
+#include "badge/battery_level.hpp"
 #include "badge/bq25620.hpp"
 #include "badge/power_sense.hpp"
 #include <zephyr/ztest.h>
@@ -109,6 +110,45 @@ ZTEST(power, test_vled_off_verdict)
 	zassert_equal(power::vled_off_verdict(300, power::kVledDrainMs + 5000), VledOff::kOff);
 	zassert_equal(power::vled_off_verdict(501, power::kVledDrainMs), VledOff::kStuck);
 	zassert_equal(power::vled_off_verdict(4790, 120000), VledOff::kStuck);
+}
+
+ZTEST(power, test_battery_level)
+{
+	using power::BatteryLevel;
+	using power::next_battery_level;
+	zassert_equal(power::battery_band(4200), BatteryLevel::kFull);
+	zassert_equal(power::battery_band(power::kLevelFullMv - 1), BatteryLevel::kHigh);
+	zassert_equal(power::battery_band(3800), BatteryLevel::kHigh);
+	zassert_equal(power::battery_band(3600), BatteryLevel::kHalf);
+	zassert_equal(power::battery_band(3500), BatteryLevel::kLow);
+	zassert_equal(power::battery_band(3450), BatteryLevel::kEmpty);
+	/* The first reading sets the level directly. */
+	zassert_equal(next_battery_level(3800, BatteryLevel::kUnknown), BatteryLevel::kHigh);
+	/* Just past an edge, either way, keeps the shown level. */
+	zassert_equal(next_battery_level(3700, BatteryLevel::kHalf), BatteryLevel::kHalf);
+	zassert_equal(next_battery_level(3680, BatteryLevel::kHigh), BatteryLevel::kHigh);
+	/* Past the edge by the hysteresis, it moves. */
+	zassert_equal(next_battery_level(3720, BatteryLevel::kHalf), BatteryLevel::kHigh);
+	zassert_equal(next_battery_level(3659, BatteryLevel::kHigh), BatteryLevel::kHalf);
+	/* A large step (charger attached, pack replaced) moves several bands. */
+	zassert_equal(next_battery_level(4180, BatteryLevel::kLow), BatteryLevel::kFull);
+	zassert_equal(next_battery_level(3400, BatteryLevel::kFull), BatteryLevel::kEmpty);
+}
+
+ZTEST(power, test_charging_report_holds_through_probe)
+{
+	power::ChargingReport report;
+	zassert_false(report.update(false, true, 0));
+	zassert_true(report.update(true, true, 1000));
+	/* A half-second probe pause keeps showing charging. */
+	zassert_true(report.update(false, true, 1500));
+	zassert_true(report.update(true, true, 1600));
+	/* A real stop shows once it has lasted the hold time. */
+	zassert_true(report.update(false, true, 3599));
+	zassert_false(report.update(false, true, 3600));
+	/* Unplugging shows at once. */
+	zassert_true(report.update(true, true, 5000));
+	zassert_false(report.update(true, false, 5100));
 }
 
 ZTEST(power, test_input_limit_filter)

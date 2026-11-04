@@ -120,6 +120,18 @@ Proposed firmware defaults, pending pack characterization:
 | Unloaded < 3.30 V for three readings | System OFF |
 | Missing/stale/invalid sample | Keep the matrix off |
 
+The app shows a coarse battery level from divider samples while charging is
+off, and from the 30 mA pack-presence probe while charging. Bands start at
+3.485 (running low), 3.56 (about half), 3.69 (mostly full) and 3.92 V (full),
+with 30 mV hysteresis; below 3.485 V or after a shed it reads almost empty.
+The edges come from one board 1 discharge of the LP785060 pack with the
+matrix lit at about 140 mA (QR code, 50 % brightness): about 12, 35, 60 and
+85 % of the charge drawn before the matrix shed. Brighter content sags the
+reading and shows a lower band. Measured on that run: the brightness cap
+engaged after about 13.4 h and the shed after about 22 h; the
+integrated charge (about 3,060 mAh from the charger's IBAT ADC) exceeds
+the 2,500 mAh label and is not confirmed with a meter.
+
 Recovery starts at 13, then 64/127/255 in 5 s steps. Input-qualified brightness
 uses a worst-case total-system current estimate with a proposed 20% margin.
 A shed within 60 s counts as failure; retry delay doubles from 60 s to 15 min.

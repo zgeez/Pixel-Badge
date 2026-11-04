@@ -12,6 +12,9 @@
 #if defined(CONFIG_APP_AUDIO)
 #include "badge/audio_runtime.hpp"
 #endif
+#if defined(CONFIG_APP_POWER_MANAGER)
+#include "badge/power_manager.hpp"
+#endif
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/conn.h>
 #include <zephyr/bluetooth/gatt.h>
@@ -41,6 +44,7 @@ bt_uuid_128 artwork_uuid = BT_UUID_INIT_128(BADGE_UUID(10));
 bt_uuid_128 nfc_uuid = BT_UUID_INIT_128(BADGE_UUID(11));
 bt_uuid_128 motion_uuid = BT_UUID_INIT_128(BADGE_UUID(12));
 bt_uuid_128 motion_status_uuid = BT_UUID_INIT_128(BADGE_UUID(13));
+bt_uuid_128 battery_uuid = BT_UUID_INIT_128(BADGE_UUID(14));
 K_MUTEX_DEFINE(ble_mutex);
 K_SEM_DEFINE(ble_started, 0, 1);
 K_SEM_DEFINE(main_requested, 0, 1);
@@ -312,6 +316,24 @@ ssize_t read_motion_status(bt_conn *conn, const bt_gatt_attr *attr, void *buf, u
 #endif
 	return bt_gatt_attr_read(conn, attr, buf, len, offset, data, sizeof(data));
 }
+/* [version 1, level, flags, 0, mv:u16le]; level 0 (unknown) without a
+ * power manager, as on the DK. */
+ssize_t read_battery(bt_conn *conn, const bt_gatt_attr *attr, void *buf, uint16_t len,
+		     uint16_t offset)
+{
+	if (!secure(conn)) {
+		return att_error(-EACCES);
+	}
+	uint8_t data[6] = {1};
+#if defined(CONFIG_APP_POWER_MANAGER)
+	const BatteryReport report = power_battery_report();
+
+	data[1] = report.level;
+	data[2] = report.flags;
+	sys_put_le16(report.mv, &data[4]);
+#endif
+	return bt_gatt_attr_read(conn, attr, buf, len, offset, data, sizeof(data));
+}
 bt_gatt_ccc_managed_user_data status_ccc{};
 constexpr uint16_t read_permission = BT_GATT_PERM_READ_AUTHEN | BT_GATT_PERM_READ_LESC;
 constexpr uint16_t write_permission = BT_GATT_PERM_WRITE_AUTHEN | BT_GATT_PERM_WRITE_LESC;
@@ -343,7 +365,9 @@ BT_GATT_SERVICE_DEFINE(badge_service, BT_GATT_PRIMARY_SERVICE(&service_uuid),
 		       SETTING_CHARACTERISTIC(motion_uuid, Field::kMotion),
 		       BT_GATT_CHARACTERISTIC(&motion_status_uuid.uuid, BT_GATT_CHRC_READ,
 					      read_permission, read_motion_status, nullptr,
-					      nullptr));
+					      nullptr),
+		       BT_GATT_CHARACTERISTIC(&battery_uuid.uuid, BT_GATT_CHRC_READ,
+					      read_permission, read_battery, nullptr, nullptr));
 #pragma GCC diagnostic pop
 
 void notify_status(k_work *)
