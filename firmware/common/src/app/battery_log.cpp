@@ -125,7 +125,7 @@ void initialize(const Input &in)
 		start_session(in, "resumed after reset");
 		break;
 	case Boot::kClose:
-		session_ms = in.now_ms;
+		session_ms = close_base_ms(in.now_ms, last.seconds);
 		(void)append(in, kEnd);
 		state = state == State::kFault ? state : State::kIdle;
 		break;

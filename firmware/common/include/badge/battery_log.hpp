@@ -109,6 +109,15 @@ constexpr Boot boot_action(bool have_last, uint8_t last_flags, bool full, bool u
 	return usb ? Boot::kClose : Boot::kResume;
 }
 
+/* Time base for an end record written at boot (Boot::kClose): the record
+ * repeats the last recorded time of the open session instead of restarting
+ * at 0, so the session's hours do not run backward. Wraps like the uptime
+ * arithmetic in the logger. */
+constexpr uint32_t close_base_ms(uint32_t now_ms, uint32_t last_seconds)
+{
+	return now_ms - last_seconds * 1000U;
+}
+
 /* Logger inputs, sampled by the power manager on each 240 ms tick. */
 struct Input {
 	uint32_t now_ms;

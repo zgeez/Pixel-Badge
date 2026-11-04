@@ -177,6 +177,17 @@ ZTEST(power, test_battery_log_boot)
 	zassert_equal(blog::boot_action(true, blog::kStart, false, true), Boot::kClose);
 }
 
+ZTEST(power, test_battery_log_close_keeps_time)
+{
+	namespace blog = badge::battery_log;
+	/* The boot-time end record repeats the last recorded time, also when
+	 * the new uptime is shorter than the session. */
+	const uint32_t now = 250;
+	const uint32_t base = blog::close_base_ms(now, 3600);
+	zassert_equal((now - base) / 1000U, 3600U);
+	zassert_equal((now - blog::close_base_ms(now, 0)) / 1000U, 0U);
+}
+
 ZTEST(power, test_charging_report_holds_through_probe)
 {
 	power::ChargingReport report;
