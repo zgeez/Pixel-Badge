@@ -92,7 +92,11 @@ The 10 kΩ NTC (B=3380 K) and 10 kΩ REGN pull-up measure board temperature,
 not cell temperature. Calculated reset COLD/HOT limits span −1.5–1.1 °C and
 41.7–44.5 °C. Firmware sets `TS_TH4_TH5_TH6=011` and adds a stricter hot gate:
 CHG_EN stays low below TS 38.4% of REGN (about 38 °C), released at 40.0%
-(about 36.1 °C). These are circuit estimates, not cell-temperature accuracy.
+(about 36.1 °C). With this network the same code places the charger's
+PREWARM threshold at 48.4% of REGN, near 26 °C; PREWARM and PRECOOL keep the
+reset ICHG and VREG, so firmware lets the charger run in them and blocks
+only COLD, COOL, WARM, HOT and a bias fault. These are circuit estimates, not
+cell-temperature accuracy.
 Cold-cell/warm-board, transitions, and hot-cell/cool-board tests are required.
 Charging stays off by default.
 

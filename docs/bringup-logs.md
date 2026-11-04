@@ -117,7 +117,7 @@ The status LED blinks while the image runs.
 | Unplug the pack while charging | Within 30 s: `NO PACK` and `Charger: charging off (...)` | Charging stays on |
 
 Every reason charging is held off is logged once as `Charger: charging off
-(<reason>)`. Reasons include `no VBUS`, `charger fault`, `TS not normal`,
+(<reason>)`. Reasons include `no VBUS`, `charger fault`, `TS zone blocks charging` (cold, cool, warm, hot or bias fault; precool and prewarm charge),
 `TS thresholds not set`, `board above 38 C (cell charge limit 40 C)`,
 `ICHG readback mismatch`, `VREG not 4200 mV`,
 `input limit not at policy`, `VBAT out of range / no pack`,

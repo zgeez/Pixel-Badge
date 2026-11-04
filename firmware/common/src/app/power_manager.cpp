@@ -454,8 +454,8 @@ bool charge_gates_pass(const ChargerState &s, const Rails &r, int policy_limit, 
 		reason = "no VBUS";
 	} else if (chg::any_fault(s.fault0)) {
 		reason = "charger fault";
-	} else if (chg::ts_stat(s.fault0) != 0) {
-		reason = "TS not normal";
+	} else if (!chg::ts_allows_charge(chg::ts_stat(s.fault0))) {
+		reason = "TS zone blocks charging";
 	} else if (chg::get_th456(s.ntc1) != kTh456Code) {
 		reason = "TS thresholds not set";
 	} else if (board_too_warm) {

@@ -76,6 +76,18 @@ ZTEST(power, test_status_fields)
 	zassert_equal(strcmp(chg::ts_stat_name(0), "normal"), 0);
 }
 
+ZTEST(power, test_ts_zones)
+{
+	/* Board 1 at about 26 degC read TS 48.6 % and TS_STAT prewarm (0x06). */
+	zassert_true(chg::ts_allows_charge(chg::ts_stat(0x06)), "prewarm");
+	zassert_true(chg::ts_allows_charge(0), "normal");
+	zassert_true(chg::ts_allows_charge(5), "precool");
+	const uint8_t blocked[] = {1, 2, 3, 4, 7}; /* cold, hot, cool, warm, bias fault */
+	for (uint8_t zone : blocked) {
+		zassert_false(chg::ts_allows_charge(zone), "zone %u", zone);
+	}
+}
+
 ZTEST(power, test_sense_scaling)
 {
 	zassert_equal(power::vbat_from_pin_mv(2100), 4200);

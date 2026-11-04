@@ -190,6 +190,18 @@ constexpr uint8_t ts_stat(uint8_t fault0)
 {
 	return fault0 & 0x07U;
 }
+/* TS zones in which firmware lets the charger run (SLUSEG2D Table 8-29
+ * TS_STAT): normal, precool (101b) and prewarm (110b). The sub-zones keep
+ * ICHG and VREG at their REG0x1C reset values (TS_ISET/VSET_PREWARM and
+ * TS_ISET_PRECOOL 11b = unchanged, Table 8-26). With this board's NTC
+ * network (RT1 10k, no RT2) TS_TH4_TH5_TH6 = 011 puts the prewarm threshold
+ * (48.4 % of REGN, V_TS_PREWARM) near 26 degC, so blocking prewarm stopped
+ * charging at room temperature; the 38 degC firmware stop stays the upper
+ * limit. Cold, cool, warm, hot and a bias fault stay blocked. */
+constexpr bool ts_allows_charge(uint8_t ts_stat)
+{
+	return ts_stat == 0 || ts_stat == 5 || ts_stat == 6;
+}
 constexpr bool any_fault(uint8_t fault0)
 {
 	return (fault0 & 0xF8U) != 0; /* VBUS, BAT, SYS, OTG fault or thermal shutdown */
