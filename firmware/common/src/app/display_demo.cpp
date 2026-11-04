@@ -64,6 +64,11 @@ int run_display_demo(const struct device *display)
 	if (err == 0) {
 		err = display_blanking_off(display);
 	}
+	if (err == -EPERM) {
+		/* Matrix output is compiled out (bring-up images): not a fault. */
+		LOG_INF("display demo not run: matrix output disabled in this image");
+		return 0;
+	}
 
 	while (err == 0) {
 		err = hold(display, "orientation: block top-left, long arm along the top",
