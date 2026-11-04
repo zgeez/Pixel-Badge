@@ -16,6 +16,23 @@ uint8_t next_brightness(uint8_t current)
 	return levels[0];
 }
 
+#if defined(CONFIG_APP_MOTION)
+namespace
+{
+/* A soldered IMU's axes are a board property: they replace the stored ones. */
+MotionConfig board_motion(MotionConfig config)
+{
+#if defined(CONFIG_APP_MOTION_FIXED_AXES)
+	static_assert(CONFIG_APP_MOTION_RIGHT_AXIS / 2 != CONFIG_APP_MOTION_DOWN_AXIS / 2,
+		      "right and down must be different physical axes");
+	config.bytes[2] = CONFIG_APP_MOTION_RIGHT_AXIS;
+	config.bytes[3] = CONFIG_APP_MOTION_DOWN_AXIS;
+#endif
+	return config;
+}
+} // namespace
+#endif
+
 void Modes::start(const Settings &settings, bool safe_mode)
 {
 	safe_ = safe_mode;
@@ -26,7 +43,7 @@ void Modes::start(const Settings &settings, bool safe_mode)
 	current_rotation_ = qr_rotation_ = Rotation::k0;
 	encode_url(settings_.url, strlen(settings_.url), qr_);
 #if defined(CONFIG_APP_MOTION)
-	motion_.configure(settings_.motion);
+	motion_.configure(board_motion(settings_.motion));
 	fluid_.reset(settings_.motion.bytes[5]);
 	current_rotation_ = motion_.rotation();
 	qr_rotation_ = current_rotation_;
@@ -96,7 +113,7 @@ bool Modes::configure(const Settings &settings)
 	}
 #if defined(CONFIG_APP_MOTION)
 	if (memcmp(settings_.motion.bytes, settings.motion.bytes, kMotionBytes) != 0) {
-		motion_.configure(settings.motion);
+		motion_.configure(board_motion(settings.motion));
 		fluid_.reset(settings.motion.bytes[5]);
 		current_rotation_ = motion_.rotation();
 	}

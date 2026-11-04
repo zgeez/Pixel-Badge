@@ -206,7 +206,9 @@ Motion encoding: `[1, auto, right, down, response, particles, rotation, 0]`.
 `auto` is 0/1; signed axes are +X=0, -X=1, +Y=2, -Y=3, +Z=4, -Z=5.
 Right and down must name different physical axes. Response is 1–5, particles
 16–192, and rotation 0–3 represents 0/90/180/270 degrees for manual mode.
-Default bytes: `01 01 00 02 03 60 00 00`. The mount is not yet bench-validated.
+Default bytes: `01 01 00 02 03 60 00 00`. On Rev A the firmware replaces the
+two axis bytes with the board's mount (+X right, -Y down); the stored value
+keeps whatever axes were written.
 
 Motion status is a read-only authenticated snapshot, not a sample stream:
 
