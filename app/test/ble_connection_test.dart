@@ -9,6 +9,7 @@ import 'package:badge_app/protocol.dart';
 
 class Adapter extends UniversalBlePlatform {
   final online = <String, bool>{};
+  int failConnects = 0, connects = 0;
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
   @override
@@ -18,6 +19,11 @@ class Adapter extends UniversalBlePlatform {
     bool autoConnect = false,
     ConnectionPlatformConfig? platformConfig,
   }) async {
+    connects++;
+    if (failConnects > 0) {
+      failConnects--;
+      throw StateError('GATT connection failed');
+    }
     online[id] = true;
     updateConnection(id, true);
   }
@@ -158,4 +164,28 @@ void main() {
       debugDefaultTargetPlatformOverride = null;
     },
   );
+  test('a failed first GATT connection is retried once', () async {
+    final adapter = Adapter();
+    UniversalBle.setInstance(adapter);
+    UniversalBadgeLink.gattRetryDelay = Duration.zero;
+    const channel = MethodChannel('com.ziadg.badge_app/connection');
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (call) async => null);
+    adapter.failConnects = 1;
+    final link = await UniversalBadgeLink.connect(
+      BleDevice(name: 'Badge', deviceId: 'AA:BB:CC:DD:EE:03'),
+    );
+    expect(adapter.connects, 2);
+    await link.close();
+    adapter
+      ..failConnects = 2
+      ..connects = 0;
+    await expectLater(
+      UniversalBadgeLink.connect(
+        BleDevice(name: 'Badge', deviceId: 'AA:BB:CC:DD:EE:04'),
+      ),
+      throwsA(isA<ConnectionException>()),
+    );
+    expect(adapter.connects, 2, reason: 'Only one retry');
+  });
 }

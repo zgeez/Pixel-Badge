@@ -4,7 +4,7 @@ import 'dart:typed_data' show Endian;
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, TargetPlatform, kIsWeb;
-import 'package:flutter/foundation.dart' show debugPrint;
+import 'package:flutter/foundation.dart' show debugPrint, visibleForTesting;
 import 'package:universal_ble/universal_ble.dart';
 import 'badge_controller.dart';
 import 'protocol.dart';
@@ -108,8 +108,7 @@ class UniversalBadgeLink
     void Function(bool? paired)? onBondState,
   }) async {
     try {
-      await device.connect();
-      await device.discoverServices();
+      await _openGatt(device);
       final info = await (await device.getCharacteristic(
         infoUuid,
         service: serviceUuid,
@@ -155,6 +154,31 @@ class UniversalBadgeLink
       rethrow;
     }
   }
+
+  /// The first GATT connection right after a scan often fails on Android
+  /// while a second attempt succeeds, so the connection and service discovery
+  /// are retried once before pairing starts. Nothing is retried after the
+  /// pairing prompt.
+  static Future<void> _openGatt(BleDevice device) async {
+    for (var attempt = 1; ; attempt++) {
+      try {
+        await device.connect();
+        await device.discoverServices();
+        return;
+      } catch (_) {
+        if (attempt >= 2) rethrow;
+        try {
+          await device.disconnect();
+        } catch (_) {
+          /* Retry regardless. */
+        }
+        await Future<void>.delayed(gattRetryDelay);
+      }
+    }
+  }
+
+  @visibleForTesting
+  static Duration gattRetryDelay = const Duration(milliseconds: 600);
 
   int _priorityUsers = 0;
   @override
