@@ -1,64 +1,62 @@
-# P3 audio GATT v2
+# Audio protocol v2
 
-Separate service f3b00101-6e9b-4f4c-a8f8-731a9d46e1c0; State0102, Control0103,
-Audio0104 use the same suffix. All require LESC/MITM level4. Configuration stays
-v2, with six modes/extension flags15 when P3 is present; old Studio uses four/7.
-REC is never a persistent mode.
+A separate GATT service, `f3b00101-6e9b-4f4c-a8f8-731a9d46e1c0`, with State
+(`f3b00102`), Control (`f3b00103`) and Audio (`f3b00104`) on the same suffix.
+All three need LE Secure Connections at security level 4. Recording is never
+a saved mode. Integers are little-endian.
 
-## Automatic session and State
+## Session
 
-Audio State v2 requires the normal authenticated LESC bond. Pixel Badge sends
-`01 || phone_public[65]` automatically after connecting, ephemeral P-256 SEC1
-uncompressed. Only one successful exchange is accepted per connection; a new
-exchange requires reconnecting. No physical enrollment or extra code appears.
-Invalid points fail closed. RFC5869 HKDF-SHA256:
+After connecting, the app writes `01 || phone_public[65]` to State: an
+ephemeral P-256 key, SEC1 uncompressed. One exchange per connection; a new
+one needs a reconnect. Invalid points fail. Keys are derived with HKDF-SHA256
+(RFC 5869):
 
 ```
 PRK = HMAC-SHA256(connection_nonce[16], ECDH_x[32])
 session_key = HMAC-SHA256(PRK, "PB3E" || phone_public || badge_public || 01)
 ```
 
-Keys are RAM-only, cleared on disconnect, and proved using opcode2. Trust is in
-the bonded phone; this no longer authenticates a distinct companion app against
-other apps on that phone. See [ADR0016](decisions/0016-simple-audio-controls.md).
-Old persistent audio keys/durations are ignored. Existing recordings remain
-readable using their unchanged phone storage key.
+Keys live in RAM and are cleared on disconnect. The app proves it holds the
+key with opcode 2. Trust rests on the bonded phone; it doesn't tell this app
+apart from other apps on the same phone ([ADR 0016](decisions/0016-simple-audio-controls.md)).
 
-State125bytes (all integers little-endian):
+State is 125 bytes:
 
-| Offset | Value |
+| Offset | Content |
 |---|---|
-| 0 | Version2 |
-| 1 | Flags: session key1, proof2, REC pending/active8, button challenge16, bench recording enabled32 |
-| 2..7 | Reserved, zero |
-| 8 | Non-secret result, int32 |
-| 12 | Fresh random connection nonce,16bytes |
-| 28 | Recording nonce,16bytes |
-| 44 | Button challenge,16bytes |
-| 60 | Badge public key,65bytes after automatic exchange |
+| 0 | Version 2 |
+| 1 | Flags: session key 1, proof 2, recording pending or active 8, button challenge 16, recording built in 32 |
+| 2–7 | Zero |
+| 8 | Result, int32, not secret |
+| 12 | Connection nonce, 16 bytes, fresh per connection |
+| 28 | Recording nonce, 16 bytes |
+| 44 | Button challenge, 16 bytes |
+| 60 | Badge public key, 65 bytes, after the exchange |
 
 ## Control
 
-`opcode:u8 || counter:u32le || value:u16le || tag[16]`. Opcodes2 prove,3 start,
-4 stop,5 button accept,7 heartbeat. Opcode6 is removed and refused. Counter strictly increases
-per connection; fresh random connection nonce defeats reconnect/reboot replays.
-Verify before advancing counter:
+A command is `opcode:u8 || counter:u32 || value:u16 || tag[16]`. Opcodes:
+prove 2, start 3, stop 4, accept button 5, heartbeat 7 (6 is retired). The
+counter must increase within a connection, and the fresh connection nonce
+stops replays across reconnects. The tag is checked before the counter moves:
 
 ```
 tag = HMAC-SHA256(session_key, "PB3C" || connection_nonce || command[0:7]
                  || (button_challenge if opcode==5 else empty))[0:16]
 ```
 
-Each write: offset byte plus<=19message bytes, contiguous, accumulator<=96bytes.
-Separate FF write executes/clears. Malformed fragments/disconnect clear staging.
-No automatic replay. Start checks proof, subscription, MTU>=108, healthy display
-and recording bench gate. Button accept3s, heartbeat1.5s. No elapsed-time cap.
+Commands are written in fragments: an offset byte plus up to 19 bytes,
+contiguous, 96 bytes at most, then a single `FF` write runs it. Bad fragments
+or a disconnect clear it. Start needs the proof, a subscription, MTU ≥ 108, a
+healthy display and a recording-enabled build. A button accept times out after
+3 s and heartbeats after 1.5 s. There's no overall time limit.
 
-## Audio and storage
+## Audio packets
 
-Packet105bytes: `01 || sequence:u32le || ciphertext[84] || GCM_tag[16]`.
-Sequence starts0, contiguous. Loss/duplicate/bad tag/overflow stops the receiver.
-No plaintext or retransmission fallback:
+Each notification is 105 bytes: `01 || sequence:u32 || ciphertext[84] || tag[16]`.
+Sequence starts at 0 with no gaps. A lost, repeated or bad packet stops the
+receiver; there's no plaintext fallback or retransmission.
 
 ```
 recording_key = HMAC-SHA256(session_key, "PB3R" || random_recording_nonce[16])
@@ -66,50 +64,38 @@ GCM_nonce = recording_nonce[0:8] || sequence:u32le
 AAD = "PB3A" || recording_nonce || packet[0:5]
 ```
 
-AES-256-GCM, full128-bit tag, fresh recording key. The badge stops before
-sequence wrap; the phone storage/WAV boundary is reached much earlier. Badge queues a bounded pair of 10ms notifications per20ms capture block, with
-a40ms completion bound for the pair; failure stops. Phone queue<=32packets (320ms), with file/key preparation completed before Start. Plaintext IMA
-block: signed16LE initial predictor, index0, reserved0,80packed bytes low-nibble
-first. All160samples, including sample0, are encoded relative to the predictor.
-Playback nominal16kHz mono; nominal32kHz input has a31-tap anti-alias FIR before
-decimation. Before ADPCM, a fixed-point recording processor applies a gentle
-30Hz first-order DC/rumble filter, RMS-based automatic gain and a peak limiter.
-Initial gain8x, range0.25x-16x (up to24dB boost), RMS target2600 PCM counts
-(about-22dBFS). Gain reduction moves halfway toward its target per20ms block;
-increase uses1/50 per block. Gain freezes below24RMS counts, without muting
-samples. Per-block peak lookahead limits output to+/-30000 before compression;
-interpolated gain reduces block-boundary steps. State/scratch reset at capture
-start/stop. No voice gate or speech-only suppression. These are implementation
-settings, not calibrated acoustic levels. Actual DK clocks remain a measurement gate.
+AES-256-GCM with the full 128-bit tag and a fresh key per recording. The badge
+stops before the sequence wraps.
 
-Android wraps a fresh random32-byte file key once using its Keystore AES-GCM
-master key before requesting capture. V2 files have a64-byte header:
-`"PBA2" || wrapping_IV[12] || encrypted_file_key[32] || tag[16]`.
-Header AAD is `"PB3K" || filename`. Packet encryption uses the RAM file key,
-not per-packet Keystore operations. Each validated84-byte block becomes112bytes:
-`IV[12] || ciphertext[84] || tag[16]`. V2 IV is8zero bytes plus sequence:u32le,
-unique under a fresh file key. Chunk AAD is `"PB3F" || filename || sequence:u32le`.
-The file key is cleared on stop and unwrapped once per playback/export. Existing
-V1 files (no header, directly encrypted with the master key) remain readable;
-file length modulo112 distinguishes V1(0) from V2(64), followed by header/tag
-validation. Incomplete final writes are truncated to complete authenticated chunks.
+The 84 plaintext bytes are one 10 ms IMA ADPCM block at 16 kHz mono: initial
+predictor (int16), index, a reserved 0, then 80 packed bytes, low nibble first.
+All 160 samples are coded relative to the predictor. The badge sends two
+blocks per 20 ms of capture, within 40 ms, or stops.
 
-Files are private and excluded from backups, bounded by available phone storage
-(16MiB reserve) and classic WAV size: at most13,421,772blocks, about37.28hours.
-Private storage uses40.32MB/hour plus64bytes per V2 file; WAV uses115.2MB/hour.
-Library listing excludes malformed/empty/open files individually and never
-clears a connection key or finishes capture on a read-only failure. The phone
-does not queue library scans during capture on the shared native I/O executor.
-Stop/detach await shared cleanup before a replacement session is installed.
-Stop invalidates pending capture setup, checks cancellation after every async
-setup step and before a queued Start is sent, and waits for setup before local
-file finalization. Resume waits for stop cleanup and restores the authenticated
-idle subscription without starting capture. A detached link is not restored.
-No five-minute limit. Playback/export authenticate every block. Only explicit
-export creates PCM/WAV outside private storage. Secret/plaintext arrays are
-cleared on setup/storage failure and stop; none cross Flutter's channel.
+Before encoding, a fixed-point stage applies a 30 Hz high-pass, automatic
+gain (start 8×, range 0.25–16×, target RMS 2600 counts, about −22 dBFS) and a
+limiter at ±30000. Gain drops quickly and rises slowly, and freezes in near
+silence instead of muting. These are tuning values, not calibrated levels.
 
-Uses [PSA Crypto](https://arm-software.github.io/psa-api/crypto/1.2/), RFC5869,
-Java cryptography and [Android Keystore](https://developer.android.com/privacy-and-security/keystore).
-Reference vectors test software operations; bond/session security, visibility,
-RF throughput, DMA stop timing and rail integration still need bench acceptance.
+## Phone storage
+
+Android makes a random 32-byte file key per recording and wraps it with an
+Android Keystore AES-GCM key. A V2 file starts with a 64-byte header,
+`"PBA2" || wrapping_IV[12] || encrypted_file_key[32] || tag[16]`, with AAD
+`"PB3K" || filename`. Each 84-byte block is stored as
+`IV[12] || ciphertext[84] || tag[16]`, where IV is 8 zero bytes plus the
+sequence, and AAD is `"PB3F" || filename || sequence:u32le`. V1 files (no
+header, encrypted with the Keystore key directly) still open; file length
+mod 112 tells them apart. An unfinished last write is trimmed to whole chunks.
+
+Files are private, excluded from backups, and capped by free space (16 MiB
+kept free) and the WAV size limit, about 37 hours. Storage costs about 40 MB
+per hour; WAV export about 115 MB per hour. Playback and export check every
+block, and only an explicit export writes plain audio outside private
+storage. Secrets are cleared on stop and on errors, and never cross the
+Flutter channel.
+
+Built on [PSA Crypto](https://arm-software.github.io/psa-api/crypto/1.2/),
+RFC 5869, Java cryptography and [Android Keystore](https://developer.android.com/privacy-and-security/keystore).
+Test vectors cover the crypto. Bond security, the recording view, throughput
+and stop timing still need checking on hardware.

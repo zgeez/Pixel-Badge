@@ -18,5 +18,5 @@ Size magnets from pull-versus-gap data for ordinary clothing, then test holding
 force and comfort. The lanyard covers thicker garments. Attachment points must
 clear the battery, antennas, USB, switch, and SWD access, and hang near the
 centre of mass in both orientations.
-[Carrier tests](../testing/system.md#11-mechanical-wearability) ·
+[Carrier tests](../testing/system.md#wearability) ·
 [Motion behavior](../motion-prototype.md)

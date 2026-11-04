@@ -1,6 +1,6 @@
 # Raw data: matrix scan timing on the nRF5340 DK (2026-10-09)
 
-Result record: [validation.md](../../../docs/validation.md#result-scan-timing-on-the-nrf5340-dk-bench-no-matrix).
+Result record: [validation.md](../../../docs/testing/prototype-results.md#scan-timing-2026-10-09).
 
 | File | Content | SHA-256 |
 |---|---|---|

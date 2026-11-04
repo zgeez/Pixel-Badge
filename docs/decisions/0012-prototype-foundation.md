@@ -22,4 +22,4 @@ separate work.
 
 [QR library and notices](../../firmware/common/lib/qrcodegen/README.md) ·
 [Storage layout](../rev-a-firmware.md#flash-and-ram) ·
-[Initial bench evidence](../validation.md#result-prototype-foundation-on-the-dk)
+[Initial bench evidence](../testing/prototype-results.md#first-checks-2026-10-11)

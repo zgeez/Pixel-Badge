@@ -1,32 +1,32 @@
 # System tests
 
-Use the assembled badge and a recorded firmware/configuration. Keep acceptance
-limits proposed until results establish the operating margin.
+Use an assembled badge with a recorded firmware build. Keep limits marked
+proposed until results show the margin.
 
-## 10. Battery runtime
+## Battery runtime
 
-Start fully charged and run a stated brightness/mode/audio/BLE profile to the
-normal-stop condition. Log usable energy, temperatures, and elapsed time.
-Eight hours is a target; capacity alone does not establish it.
+Start full, run a stated profile (mode, brightness, audio, BLE) until the
+badge sheds or stops, and log energy, temperatures and time. Eight hours is
+the target. Board 1 lasted 22 hours to load shed on a QR code at half
+brightness, which is one light profile, not the target test.
 
-## 11. Mechanical wearability
+## Wearability
 
-Check pack insulation/swelling clearance, leads, connector access, thread/cap
-fit and repeated service, magnet retention, and button travel. Test magnetic
-and lanyard use in both orientations, including walking/bending and a range
-of clothing. The carrier takes the lanyard load. Recheck NFC/BLE, optics, and
-thermals with the final stack. Accepted CAD dimensions do not establish retention.
+Check pack insulation and swelling room, the leads, connector access, screw
+and cap fit over repeated service, magnet hold, and button travel. Wear it on
+the magnet and the lanyard in both orientations while walking and bending,
+on a few kinds of clothing. The carrier, not the board, takes the lanyard
+load. Recheck NFC, BLE, the diffuser and temperatures with the final stack.
 
-## 12. Power cycling, brownout, and recovery
+## Brownout and recovery
 
-Calibrate VBAT against a meter with a current-limited battery simulator. Sweep
-loaded/relaxed voltage, USB presence, startup, and temperature; include probe
-loading, ADC settling, off-state leakage, and missing/stale/invalid samples.
+Calibrate VBAT against a meter, using a current-limited battery simulator.
+Sweep loaded and resting voltage, USB on and off, start-up and temperature,
+and include stale or missing samples.
 
-Under worst-case display/radio load, capture VBAT, logic rail, LED enable/current,
-and sample-to-shed latency. Establish margin above cell/protector/regulator limits.
-Test rebound/noise, restart near empty, 100 mA USB supplement behavior, qualified
-recovery, ramp-up, and retry backoff. Recovery must not create repeated resets
-or drain an empty pack. Repeat on the final image and measure System OFF/wake.
-
-Keep independent battery protection active. [Proposed policy](../power.md#battery-state-measurement)
+Under the heaviest display and radio load, capture VBAT, the logic rail, LED
+enable and current, and the time from sample to shed. Test noisy rebounds,
+restarts near empty, the 100 mA USB case, the step-up after recovery and the
+retry backoff. Recovery must never loop through resets or flatten an empty
+pack. Measure System OFF current and wake-up on the final image.
+[Shedding policy](../power.md#battery-measurement).

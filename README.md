@@ -1,104 +1,125 @@
 # Pixel Badge
 
-**A wearable LED badge with BLE configuration and passive NFC.**
+A wearable 32 × 32 LED badge that shows a QR code, text and animations, and
+hands out a contact link over NFC. A phone app sets it up over Bluetooth.
 
-Pixel Badge displays contact links, text, and animations on a 32 × 32 LED matrix.
-The project covers custom PCB design, embedded firmware, and an Android companion
-app, developed first on an nRF5340 DK and then ported to an nRF52840 module.
+I designed the PCB in KiCad, wrote the firmware on Zephyr, and built the
+Android app in Flutter. The firmware started on an nRF5340 DK with a HUB75
+panel and now runs on the custom nRF52840 board.
 
 <p align="center">
-  <img src="docs/images/pcb-front-render.webp" width="820" alt="KiCad CAD render of the Rev A PCB, showing the LED matrix, NFC coil, and control electronics">
-  <br>
-  <em>Rev A PCB — KiCad CAD render.</em>
+  <img src="docs/images/rev-a-charging-bench.webp" width="820" alt="Rev A badge showing the words Pixel Badge, powered from its battery with a USB-C meter attached">
 </p>
 
-**Status · November 2026:** Rev A boards are assembled and running. Board
-bring-up found and fixed an assembly defect, replaced the CPU-driven LED scan
-with a hardware-sequenced one (about 215 frames/s), and measured 22 h to load
-shed on the battery. NFC range, BLE range, thermals, and System OFF on the pack
-are still to test. [Rev A bring-up record](validation/results/2026-11-03-rev-a-bringup/README.md)
-· [All validation records](docs/validation.md).
+## Where it stands
 
-## Features
+Rev A boards are built and working (November 2026). Bring-up turned up an
+assembly fault on the module, a scan that flickered, and a few USB and
+charging quirks. All are fixed. Board 1 runs everything: display, BLE, NFC,
+motion, audio and charging. It lasted 22 hours on the battery showing a QR
+code at half brightness.
 
-- **Contact sharing:** QR display and a passive NFC tag with the same destination.
-- **Display content:** text, drawings, and up to 128 frames of grayscale artwork.
-- **Motion and audio:** automatic rotation, an IMU-driven particle fluid effect,
-  and microphone level/spectrum visualization.
-- **Phone control:** BLE configuration, artwork editing, and image/GIF/video import.
-- **Recording:** an opt-in development build streams encrypted audio to the phone;
-  audio is never stored on the badge.
+Bare LEDs make a QR code that phones struggle to read. A printed white diffuser
+over the matrix fixes that, so the code scans easily. That's a first hands-on
+result, not a formal scan test yet.
 
-## Hardware and firmware
+Still untested: NFC and BLE range, thermals, and System OFF on the battery.
+[Bring-up record](validation/results/2026-11-03-rev-a-bringup/README.md),
+[all test records](docs/validation.md).
 
-| Area | Design |
+<p align="center">
+  <img src="docs/images/rev-a-qr-hero.webp" width="32%" alt="QR code on the Rev A matrix">
+  <img src="docs/images/rev-a-scan-artwork.webp" width="32%" alt="Grayscale artwork on the Rev A matrix">
+  <img src="docs/images/rev-a-audio-rec.webp" width="32%" alt="Recording view on the badge with the phone app recording">
+</p>
+
+<p align="center">
+  <a href="docs/images/rev-a-fluid.mp4"><img src="docs/images/rev-a-fluid-poster.webp" width="260" alt="Particle fluid effect on the badge; links to a short video"></a>
+  <br>
+  <em>Tilt-driven particle fluid (click for video).</em>
+</p>
+
+## What it does
+
+- Shows a contact QR code and serves the same link from a passive NFC tag.
+- Displays text, drawings and grayscale animations of up to 128 frames.
+- Rotates with the IMU and runs a particle fluid effect.
+- Shows microphone level and spectrum. An opt-in bench build can stream
+  encrypted audio to the phone, which stores it. Audio never touches the
+  badge's flash.
+
+## Inside
+
+| | |
 |---|---|
-| MCU | Ebyte E73 nRF52840 module; nRF5340 DK development fixture |
-| PCB | 118 × 76 mm, four layers, designed in KiCad |
-| Display | 1024 white LEDs, 2 mm pitch, constant-current column sinks and switched rows |
-| Firmware | C++17 and C, Zephyr RTOS, nRF Connect SDK 3.4.1 |
-| Power | USB-C, BQ25620 charger, protected 1S LiPo, separate logic and LED rails |
-| App | Flutter with Android BLE, media, and encrypted recording support |
+| MCU | Ebyte E73 module (nRF52840), BLE and app on one core |
+| Display | 1024 white LEDs at 2 mm pitch, constant-current column drivers, hardware-timed scan |
+| Board | 118 × 76 mm, four layers, all parts on the front |
+| Power | USB-C, BQ25620 charger, protected 2500 mAh LiPo, separate LED rail |
+| Sensors | ICM-42688-P IMU, PDM microphone, NT3H2111 NFC tag with a PCB coil |
+| Firmware | C++17 and C on Zephyr, nRF Connect SDK 3.4.1 |
+| App | Flutter, Android |
 
-The matrix scan runs in hardware (SPIM EasyDMA list, TIMER/PPI/GPIOTE, one
-interrupt per plane), with an independent hardware scan-stall circuit. Shared services use bounded buffers and queues; two artwork
-banks preserve the previous content during an interrupted upload. BLE changes
-require completion and readback, including QR/NFC agreement for link updates.
+The CPU doesn't drive the LED scan. SPI DMA, timers and PPI do, and the CPU
+takes one interrupt per brightness plane. If the firmware ever stops, a
+hardware one-shot blanks the matrix within about a millisecond. Settings
+changes over BLE are staged, applied one at a time and read back before the
+app shows them as done. [How it fits together](docs/architecture.md).
 
-See the [system architecture](docs/architecture.md) and
-[Rev A firmware design](docs/rev-a-firmware.md) for the implementation.
+## Carrier
+
+<p align="center">
+  <img src="docs/images/rev-a-carrier-kit.webp" height="300" alt="Printed carrier parts, badge, lanyard and magnetic backing laid out">
+  <img src="docs/images/rev-a-magnetic-backing-photo.webp" height="300" alt="Magnetic backing held against the rear of the carrier">
+</p>
+
+A 3D-printed carrier holds the board and battery. It clips on with a magnetic
+backing or hangs from a lanyard, in portrait or landscape. Print files are in
+[hardware/mechanical](hardware/mechanical/).
 
 ## Prototype
 
 <p align="center">
-  <img src="docs/images/qr-bench.webp" height="320" alt="Physical prototype displaying a QR code on a HUB75 panel beside the nRF5340 DK and breadboard">
-  <img src="docs/images/bench-overview.webp" height="320" alt="Development fixture with the Nordic DK, breadboard, NFC breakout, and display wiring">
+  <img src="docs/images/qr-bench.webp" height="300" alt="Prototype showing a QR code on a HUB75 panel beside the nRF5340 DK">
+  <img src="docs/images/bench-overview.webp" height="300" alt="Prototype bench with the DK, breadboard, NFC breakout and display wiring">
 </p>
 
-The nRF5340 DK and external HUB75 panel provide an accessible fixture for
-display, sensor, BLE, and NFC development. These photos show the RGB bench
-panel; Rev A uses white LEDs on the custom PCB.
+Before the boards existed, the firmware ran on an nRF5340 DK driving an RGB
+HUB75 panel, with breakout boards for the tag, IMU and microphone. That bench
+still builds and is useful for app work.
 
-## Companion app
+## App
 
 <p align="center">
-  <img src="docs/images/app-badge.png" width="28%" alt="Pixel Badge app: device and display controls">
-  <img src="docs/images/app-text.png" width="28%" alt="Pixel Badge app: text composer and preview">
-  <img src="docs/images/app-studio.png" width="28%" alt="Pixel Badge app: grayscale artwork and animation editor">
+  <img src="docs/images/app-badge.png" width="23%" alt="App: badge controls">
+  <img src="docs/images/app-links.png" width="23%" alt="App: saved links">
+  <img src="docs/images/app-text.png" width="23%" alt="App: text composer">
+  <img src="docs/images/app-studio.png" width="23%" alt="App: grayscale artwork editor">
 </p>
 
-Badge, Text, and Studio workspaces. UI review captures use test data.
-The app also supports recording playback and explicit WAV export.
-[App setup and behavior](app/README.md).
+Badge, Links, Text and Studio pages (test data). [App README](app/README.md).
 
-## Build and test
+## Build
 
-Install nRF Connect SDK **3.4.1** and its matching toolchain. From PowerShell:
+Install nRF Connect SDK 3.4.1 and its toolchain, then from PowerShell:
 
 ```powershell
-.\scripts\dev.ps1 build -Image Prototype -Pristine
 .\scripts\dev.ps1 build -Image Main -Pristine
-.\scripts\dev.ps1 test
+.\scripts\dev.ps1 build -Image Prototype -Pristine
+.\scripts\dev.ps1 test     # host tests, needs Docker
 .\scripts\dev.ps1 check
 ```
 
-Windows host tests require Docker. See [firmware setup](docs/firmware.md#building)
-for prerequisites, Linux commands, and the Diagnostics image. Main keeps matrix
-output, recording, and charging disabled by default; follow the
-[bring-up checklist](docs/bringup.md) before enabling hardware tests.
+Main ships with the LED output, charging and recording turned off. Bench
+add-ons turn them on deliberately. [Firmware guide](docs/firmware.md),
+[bring-up checklist](docs/bringup.md).
 
-Tests cover portable services, interrupted writes, protocol bounds, display
-health, and power policy, alongside Flutter/Kotlin app tests. The
-[DK timing capture](validation/results/2026-10-09-dk-matrix-timing/README.md)
-records a 195.2 Hz standalone scan; the Rev A scan count is about 215 frames/s,
-not yet captured on a logic analyzer.
+## Repository
 
-## Explore the source
-
-[Firmware and tests](firmware/README.md) · [KiCad and carrier files](hardware/README.md) ·
-[Android app](app/README.md) · [Documentation](docs/README.md) ·
-[Design decisions](docs/decisions/README.md)
+[firmware/](firmware/README.md), [hardware/](hardware/README.md),
+[app/](app/README.md), [docs/](docs/README.md),
+[design decisions](docs/decisions/README.md).
 
 ## License
 
-[MIT](LICENSE), with [third-party notices and Apache-2.0 board files](docs/firmware.md#licenses).
+[MIT](LICENSE), with some [third-party notices and Apache-2.0 board files](docs/firmware.md#licenses).

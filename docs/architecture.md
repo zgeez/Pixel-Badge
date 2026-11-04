@@ -1,9 +1,4 @@
-# System overview
-
-Pixel Badge combines a multiplexed LED display, BLE configuration, and a passive
-NFC contact link. The nRF5340 DK prototype and nRF52840 Rev A application share
-services and storage formats, with separate board definitions and display drivers.
-Rev A is in production; its electrical and physical performance awaits bring-up.
+# Architecture
 
 ```mermaid
 flowchart LR
@@ -21,38 +16,48 @@ flowchart LR
     LED --> Drivers
 ```
 
-## Main design choices
+## Display
 
-- **Display:** two TLC59283 column sinks, four HC595 row registers, a level
-  translator, and 32 high-side PFETs. TIMER/PPI limits each light pulse; an
-  independent monostable forces blanking if latching stops.
-- **Shared firmware:** application code selects modes; portable services handle
-  content, protocols, storage, and policies. Board drivers own GPIO and timing.
-  Application buffers are bounded and statically allocated.
-- **Configuration:** authenticated BLE writes stage changes, then an explicit
-  Apply commits them. The app checks completion and exact readback. URL changes
-  also verify the NFC EEPROM so the QR and NFC destinations agree.
-- **Passive NFC:** an external NTAG I²C plus stores the public URL. RF reads
-  remain public; provisioning protects RF writes while allowing MCU updates.
-- **Power:** the BQ25620 manages USB/battery power; separate regulators supply
-  logic and LEDs. Switched battery sensing drives brightness limiting and load
-  shedding. USB with the switch off runs a charging-only firmware state.
-- **Recovery:** watchdog and display-health checks handle stalled services;
-  MCUboot and two image slots preserve room for a future update transport.
-  SWD/RTT provide programming and logs. OTA updates are not implemented.
+Two TLC59283 drivers sink constant current on the 32 columns. Four 74HC595
+shift registers and 32 P-channel FETs select the row. The nRF52840 runs the
+scan in hardware: SPI DMA shifts each row, timers and PPI time the latch and
+blanking, and the CPU takes one interrupt per brightness plane. If latching
+stops for any reason, a one-shot blanks the matrix on its own.
 
-The module changed from nRF5340 to nRF52840 because of assembly availability.
-The port puts the application and radio controller on one core and replaces
-the DK display backend. [Trade-offs and resource map](rev-a-firmware.md).
+## Firmware
 
-## Validation boundaries
+Prototype (nRF5340 DK) and Rev A (nRF52840) share all application code and
+storage formats. Each has its own board files and display driver. The app
+layer picks modes, portable services handle content, protocols and storage,
+and drivers own the hardware. Buffers are fixed-size and statically allocated.
 
-DK measurements establish prototype behavior for the recorded setup. They do
-not establish Rev A refresh, brightness, battery runtime, or RF performance.
-Recording remains an explicit development option pending visibility, security,
-and endurance checks. Charging and load-shed thresholds require measurements on
-the assembled board.
+## Settings over BLE
 
-See [hardware](hardware.md), [firmware](firmware.md), [power](power.md),
-[NFC](nfc.md), and [validation](validation.md). The
-[decision records](decisions/README.md) explain the design history.
+Writes need an authenticated, bonded phone. Each change is staged first, then
+applied with an explicit Apply. The app waits for completion and reads the
+value back before showing it as done. A link change also writes the NFC tag,
+and only succeeds once the QR code and the tag agree.
+
+## NFC
+
+An NT3H2111 tag stores the public link. Phones can read it with the badge
+off. RF writes are password protected, while the MCU updates it over I²C.
+[NFC design](nfc.md).
+
+## Power
+
+The BQ25620 charger runs the system from USB or the battery. Separate
+regulators feed the logic and the LEDs. Firmware reads the battery through a
+switched divider, caps brightness when it gets low, and turns the LED rail off
+before the pack's protection would trip. With USB in and the switch off, the
+badge just charges. [Power design](power.md).
+
+## Recovery and updates
+
+A watchdog and display health checks recover from stuck services. MCUboot
+and two image slots leave room for updates later, but there's no OTA
+transport yet. Programming and logs go over SWD and RTT.
+
+The module moved from nRF5340 to nRF52840 because the nRF5340 module wasn't
+available for assembly. That put the app and the radio on one core.
+[Trade-offs](rev-a-firmware.md#nrf5340-to-nrf52840).

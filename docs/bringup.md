@@ -1,164 +1,93 @@
-# Rev A bring-up checklist
+# Bring-up checklist
 
-Copy this checklist into a bring-up issue per board. Record measured values,
-equipment, and firmware commit next to each item. Stop at the first failure in
-the power section. [bringup-logs.md](bringup-logs.md) lists the image for each
-step and the RTT log lines that mean pass or fail;
-[bringup-expected.md](bringup-expected.md) lists the design values to compare
-measurements with.
+For a new board. Copy it into an issue, and record the values, equipment and
+firmware commit next to each item. Stop at the first power failure.
+[Log lines for each step](bringup-logs.md), [expected values](bringup-expected.md).
+Board 1 went through all of this; its results are in the
+[bring-up record](../validation/results/2026-11-03-rev-a-bringup/README.md).
 
-Board: ____  Serial/batch: ____  Firmware commit: ____  Date: ____
+Board: ____  Firmware commit: ____  Date: ____
 
 ## Before power
 
-- [ ] Visual inspection (solder bridges, missing/rotated parts, polarity marks)
-- [ ] Resistance from each supply rail to ground
-- [ ] Battery connector polarity: meter the pack plug before first connection
-      (red wire must land on header pin 2, BAT+)
-- [ ] Protected pack identity/specifications verified, or dedicated cell
-      protection circuit reviewed; charger alone is insufficient
-- [ ] Assembly matches BOM and placement
-
-## Power
-
-- [ ] First power from current-limited bench supply
-- [ ] Rails in order, with no battery and the LED rail off: SYS (TP201), then
-      3V3_REG and +3V3 (TP203/TP204); VLED (TP206) stays at 0 V
-- [ ] Each rail voltage
-- [ ] Idle current
-- [ ] Flash the diagnostics image (`firmware/rev_a_nrf52840/README.md`). Its
-      RTT log reports reset cause, the 32.768 kHz clock source, the SAADC VBAT,
-      VLED and CC readings, the charger's identity, faults, TS zone, D+/D-
-      result and ADC readings, and button/power-switch edges. The status LED
-      blinks while it runs. Charging stays off in this image
-- [ ] Matrix dark in reset and boot: LED_EN low and BLANK high, VLED about
-      0 V in the diagnostics log, no LED lit
-- [ ] Charger behavior: no charging until firmware drives CHG_EN high, in MCU
-      reset, or with the logic rail off; reset TS
-      thresholds stop charging below about 0 °C and above 45 °C
-- [ ] Pack-presence probe, before the first charge: with the charge image
-      and USB-C attached but no pack, the log must report `NO PACK` and keep
-      CHG_EN low; with a meter-checked pack it must report `pack present` at
-      about the metered voltage. Unplug the pack while charging: CHG_EN must
-      drop within the next 30 s probe
-- [ ] First charge, watched: diagnostics image plus `diagnostics-charge.conf`
-      (ICHG 480 mA), a meter-checked pack, and a USB-C source that advertises
-      1.5 A or a BC1.2 dedicated charger (a computer port gives 500 mA once it
-      configures the badge, otherwise 100 mA). The log
-      must show every gate passing before CHG_EN goes high. Confirm the charge
-      current on an inline USB-C power meter and the charger IBAT reading; feel
-      or IR-check the charger, inductor and pack for the first 15 minutes; stop
-      if anything gets hot. Scope REGN, BTST-SW and SW before any charge
-      current above about 500 mA
-- [ ] USB-C plug seating with the cables you will use (the receptacle face sits
-      0.55 mm inside the board edge)
-- [ ] CC1/CC2 each have separate 5.1 kΩ Rd; C-to-C VBUS/charging attachment in
-      both orientations, including switch-off and battery-absent states
-- [ ] USB-C VBUS reaches charger input and module VBUS pin 27 through the
-      specified conditioning/decoupling; hot-plug and switch-off states checked
-- [ ] USB enumeration: on a computer the badge appears as a CDC ACM device,
-      the log shows `USB configuration 1` and the input limit rises to
-      500 mA; on a wall charger it never enumerates and the D+ pull-up comes
-      on only after the charger's detection result is logged
-- [ ] USB suspend: sleep the host with a pack fitted; the log shows the
-      charger entering HIZ, an inline meter shows VBUS current at or below
-      2.5 mA, the badge keeps running (switch ON or OFF), and waking the host
-      leaves HIZ
-- [ ] Battery-powered operation
-- [ ] Switched VBAT sensing agrees with meter; disabled/reset/off leakage and
-      ADC back-powering checked; loaded low-battery shedding/recovery and invalid
-      sample behavior verified (validation.md §12); final thresholds recorded
-- [ ] Product power states: with USB attached and the switch OFF the log
-      reports the charging-only state, BLE does not advertise and the matrix
-      stays dark; switching ON restarts into normal operation, and switching
-      OFF again restarts into charging-only
-- [ ] Load shedding on a current-limited supply at the battery connector
-      (matrix image): lowering the supply caps brightness below about
-      3.55 V and turns the LED rail off below about 3.40 V; raising it to
-      3.70 V or more re-enables from the lowest level in 5 s steps. Record the
-      loaded and unloaded VBAT readings against a meter
-- [ ] Low-battery off: on that supply with no USB, about 3.25 V unloaded
-      enters System OFF (log, then no RTT); record the off current; attaching
-      USB must wake the badge. A debugger keeps the nRF52840 in emulated
-      System OFF, so measure with it detached
-- [ ] Independent battery protection and recovery checked against selected
-      pack/cell specifications using controlled fixtures; record limits/results
+- [ ] Look for bridges and missing, rotated or reversed parts.
+- [ ] Measure each rail's resistance to ground.
+- [ ] Meter the pack plug: red must land on header pin 2 (BAT+).
+- [ ] Confirm the pack is protected and know its limits.
 
 ## Debug and programming
 
-- [ ] SWD through the nRF5340 DK debug out (P19, 10-pin 1.27 mm flat cable):
-      DK SB47 open; DK on USB for the debugger; 3.3 V on DK P21 with SW10
-      VEXT->nRF on and SW9 at VDD; meter the DK VDD and the badge 3V3 and
-      confirm they match before connecting the cable (a DK on USB alone is 3 V);
-      the target is the badge's nRF52840
-- [ ] Module supply (VCC = VDDH = 3V3, DCCH open): 3V3 ripple at the module
-      and stable operation at idle and with the radio active. The E73's DC/DC
-      inductors are inside the module, so there are no external regulator
-      nodes to probe
-- [ ] Probe check before any write: with the badge unpowered,
-      `dev.ps1 flash -Image Diagnostics` must refuse because it sees the DK's
-      nRF5340; with the badge powered it must see an nRF52840
-- [ ] New module: `dev.ps1 recover -Target RevA -EraseAll` once (AP-Protect
-      ships enabled on newer nRF52840 build codes and blocks SWD until
-      ERASEALL); record the module's build code from `nrfutil device device-info`
-- [ ] Flash the diagnostics image (`dev.ps1 flash -Image Diagnostics`) and
-      run it; the first boot writes P0.18 pin reset and NFC pins as GPIO to
-      UICR, then reset through J501 pin 10 and confirm SWD still connects
-      after a power cycle (debug port stays open)
-- [ ] RTT log output (`dev.ps1 rtt -Target RevA`; the only log path: Rev A
-      has no UART pads)
+- [ ] Wire SWD from the nRF5340 DK debug out (P19, 10-pin 1.27 mm cable).
+      Open DK SB47, power the DK from USB, feed 3.3 V into DK P21 with SW10
+      on VEXT->nRF and SW9 at VDD. Meter the DK VDD and the badge 3V3 and
+      make sure they match before connecting the cable.
+- [ ] With the badge off, `dev.ps1 flash` must refuse (it sees the DK's own
+      nRF5340). Powered, it must see an nRF52840.
+- [ ] New module: run `dev.ps1 recover -Target RevA -EraseAll` once.
+      AP-Protect ships on and blocks SWD until then.
+- [ ] Flash Diagnostics. Its first boot writes UICR (pin reset, NFC pins as
+      GPIO). Reset through J501 pin 10, power-cycle, and check SWD still connects.
+- [ ] Capture RTT with `dev.ps1 rtt -Target RevA`. There's no UART.
 
-## MCU and clocks
+## Power
 
-- [ ] High-frequency crystal (inside the module)
-- [ ] 32.768 kHz crystal with the 12 pF C405/C406 loads: starts reliably,
-      frequency error measured (the load value is calculated, not measured)
+- [ ] First power from a current-limited supply on the battery connector.
+- [ ] SYS (TP201), then 3V3 (TP203/TP204), come up. VLED (TP206) stays at 0 V.
+- [ ] Note the idle current.
+- [ ] Diagnostics ends with `Bring-up checks done: 0 failed`. If the IMU
+      reports far more than 100 interrupts a second, or the matrix chain
+      fails, suspect the module joints first. That was board 1's fault.
+- [ ] The matrix stays dark through reset and boot.
+- [ ] Pack probe: with USB and no pack, the log says `NO PACK` and charging
+      stays off. With a pack, it reads about the metered voltage.
+- [ ] First charge, watched: Diagnostics plus `diagnostics-charge.conf`
+      (480 mA), a 1.5 A USB-C source. Every gate must pass in the log before
+      CHG_EN goes high. Check the current on a USB-C meter, and feel the
+      charger, inductor and pack for 15 minutes. Scope REGN, BTST-SW and SW
+      before charging above about 500 mA.
+- [ ] VBAT from the divider agrees with a meter at the pack; record the offset.
+- [ ] USB: a computer enumerates it and the limit rises to 500 mA; a wall
+      charger never enumerates. Try both plug orientations.
+- [ ] Host suspend: the charger enters HIZ and the badge keeps running.
+- [ ] Switch off with USB: charging only, no BLE, dark matrix.
+- [ ] Load shedding on a supply at the battery connector: brightness caps
+      below about 3.55 V, the LED rail goes off below about 3.40 V, and it
+      comes back from 3.70 V.
+- [ ] Low battery: about 3.25 V unloaded with no USB enters System OFF.
+      Measure the off current with the debugger unplugged.
+
+## Clocks
+
+- [ ] The 32.768 kHz crystal starts and runs at the right rate. Count RTC1
+      over SWD for 10 s: it should be about 327,680.
 
 ## LED matrix
 
-- [ ] All-off state
-- [ ] LED-driver chain, outputs off (diagnostics image): MTX_SAFE_SENSE reads
-      1 and the TLC chain readback passes at one offset; check the HC595 chain
-      (SER_V/SRCLK_V/RCLK_V) on a logic analyzer
-- [ ] Staged matrix bench (`matrix-stepper.conf`, current-limited supply):
-      rows scanning with no LED lit, then one LED at minimum brightness, then
-      walks, patterns and all-on at rising brightness; record supply current
-      and VLED at each all-on step
-- [ ] Stalled-scan safety: matrix bench step 12 lights one LED with the scan
-      stopped and logs when the monostable blanks it (calculated 0.76-1.41
-      ms); then halt the MCU in the debugger mid-scan; the matrix must go
-      dark within about 1-1.5 ms (monostable)
-- [ ] Single-pixel and row/column test patterns
-- [ ] Brightness control
-- [ ] Refresh timing (see validation.md), including during BLE activity: the
-      BLE controller shares the single CPU with the matrix frame restart
-- [ ] QR code display
+- [ ] Outputs off: `MTX_SAFE_SENSE` reads 1 and the TLC chain reads back.
+- [ ] Stepper bench (`matrix-stepper.conf`, current-limited supply): rows
+      with no LED lit, one LED, walks, patterns, then all-on at rising
+      brightness. Record current and VLED at each all-on step.
+- [ ] Stall test (stepper step 12): the one-shot blanks a lit LED in about
+      1 ms. Halting the CPU mid-scan must also blank it.
+- [ ] Brightness, refresh with BLE active, and the QR code with the diffuser.
 
-## Sensors
+## Sensors and wireless
 
-- [ ] IMU detected and producing plausible data
-- [ ] PDM microphone producing plausible data
-
-## Wireless
-
-- [ ] BLE advertising and connection
-- [ ] Configure a new URL through the intended MCU path, verify NTAG I²C EEPROM
-      update, exact NFC URI while powered and passively after switch-off/power
-      removal, and equality with the decoded QR (validation.md §6)
-- [ ] NFC read-range/tap tests with battery, magnets, and carrier installed
-- [ ] Provisioned RF write protection rejects unauthenticated URL/metadata/
-      bypass writes in fresh RF sessions, powered and unpowered; public reads
-      and subsequent MCU/I²C URL updates still work (validation.md §6)
+- [ ] IMU reads about 1 g at rest and turns the display the right way.
+- [ ] Microphone level rises when you clap.
+- [ ] BLE pairs with the passkey on the matrix and the app works.
+- [ ] Change the link from the app: the QR code and the NFC tag must match,
+      powered and with the badge off. A new tag needs the wired setup first
+      ([NFC tools](../scripts/nfc/README.md)).
+- [ ] NFC range with the battery, magnets and carrier fitted.
 
 ## Mechanical
 
-- [ ] Fit in enclosure/mount
-- [ ] Magnetic mount retention, landscape and portrait
-- [ ] Lanyard attachment, landscape and portrait (hangs level; carrier takes the load)
-- [ ] Display rotation follows the badge orientation; QR mode stays locked
+- [ ] Fits the carrier; the slide switch works in both positions.
+- [ ] Magnet and lanyard hold, in portrait and landscape.
 
 ## Issues found
 
-| # | Description | Severity | Workaround | Issue link |
-|---|---|---|---|---|
-| | | | | |
+| # | Description | Severity | Workaround |
+|---|---|---|---|
+| | | | |

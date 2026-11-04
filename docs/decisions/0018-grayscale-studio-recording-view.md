@@ -22,4 +22,4 @@ testing for this view before enabling recording by default.
 
 Implement editor workflows independently from documented Glyph tools, without
 copying their source/assets. [App](../../app/README.md) ·
-[BLE formats](../ble-protocol.md#grayscale-artwork-extension-adr0018)
+[BLE formats](../ble-protocol.md#artwork)

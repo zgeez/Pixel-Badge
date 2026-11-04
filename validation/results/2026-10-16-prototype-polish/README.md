@@ -31,7 +31,7 @@ not exhaustive fault injection or physical timing acceptance.
   H/Q/M/L correction. Limits are 25/17 including the scheme, with a full quiet
   zone. The scheme may be normalized; the path is never uppercased. The
   existing encoder uses a single segment; Micro QR and larger/cropped symbols
-  are not emitted. See [wire details](../../../docs/ble-protocol.md#extended-qr-links-and-staging).
+  are not emitted. See [wire details](../../../docs/ble-protocol.md#qr-links).
 - URLs over 20 bytes use bounded default-MTU fragments. Info advertises the
   maximum; the app explains when older firmware needs updating.
 - NFC provisioning mailbox v4 uses 28-byte terminated URL slots and a separate

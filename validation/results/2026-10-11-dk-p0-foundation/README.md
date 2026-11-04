@@ -11,7 +11,7 @@
 - Equipment: my panel/power/phone setup for functional checks;
   J-Link RTT Logger V9.82, application-core device `nRF5340_xxAA_APP`, SWD
   4000 kHz, RTT channel 0 for the independent capture.
-- Method: six steps in [the firmware guide](../../../docs/firmware.md#historical-foundation-checks).
+- Method: six steps in [the firmware guide](../../../docs/testing/foundation.md).
 - Threshold: functional expected behavior from that procedure; no numerical
   optical acceptance or GPIO timing threshold was measured here.
 

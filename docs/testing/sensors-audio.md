@@ -1,42 +1,36 @@
 # Sensor and audio tests
 
-Record firmware/app versions, configuration, instruments, raw-data location,
-and pass/fail. Sensor and recording behavior still need Rev A measurements.
+Note firmware and app versions, configuration, instruments, where the raw data
+is, and the result.
 
-## 7. IMU
+## IMU
 
-Verify identity, sample units/orientation, data-ready interrupts, and freshness.
-Use [motion checks](../motion-prototype.md) for four-way tilt, flat/diagonal
-poses, manual rotation, QR entry lock, settings persistence, and sensor loss.
-Measure fetch/processing time, stack peaks, and shared-I²C behavior under
-BLE/audio/NFC load. A registered interrupt callback does not prove delivery.
+Check identity, units and axes, data-ready interrupts and sample freshness.
+Use the [motion checks](../motion-prototype.md) for tilt, flat and diagonal
+poses, manual rotation, the QR orientation lock, saved settings and sensor
+loss. Measure processing time, stack use and the shared I²C bus with BLE,
+audio and NFC running. A registered interrupt doesn't prove it fires.
 
-## 8. Microphone and audio processing
+## Microphone and audio
 
-- Check PDM clock/rate/lane, startup discard, level/FFT response with known
-  signals, and capture stopping outside audio modes. Record gain/noise limits.
-- Confirm the recording view is presented before the first sent sample; prior
-  visualization samples must be discarded. Compare frame/capture timestamps.
-- Refuse recording without authenticated LESC, session proof/subscription,
-  a fresh button-start acceptance, or a healthy display/LED rail.
-- Test wrong MACs, replayed counters, old sessions, cross-recording packets,
-  repeat handshakes, sequence limits, and malformed data. Bond trust does not
-  isolate one app from every other app on the same phone.
-- Exercise button/app stop, Home/lock, unsubscribe, heartbeat/link failure,
-  low storage, WAV boundary, display blank/fault, rail shedding, and DMA/transport
-  failure. Queued samples must be discarded before the view disappears.
-- Test playback/seek/export/delete, interrupted files, and a recording beyond
-  five minutes. Use known waveforms to check rate, order, continuity, and loss.
-- Trace raw/encoded samples and keys through normal/error/debug paths. No audio
-  or keys may reach badge flash, settings, logs, telemetry, or persistent dumps.
-  Phone files stay encrypted/private and excluded from backups; export is explicit.
-  Use synthetic samples for leakage tests, not retained microphone recordings.
+- Check the PDM clock and rate, the start-up discard, level and FFT response
+  to known signals, and that capture stops outside audio modes.
+- The recording view must be on screen before the first sample goes out.
+- Recording must be refused without an authenticated link, session proof and
+  subscription, a fresh button accept, or a healthy display and LED rail.
+- Try wrong MACs, replayed counters, old sessions, packets from another
+  recording, repeated handshakes and malformed data.
+- Stop it every way: buttons, the app, Home or lock, unsubscribing, link
+  loss, low phone storage, the WAV size limit, a display fault, load shedding.
+- Play, seek, export and delete; interrupt a file; record past five minutes.
+  Known waveforms show rate, order and gaps.
+- Trace samples and keys through normal, error and debug paths. None may
+  reach badge flash, settings or logs. Use synthetic audio for leak tests.
 
-The current view is spectrum/level plus lit corners in silence
-([ADR 0018](../decisions/0018-grayscale-studio-recording-view.md)). Test whether
-an uninformed observer can identify recording at 1/2 m, head-on, 45° sideways,
-and 30° above, indoors, shade, and direct sun. Record illuminance. Proposed
-rule: 10/10 correct within 2 s per condition; this is not yet an accepted limit.
-Any failed condition keeps default recording disabled.
+The view shows REC above a level bar and stays lit in silence. Check that
+someone who doesn't know the badge can tell it's recording from 1 and 2 m,
+head-on, 45° to the side and 30° above, indoors, in shade and in sun. The
+proposed rule is 10 of 10 within 2 s per condition. Recording stays off by
+default until that passes.
 
-[Audio bench](../audio-prototype.md) · [Wire contract](../audio-protocol.md)
+[Audio bench](../audio-prototype.md), [wire format](../audio-protocol.md).
