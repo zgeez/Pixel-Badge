@@ -229,7 +229,9 @@ static void worker(void *pointer, void *unused1, void *unused2)
 	int64_t last_progress = 0;
 	while (true) {
 		k_mutex_lock(&data->mutex, K_FOREVER);
-		if (epoch != data->epoch) {
+		/* off() from another path (power cap 0) clears rail_on without
+		 * waking this thread: re-enable and settle the rail first. */
+		if (epoch != data->epoch || !data->rail_on) {
 			epoch = data->epoch;
 			powered = false;
 		}
