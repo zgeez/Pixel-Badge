@@ -87,6 +87,22 @@ void Fluid::reset(unsigned count)
 	}
 	clocked_ = false;
 	step_ = 0;
+	random_ = 0x2545F491u;
+}
+void Fluid::slide(Particle &p, bool along_y, int32_t pull)
+{
+	// A blocked particle steps one cell across, toward the cross-axis pull or a
+	// random side when there is none, so a pile levels instead of clinging to
+	// the wall it was pressed against.
+	random_ ^= random_ << 13;
+	random_ ^= random_ >> 17;
+	random_ ^= random_ << 5;
+	const int32_t side = (pull ? pull > 0 : (random_ & 1) != 0) ? 256 : -256;
+	const int32_t nx = p.x + (along_y ? 0 : side), ny = p.y + (along_y ? side : 0);
+	if (nx >= 0 && nx < 8192 && ny >= 0 && ny < 8192 && !occupied_[cell(nx, ny)]) {
+		p.x = nx;
+		p.y = ny;
+	}
 }
 void Fluid::step(int32_t x, int32_t y, unsigned response)
 {
@@ -110,12 +126,12 @@ void Fluid::step(int32_t x, int32_t y, unsigned response)
 			} else if (horizontal) {
 				p.vx = -p.vx / 4;
 				if (magnitude(x) > magnitude(y)) {
-					p.vy += (n + step_) & 1 ? 16 : -16;
+					slide(p, true, y);
 				}
 			} else {
 				p.vy = -p.vy / 4;
 				if (magnitude(y) > magnitude(x)) {
-					p.vx += (n + step_) & 1 ? 16 : -16;
+					slide(p, false, x);
 				}
 			}
 		}

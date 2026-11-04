@@ -67,8 +67,9 @@ private:
 	Particle particles_[kMaximum]{};
 	uint8_t occupied_[kMatrixSize * kMatrixSize]{};
 	unsigned count_ = 0, step_ = 0;
-	uint32_t at_ = 0;
+	uint32_t at_ = 0, random_ = 1;
 	bool clocked_ = false;
 	void step(int32_t x, int32_t y, unsigned response);
+	void slide(Particle &p, bool along_y, int32_t pull);
 };
 } // namespace badge
