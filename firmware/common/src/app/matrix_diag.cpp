@@ -296,6 +296,11 @@ constexpr unsigned kStallMaxUs = 1410;
 /* Hard limit: the driver's timer re-blanks through PPI if SAFE stays low. */
 constexpr unsigned kStallLimitUs = 3000;
 
+/* Two full scans must complete within this time. The scan worker runs below
+ * the application threads, so a busy moment can delay a frame; on-time
+ * stays hardware-timed either way. */
+constexpr unsigned kVisibleTimeoutMs = 1000;
+
 int run_stall(const struct device *display)
 {
 	unsigned safe_us = 0;
@@ -366,7 +371,8 @@ int run_matrix_bench(const struct device *display)
 				LOG_INF("Matrix bench: resumed");
 				err = display_blanking_off(display);
 				if (err == 0) {
-					err = badge_display_wait_visible(display, 200);
+					err = badge_display_wait_visible(display,
+									 kVisibleTimeoutMs);
 				}
 			}
 		}
@@ -394,7 +400,8 @@ int run_matrix_bench(const struct device *display)
 				}
 				/* Confirm the driver is scanning, not faulted (SAFE, timeout). */
 				if (err == 0) {
-					err = badge_display_wait_visible(display, 200);
+					err = badge_display_wait_visible(display,
+									 kVisibleTimeoutMs);
 				}
 			}
 		}
@@ -416,7 +423,7 @@ int run_matrix_bench(const struct device *display)
 			err = show_retry(display, frame);
 		} else if (active && tick % 20 == 19) {
 			/* Static steps: re-check once a second that the driver still scans. */
-			err = badge_display_wait_visible(display, 200);
+			err = badge_display_wait_visible(display, kVisibleTimeoutMs);
 		}
 		if (err != 0) {
 			(void)display_blanking_on(display);

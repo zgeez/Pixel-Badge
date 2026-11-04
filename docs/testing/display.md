@@ -17,6 +17,9 @@ Numerical pass limits still need agreement.
   transition blanking, refresh, ghosting, and rolling-shutter artifacts.
 - Repeat under BLE/audio/motion load and during flash operations. Late work
   must extend blanking rather than the illuminated pulse.
+- Halt the CPU mid-scan, reset it, and pull ARM low (debugger write to the
+  P0.06 OUTCLR bit): each must blank at once and the driver must report or
+  recover without a lit row.
 - Stop LAT and measure independent SAFE blanking at room/hot/cold conditions.
   The calculated one-shot range is 0.76–1.41 ms; measure the actual board.
 - With a full row on, measure every TLC output at minimum VLED/battery and

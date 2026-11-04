@@ -7,9 +7,21 @@ config REVA_MATRIX
 	select SPI
 	select NRFX_GPPI
 	help
-	  Dedicated SPI worker shifts complete rows while blanked. A one-shot
-	  TIMER/PPI pulse sets LED on-time and returns to blank without CPU work.
-	  Electrical timing, current and mapping require Rev A bring-up evidence.
+	  Hardware-driven scan: rows of each brightness plane run from TIMER
+	  compares, PPI and SPIM2 EasyDMA without the CPU, and one interrupt
+	  per plane sets the next on-time. The slot timer stops in hardware
+	  after every plane, so a stalled CPU leaves LAT idle and the external
+	  one-shot blanks the matrix. SPIM3 stays with Zephyr's SPI driver for
+	  the diagnostics chain readback, before the scan owns the pins.
+
+config REVA_MATRIX_THREAD_PRIORITY
+	int "Matrix worker thread priority"
+	default 12
+	depends on REVA_MATRIX
+	help
+	  The worker powers the LED rail, starts the scan and supervises plane
+	  progress (a scan fault after 500 ms without one); it wakes every
+	  100 ms while scanning and never shifts rows itself.
 
 config REVA_MATRIX_OUTPUT
 	bool "Allow Rev A LED rail and scanning before board acceptance"

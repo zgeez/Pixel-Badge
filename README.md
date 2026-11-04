@@ -37,8 +37,8 @@ are pending. [Validation records](docs/validation.md).
 | Power | USB-C, BQ25620 charger, protected 1S LiPo, separate logic and LED rails |
 | App | Flutter with Android BLE, media, and encrypted recording support |
 
-The matrix uses SPI/DMA and TIMER/PPI blanking, with an independent hardware
-scan-stall circuit. Shared services use bounded buffers and queues; two artwork
+The matrix scan runs in hardware (SPIM EasyDMA list, TIMER/PPI/GPIOTE, one
+interrupt per plane), with an independent hardware scan-stall circuit. Shared services use bounded buffers and queues; two artwork
 banks preserve the previous content during an interrupted upload. BLE changes
 require completion and readback, including QR/NFC agreement for link updates.
 
@@ -87,8 +87,8 @@ output, recording, and charging disabled by default; follow the
 Tests cover portable services, interrupted writes, protocol bounds, display
 health, and power policy, alongside Flutter/Kotlin app tests. The
 [DK timing capture](validation/results/2026-10-09-dk-matrix-timing/README.md)
-records a 195.2 Hz standalone scan; current grayscale and Rev A timing need
-separate measurements.
+records a 195.2 Hz standalone scan; the Rev A scan count is about 215 frames/s,
+not yet captured on a logic analyzer.
 
 ## Explore the source
 

@@ -14,9 +14,9 @@ contains shared services and drivers. The DK application remains separate.
 
 | Resource | Allocation |
 |---|---|
-| Matrix SPI | SPIM3, 8 MHz; P0.12 SCK, P0.04 MOSI, P0.08 MISO |
+| Matrix SPI | SPIM2 scan, 8 MHz; SPIM3 for the diagnostics chain readback; P0.12 SCK, P0.04 MOSI, P0.08 MISO |
 | Matrix control | P1.09 LAT, P0.05 BLANK, P0.06 ARM, P0.26 SAFE, P0.07 LED_EN |
-| Timing | TIMER3, GPIOTE task, two PPI connections |
+| Timing | TIMER3 slot, TIMER4 plane counter, GPIOTE LAT/BLANK, seven PPI connections |
 | IMU/charger | TWIM0, 100 kHz; P0.15/P0.17; IMU interrupt P0.09 |
 | NTAG | TWIM1, 100 kHz; P0.22/P0.24; VCC P1.00, FD P1.02 |
 | PDM | CLK P0.20, DIN P0.13 |
@@ -96,7 +96,14 @@ off and is retried. Test both pack-present and pack-absent behavior first.
 
 The product image adds charging-only and low-battery System OFF states.
 Invalid/stale inputs hold the display off; sustained manager faults stop
-watchdog feeding. The driver enforces the brightness ceiling per slot.
+watchdog feeding. The driver enforces the brightness ceiling per plane.
+
+The matrix scan runs in hardware: TIMER3 compares and PPI start each row's
+SPIM2 transfer, latch it and time BLANK, and TIMER4 stops TIMER3 after each
+32-row brightness plane. One interrupt per plane sets the next on-time, so a
+stalled or halted CPU stops LAT after at most one plane and the external
+one-shot blanks the matrix. SPIM2 is used because nRF52840 anomaly 198 affects
+SPIM3 transmit data during CPU access to the buffer's RAM block.
 USB enumerates after BC1.2 detection and uses HIZ on host suspend.
 
 Diagnostics logs rails, charger state/ADC, clock/reset cause, buttons, and
