@@ -811,6 +811,7 @@ void power_thread(void *, void *, void *)
 	bool vbat_busy = false, vbat_loaded = false, probing = false, pack_ok = false,
 	     probed = false;
 	int policy_limit = 100;
+	power::InputLimitFilter input_filter; /* raises only once a higher limit holds */
 	uint8_t last_vbus_stat = 0xFF;
 	int sw_candidate = -1;
 	unsigned sw_stable = 0;
@@ -936,8 +937,10 @@ void power_thread(void *, void *, void *)
 
 				/* 500 mA only once a host has configured the badge; a
 				 * CDP counts as an SDP. */
-				policy_limit = power::input_limit_ma(cc, chg::vbus_stat(status1),
-								     usb_host());
+				policy_limit = input_filter.update(
+					power::input_limit_ma(cc, chg::vbus_stat(status1),
+							      usb_host()),
+					k_uptime_get_32());
 				if (enforce_input_limit(policy_limit) != 0) {
 					set_charging(false, "input limit access failed");
 				}

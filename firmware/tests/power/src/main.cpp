@@ -97,6 +97,28 @@ ZTEST(power, test_sense_scaling)
 	zassert_within(power::cc_from_pin_mv(80), 746, 1);
 }
 
+ZTEST(power, test_input_limit_filter)
+{
+	power::InputLimitFilter filter;
+	/* Attach transient seen on board 1: 1500/500 alternating every 20 ms. */
+	uint32_t t = 0;
+	zassert_equal(filter.update(500, t), 100);
+	for (int i = 0; i < 6; ++i) {
+		zassert_true(filter.update(i % 2 ? 500 : 1500, t += 20) <= 500);
+	}
+	/* 500 mA (host configured) held 200 ms applies. */
+	zassert_equal(filter.update(500, t += 20), 100);
+	zassert_equal(filter.update(500, t += 100), 100);
+	zassert_equal(filter.update(500, t += 100), 500);
+	/* A DCP must hold too; a brief 1500 never applies. */
+	zassert_equal(filter.update(1500, t += 20), 500);
+	zassert_equal(filter.update(500, t += 20), 500);
+	zassert_equal(filter.update(1500, t += 20), 500);
+	zassert_equal(filter.update(1500, t += power::kInputRaiseHoldMs), 1500);
+	/* Lowering is immediate (unplug, or the source lowers its CC level). */
+	zassert_equal(filter.update(100, t += 20), 100);
+}
+
 /* TS as a fraction of REGN for the board NTC network at t degC. */
 static int ts_permille_at(double t)
 {

@@ -96,6 +96,39 @@ constexpr int input_limit_ma(CcAdvert cc, uint8_t vbus_stat, UsbHost host)
 	return host == UsbHost::kConfigured ? 500 : 100;
 }
 
+/* A higher input limit applies only after the policy has asked for it
+ * continuously for kInputRaiseHoldMs; a lower one applies at once, within
+ * the Type-C tSinkAdj sink adjustment time. At attach the CC and BC1.2
+ * readings settle over tens of milliseconds (board 1: 1500/500 mA four times
+ * within 100 ms on an SDP), which must not briefly allow 1500 mA. */
+constexpr uint32_t kInputRaiseHoldMs = 200;
+
+class InputLimitFilter
+{
+public:
+	int update(int wanted_ma, uint32_t now_ms)
+	{
+		if (wanted_ma <= applied_) {
+			applied_ = wanted_ma;
+			pending_ = false;
+		} else if (!pending_ || wanted_ma != candidate_) {
+			pending_ = true;
+			candidate_ = wanted_ma;
+			since_ = now_ms;
+		} else if (now_ms - since_ >= kInputRaiseHoldMs) {
+			applied_ = wanted_ma;
+			pending_ = false;
+		}
+		return applied_;
+	}
+
+private:
+	int applied_ = 100; /* USB default until a higher limit holds */
+	int candidate_ = 0;
+	uint32_t since_ = 0;
+	bool pending_ = false;
+};
+
 const char *cc_advert_name(CcAdvert cc);
 
 } // namespace badge::power
