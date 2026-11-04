@@ -31,6 +31,11 @@
 		height = <32>;
 		spi = <&spi3>;
 		timer = <&timer3>;
+		/* Scan SPIM2 drives the same SCK/MOSI pins as spi3_default. */
+		scan-spim = <&spi2>;
+		plane-timer = <&timer4>;
+		sck-gpios = <&gpio0 12 GPIO_ACTIVE_HIGH>;
+		mosi-gpios = <&gpio0 4 GPIO_ACTIVE_HIGH>;
 		lat-gpios = <&gpio1 9 GPIO_ACTIVE_HIGH>;
 		blank-gpios = <&gpio0 5 GPIO_ACTIVE_HIGH>;
 		arm-gpios = <&gpio0 6 GPIO_ACTIVE_HIGH>;

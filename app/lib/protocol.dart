@@ -26,6 +26,7 @@ final infoUuid = badgeUuid(2);
 final applyUuid = badgeUuid(7);
 final statusUuid = badgeUuid(8);
 final motionStatusUuid = badgeUuid(13);
+final batteryUuid = badgeUuid(14);
 const brightnessLevels = [13, 64, 128, 255];
 const legacyBrightnessLevels = [16, 64, 128, 255];
 const legacyFields = [

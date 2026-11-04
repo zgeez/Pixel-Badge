@@ -25,6 +25,28 @@ constexpr int vled_from_pin_mv(int pin_mv)
 	return pin_mv * 2047 / 47;
 }
 
+/* VLED with LED_EN low. After a quick reset (watchdog, fault, debugger) the
+ * rail is still charged and drains through the sense divider and matrix
+ * leakage, so a high reading is accepted for kVledDrainMs after boot; a rail
+ * still present after that cannot be switched off. Board 1 (2026-10-31):
+ * 958-2264 mV about 110 ms after a reset, below 500 mV within about 20 s. */
+constexpr int kVledOffMv = 500;
+constexpr uint32_t kVledDrainMs = 60000;
+
+enum class VledOff : uint8_t {
+	kOff,      /* rail off: the matrix may run */
+	kDraining, /* still charged from before a reset: keep waiting */
+	kStuck,    /* present after the drain time: the rail cannot be switched off */
+};
+
+constexpr VledOff vled_off_verdict(int vled_mv, uint32_t uptime_ms)
+{
+	if (vled_mv <= kVledOffMv) {
+		return VledOff::kOff;
+	}
+	return uptime_ms < kVledDrainMs ? VledOff::kDraining : VledOff::kStuck;
+}
+
 /* Board NTC on the charger's TS pin: RT1 10 kOhm from REGN, 10 kOhm
  * B25/50 3380 K NTC to GND, no RT2 (docs/power.md), so TS falls as the board
  * warms. One pack specification limits charging to 0-40 degC, and the
@@ -95,6 +117,39 @@ constexpr int input_limit_ma(CcAdvert cc, uint8_t vbus_stat, UsbHost host)
 	}
 	return host == UsbHost::kConfigured ? 500 : 100;
 }
+
+/* A higher input limit applies only after the policy has asked for it
+ * continuously for kInputRaiseHoldMs; a lower one applies at once, within
+ * the Type-C tSinkAdj sink adjustment time. At attach the CC and BC1.2
+ * readings settle over tens of milliseconds (board 1: 1500/500 mA four times
+ * within 100 ms on an SDP), which must not briefly allow 1500 mA. */
+constexpr uint32_t kInputRaiseHoldMs = 200;
+
+class InputLimitFilter
+{
+public:
+	int update(int wanted_ma, uint32_t now_ms)
+	{
+		if (wanted_ma <= applied_) {
+			applied_ = wanted_ma;
+			pending_ = false;
+		} else if (!pending_ || wanted_ma != candidate_) {
+			pending_ = true;
+			candidate_ = wanted_ma;
+			since_ = now_ms;
+		} else if (now_ms - since_ >= kInputRaiseHoldMs) {
+			applied_ = wanted_ma;
+			pending_ = false;
+		}
+		return applied_;
+	}
+
+private:
+	int applied_ = 100; /* USB default until a higher limit holds */
+	int candidate_ = 0;
+	uint32_t since_ = 0;
+	bool pending_ = false;
+};
 
 const char *cc_advert_name(CcAdvert cc);
 

@@ -24,6 +24,14 @@ extension _CompactWorkspace on _BadgeHomeState {
                   ? null
                   : () => openDesignLibrary(page == 2),
             ),
+          if (badge.connected && badge.battery?.known == true)
+            BatteryIndicator(
+              badge.battery!,
+              // Pages 1-3 add a library button to the app bar.
+              compact:
+                  MediaQuery.sizeOf(context).width <
+                  (page >= 1 && page <= 3 ? 440 : 390),
+            ),
           IconButton(
             tooltip: badge.connected ? 'Refresh settings' : 'Connect',
             onPressed: connecting || scanning || badge.busy

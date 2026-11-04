@@ -11,12 +11,20 @@ angle, lighting, phones, and reader apps. Record decode times and failures.
 Repeat with the assembled Rev A optics; HUB75 screening is not transferable.
 Numerical pass limits still need agreement.
 
+For polarity on Rev A, add `firmware/rev_a_nrf52840/configs/qr-polarity-bench.conf`
+to a Main build. In QR mode a short Action press then switches between
+normal (lit light modules) and inverted (lit dark modules). This is not
+saved. Change brightness from the app, or with Action in another mode.
+
 ## 3. Matrix timing, flicker, and ghosting
 
 - Capture SCK, LAT, BLANK, row select, and LED current. Check row mapping,
   transition blanking, refresh, ghosting, and rolling-shutter artifacts.
 - Repeat under BLE/audio/motion load and during flash operations. Late work
   must extend blanking rather than the illuminated pulse.
+- Halt the CPU mid-scan, reset it, and pull ARM low (debugger write to the
+  P0.06 OUTCLR bit): each must blank at once and the driver must report or
+  recover without a lit row.
 - Stop LAT and measure independent SAFE blanking at room/hot/cold conditions.
   The calculated one-shot range is 0.76–1.41 ms; measure the actual board.
 - With a full row on, measure every TLC output at minimum VLED/battery and

@@ -37,6 +37,14 @@ Measure average and peak current for each mode/brightness, BLE activity, audio,
 uploads, charging-only, and System OFF. Include total input power and conversion
 losses when checking recovery brightness limits.
 
+For a discharge curve, build Main with `configs/battery-log.conf` (bench only).
+After USB is unplugged for 10 s, the badge records SAADC and charger-ADC VBAT,
+mean IBAT, matrix ceiling, temperatures and power flags every 120 s into the
+24 KiB flash reserve, until USB returns or System OFF (about 51 h capacity).
+Keep the display mode and brightness fixed for the run. Read it with
+`python scripts/bench/battery_log.py read --csv <file>` and clear it with
+`... clear`; firmware never erases the log.
+
 ## 9. Thermal
 
 Log cell, board NTC, charger, boost, and driver temperatures during full charge

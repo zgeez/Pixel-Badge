@@ -64,6 +64,37 @@ config APP_MOTION
 	  Bounded particle fluid and gravity orientation on the existing DK IMU.
 	  Sensor-to-panel axis mapping remains a bench calibration dependency.
 
+config APP_MOTION_FIXED_AXES
+	bool "IMU axes fixed by the board"
+	depends on APP_MOTION
+	default y if BOARD_PIXEL_BADGE_REVA
+	help
+	  For an IMU soldered to the board. The sensor-to-panel axes below
+	  replace the axes in the stored motion setting, which then only
+	  carries rotation, response and particle count.
+
+config APP_MOTION_RIGHT_AXIS
+	int "Sensor axis pointing to the panel's right (+X=0 -X=1 +Y=2 -Y=3 +Z=4 -Z=5)"
+	depends on APP_MOTION_FIXED_AXES
+	default 0
+	range 0 5
+
+config APP_MOTION_DOWN_AXIS
+	int "Sensor axis pointing to the panel's bottom (+X=0 -X=1 +Y=2 -Y=3 +Z=4 -Z=5)"
+	depends on APP_MOTION_FIXED_AXES
+	# Rev A board 1 (2026-11-03): with +Y the fluid settled at the top.
+	default 3 if BOARD_PIXEL_BADGE_REVA
+	default 2
+	range 0 5
+
+config APP_QR_POLARITY_BENCH
+	bool "Action button toggles QR polarity (bench)"
+	depends on APP_PROTOTYPE
+	help
+	  QR scan screening on Rev A: in QR mode a short Action press switches
+	  between lit light modules (normal) and lit dark modules (inverted)
+	  instead of stepping the brightness. Not saved; QR starts normal.
+
 config APP_PROTOTYPE
 	bool "Prototype badge application"
 	default y if BOARD_NRF5340DK_NRF5340_CPUAPP || BOARD_PIXEL_BADGE_REVA
@@ -173,6 +204,24 @@ config APP_CHARGE_ICHG_MA
 	  BQ25620 ICHG in 80 mA steps (rounded down). 480 mA for the first
 	  charge; the pack allows up to 1.2 A.
 
+config APP_BATTERY_LOG
+	bool "Bench battery discharge logger"
+	depends on APP_POWER_MANAGER && FLASH_MAP
+	help
+	  Records battery voltage (SAADC and charger ADC), mean battery
+	  current, matrix ceiling, temperatures and power flags into the
+	  flash reserve partition after USB is unplugged, for discharge
+	  characterization. Read and clear it over SWD with
+	  scripts/bench/battery_log.py. Firmware never erases the log.
+
+config APP_BATTERY_LOG_PERIOD_S
+	int "Battery log record period (s)"
+	depends on APP_BATTERY_LOG
+	default 120
+	range 10 3600
+	help
+	  1536 records fit the 24 KiB reserve: about 51 h at 120 s.
+
 config APP_MATRIX_BENCH
 	bool "Rev A matrix bench: button-stepped staged LED tests"
 	depends on APP_BRINGUP_CHECKS && DISPLAY && REVA_MATRIX_OUTPUT
@@ -224,5 +273,14 @@ config APP_BLE
 	  Enabled through the matching sysbuild BLE configuration, which also
 	  builds the network-core radio. One authenticated client; settings are
 	  applied asynchronously and read back before reporting success.
+
+config APP_BLE_PAIRING_BENCH
+	bool "Bench only: pair with the matrix disarmed, passkey in the log"
+	depends on APP_BLE
+	help
+	  For a board whose matrix cannot show the passkey. The ACTION long
+	  press opens the pairing window while the matrix is disarmed, and the
+	  passkey is printed in the debug log. Anyone with the log can pair:
+	  never enable this in a product image.
 
 endmenu

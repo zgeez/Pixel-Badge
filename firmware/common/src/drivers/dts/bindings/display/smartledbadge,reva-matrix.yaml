@@ -6,11 +6,11 @@ properties:
   spi:
     type: phandle
     required: true
-    description: Dedicated Zephyr SPIM3 bus; no chip select, mode 0 at 8 MHz
+    description: Zephyr SPIM3 bus for the diagnostics chain readback; released before the scan drives its pins
   timer:
     type: phandle
     required: true
-    description: Dedicated one-shot TIMER3, not owned by the Bluetooth controller
+    description: Slot TIMER3 sequencing SPI start, LAT and BLANK through PPI; not owned by the Bluetooth controller
   lat-gpios:
     type: phandle-array
     required: true
@@ -26,3 +26,19 @@ properties:
   enable-gpios:
     type: phandle-array
     required: true
+  scan-spim:
+    type: phandle
+    required: true
+    description: SPIM instance driven by PPI for the scan (SPIM2; not owned by a Zephyr driver)
+  plane-timer:
+    type: phandle
+    required: true
+    description: Counter TIMER that stops the slot timer after each plane
+  sck-gpios:
+    type: phandle-array
+    required: true
+    description: Matrix SCK pin, shared with the readback SPI's pinctrl
+  mosi-gpios:
+    type: phandle-array
+    required: true
+    description: Matrix MOSI pin, shared with the readback SPI's pinctrl

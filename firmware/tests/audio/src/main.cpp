@@ -130,28 +130,32 @@ ZTEST(audio, test_recording_overlay_overrides_stale_unavailable_message)
 	zassert_equal(audio_overlay_kind(true, false, false, false), AudioOverlay::kRecording);
 	zassert_equal(audio_overlay_kind(false, false, false, false), AudioOverlay::kNone);
 }
-ZTEST(audio, test_recording_uses_full_spectrum_and_level_view)
+ZTEST(audio, test_recording_view_is_a_level_bar_below_rec)
 {
 	AudioAnalysis analysis;
 	for (auto &band : analysis.bands) {
 		band = 32768;
 	}
 	analysis.rms = 32768;
+	analysis.clipped = 1;
 	Frame frame;
 	render_recording_audio(frame, analysis);
-	for (unsigned band = 0; band < 8; band++) {
-		zassert_true(frame.get(band * 4, 0));
-		zassert_true(frame.get(band * 4, 27));
-	}
+	/* Full level fills rows 13-31, columns 4-27; rows 0-12 stay for REC. */
+	zassert_true(frame.get(4, 31));
+	zassert_true(frame.get(27, 13));
+	zassert_false(frame.get(3, 31));
+	zassert_false(frame.get(28, 31));
 	for (int x = 0; x < 32; x++) {
-		zassert_true(frame.get(x, 30));
-		zassert_true(frame.get(x, 31));
+		for (int y = 0; y < 13; y++) {
+			zassert_false(frame.get(x, y), "pixel %d,%d", x, y);
+		}
 	}
 	render_recording_audio(frame, AudioAnalysis{});
-	zassert_true(frame.get(0, 0));
-	zassert_true(frame.get(31, 0));
-	zassert_false(frame.get(4, 14));
-	zassert_false(frame.get(4, 31));
+	for (int x = 0; x < 32; x++) {
+		for (int y = 0; y < 32; y++) {
+			zassert_false(frame.get(x, y), "pixel %d,%d", x, y);
+		}
+	}
 }
 ZTEST(audio, test_rev_a_capture_profile_and_native_voice_block)
 {

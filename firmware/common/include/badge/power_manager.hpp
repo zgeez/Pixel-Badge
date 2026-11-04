@@ -31,6 +31,18 @@ bool power_display_held();
 
 /* Unloaded VBAT stayed below the lowest-power threshold on battery. */
 bool power_low_battery();
+/* Coarse battery estimate for the app (battery_level.hpp; BLE Battery
+ * characteristic in docs/ble-protocol.md). level is a power::BatteryLevel;
+ * mv is the near-rest reading behind it, 0 before the first one. */
+constexpr uint8_t kBatteryUsb = 1;      /* USB power present */
+constexpr uint8_t kBatteryCharging = 2; /* charger reports a charge phase */
+constexpr uint8_t kBatteryShed = 4;     /* matrix shed or lowest-power state: level empty */
+struct BatteryReport {
+	uint8_t level;
+	uint8_t flags;
+	uint16_t mv;
+};
+BatteryReport power_battery_report();
 
 /* Charging-only state: puts the IMU to sleep (retry until 0); the matrix,
  * microphone, NFC I2C side and Bluetooth are never started in that state. */

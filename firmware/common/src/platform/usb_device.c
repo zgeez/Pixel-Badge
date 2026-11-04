@@ -12,6 +12,8 @@
 
 #include <errno.h>
 #include <hal/nrf_power.h>
+#include <hal/nrf_usbd.h>
+#include <nrfx_power.h>
 #include <zephyr/device.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/sys/atomic.h>
@@ -125,6 +127,33 @@ int badge_usb_start(struct k_sem *event)
 	return 0;
 }
 
+/*
+ * The nRF USB driver connects the D+ pull-up only on the POWER USBPWRRDY
+ * event. When VBUS is already present at power-on that event is not delivered
+ * (Rev A board 2: USBD enabled, USB regulator ready, USBPULLUP 0, no
+ * enumeration), so the host never sees the badge and the input limit stays at
+ * 100 mA. Replay the event through the driver's own registered handler once the
+ * regulator reports ready. A real event arriving later repeats the same
+ * register writes, which is harmless.
+ */
+static void replay_missed_power_ready(void)
+{
+	if (!nrf_power_usbregstatus_vbusdet_get(NRF_POWER) ||
+	    !nrf_power_usbregstatus_outrdy_get(NRF_POWER) || nrf_usbd_pullup_check(NRF_USBD)) {
+		return;
+	}
+	nrfx_power_usb_event_handler_t handler = nrfx_power_usb_handler_get();
+
+	if (handler == NULL) {
+		return;
+	}
+	LOG_INF("USB power-ready event missed; replaying");
+	const unsigned int key = irq_lock();
+
+	handler(NRFX_POWER_USB_EVT_READY);
+	irq_unlock(key);
+}
+
 void badge_usb_poll(bool detection_done)
 {
 	if (atomic_get(&vbus) == 0 || atomic_get(&enabled) != 0) {
@@ -140,6 +169,9 @@ void badge_usb_poll(bool detection_done)
 	if (err == 0 || err == -EALREADY) {
 		atomic_set(&enabled, 1);
 		atomic_clear(&enable_fail_since);
+		if (err == 0) {
+			replay_missed_power_ready();
+		}
 		return;
 	}
 	if (atomic_get(&enable_fail_since) == 0) {

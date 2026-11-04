@@ -56,7 +56,7 @@ Two seconds later the checks run once, in this order, and end with a count.
 | `Charger: FAIL, configuration write; retrying` | Absent | Present: register writes fail; check I2C before any charge test |
 | `USB: FAIL, device start (err)` | Absent | Present: the USB stack did not start; with USB attached the manager reports unhealthy |
 | `Power: VBAT N mV via divider (expect pack voltage, or ~0 with no pack)` | No pack: about 0. With a pack: compare with a meter at the pack and record the difference | A large difference: divider values or SAADC setup |
-| `Power: VLED N mV (LED rail is off at start: expect ~0)` | About 0 | `Power: FAIL, VLED N mV while LED_EN is low; matrix held off`: the LED rail is on while disabled. Stop: power section failure |
+| `Power: VLED N mV (LED rail is off at start: expect ~0)` | About 0 | `Power: VLED N mV while LED_EN is low; matrix held until it drains`: normal shortly after a reset that interrupted a lit matrix; expect `Power: VLED drained to N mV after N ms; matrix released`. `Power: FAIL, VLED N mV while LED_EN is low; matrix held off` (still present 60 s after boot): the LED rail is on while disabled. Stop: power section failure |
 | `Power manager started: N failed checks; charging disabled in this image` | `0 failed checks` | Any failure: find the matching FAIL line above |
 
 **Matrix, outputs off**
@@ -117,7 +117,7 @@ The status LED blinks while the image runs.
 | Unplug the pack while charging | Within 30 s: `NO PACK` and `Charger: charging off (...)` | Charging stays on |
 
 Every reason charging is held off is logged once as `Charger: charging off
-(<reason>)`. Reasons include `no VBUS`, `charger fault`, `TS not normal`,
+(<reason>)`. Reasons include `no VBUS`, `charger fault`, `TS zone blocks charging` (cold, cool, warm, hot or bias fault; precool and prewarm charge),
 `TS thresholds not set`, `board above 38 C (cell charge limit 40 C)`,
 `ICHG readback mismatch`, `VREG not 4200 mV`,
 `input limit not at policy`, `VBAT out of range / no pack`,

@@ -23,8 +23,8 @@
       Diagnostics  Rev A bring-up checks, no BLE (build/reva-diagnostics)
       Main         Rev A badge firmware (build/rev_a_nrf52840)
     Add-ons stay explicit -ExtraConfFile fragments: matrix-stepper.conf and
-    diagnostics-charge.conf on Diagnostics, matrix-bench.conf and
-    recording-bench.conf on Main, audio-recording-bench.conf on Prototype.
+    diagnostics-charge.conf on Diagnostics, matrix-bench.conf,
+    charge-bench.conf and recording-bench.conf on Main, audio-recording-bench.conf on Prototype.
 
     recover, flash and rtt use a J-Link probe (the nRF5340 DK's debugger, see
     docs/bringup.md) and refuse to act unless the probe identifies the chip the

@@ -16,6 +16,8 @@ work and no allocation. This is a visual effect rather than a FLIP/PIC solver.
 
 The app exposes rotation, response, and particle count. It preserves the
 configured sensor-axis mapping; mount the loose IMU consistently with that map.
+On Rev A the IMU is soldered, so firmware fixes the axes (`APP_MOTION_FIXED_AXES`:
++X right, -Y down) and ignores the axes in the stored setting.
 Settings persist and work without the phone.
 
 ## Try it

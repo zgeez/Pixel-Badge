@@ -1,8 +1,9 @@
 # Validation
 
-The repository includes host tests, phone/DK checks, and measured DK scan timing.
-**Rev A board measurements are pending.** A passing build or prototype test
-does not establish electrical safety or performance on the custom PCB.
+The repository includes host tests, phone/DK checks, measured DK scan timing,
+and the first Rev A bring-up. A passing build or prototype test does not
+establish electrical safety or performance on the custom PCB; the Rev A record
+states what was and was not measured.
 
 ## Evidence
 
@@ -15,6 +16,7 @@ does not establish electrical safety or performance on the custom PCB.
 | Audio and motion | [Audio software](../validation/results/2026-10-14-p3-audio-start/README.md), [motion software](../validation/results/2026-10-15-dk-p4-motion/README.md) | Software/deployment records; physical acceptance remains scoped in each report |
 | App and artwork | [UI review](../validation/results/2026-10-17-app-visual-cleanup/README.md), [transfer checks](../validation/results/2026-10-17-editor-transfer/README.md) | Phone screenshots, tests, and a measured readback |
 | nRF52840 | [Pro Micro bench](../validation/results/2026-10-18-promicro-bench/README.md), [Rev A port](../validation/results/2026-10-18-rev-a-port/README.md) | Bare-board BLE/settings checks and Rev A builds; no Rev A peripheral measurements |
+| Rev A boards | [Bring-up](../validation/results/2026-11-03-rev-a-bringup/README.md) | Two boards: diagnostics, assembly fault, hardware scan, charging, one discharge run, BLE/NFC/recording function; ranges, thermals and System OFF pending |
 
 All dated records are under [validation/results/](../validation/results/).
 They describe the image and setup tested then, including failed and incomplete

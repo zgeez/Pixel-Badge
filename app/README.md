@@ -9,7 +9,7 @@ iOS packaging and recording support are not implemented.
 
 | Page | Controls |
 |---|---|
-| Badge | Connect, brightness, mode, display rotation, and motion settings |
+| Badge | Connect, brightness, mode, display rotation, and motion settings; the app bar shows the badge's battery level in words (tap for details) |
 | Links | Saved short URLs; apply a shared QR/NFC destination and check synchronization |
 | Text | Compose, preview, align, scroll, or bounce lines; save local drafts |
 | Studio | Draw on a 32 × 32 grayscale canvas; edit animation and import images/GIFs/video |

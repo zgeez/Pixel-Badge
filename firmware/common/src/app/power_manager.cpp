@@ -21,6 +21,10 @@
 
 #if defined(CONFIG_APP_POWER_MANAGER)
 
+#include "badge/battery_level.hpp"
+#if defined(CONFIG_APP_BATTERY_LOG)
+#include "badge/battery_log.hpp"
+#endif
 #include "badge/bq25620.hpp"
 #include "badge/nfc_platform.hpp"
 #include "badge/power_policy.hpp"
@@ -126,7 +130,8 @@ bool charger_present;
 bool vled_checked;      /* VLED read with the rail off at least once this boot */
 bool hiz_confirmed;     /* EN_HIZ known set: a set_hiz(true) succeeded since */
 bool hiz_pending;       /* HIZ wanted (host suspended) but not confirmed */
-bool vled_fault;        /* VLED present with LED_EN low at start: matrix held for this boot */
+bool vled_draining;     /* VLED still charged from before a reset: rechecked until it drains */
+bool vled_fault;        /* VLED present with LED_EN low after the drain time: held this boot */
 bool configure_pending; /* configure_charger() failed: retried every 240 ms */
 bool charging;
 int input_limit_ma = -1;
@@ -142,6 +147,7 @@ power::LoadShedPolicy policy;
 atomic_t heartbeat;
 atomic_t switch_state = ATOMIC_INIT(-1);
 atomic_t low_battery;
+atomic_t battery_report; /* power_battery_report() packed: mv << 16 | flags << 8 | level */
 #if defined(CONFIG_APP_LOAD_SHED)
 atomic_t held = ATOMIC_INIT(1); /* LED rail held off: no reading yet */
 #endif
@@ -454,8 +460,8 @@ bool charge_gates_pass(const ChargerState &s, const Rails &r, int policy_limit, 
 		reason = "no VBUS";
 	} else if (chg::any_fault(s.fault0)) {
 		reason = "charger fault";
-	} else if (chg::ts_stat(s.fault0) != 0) {
-		reason = "TS not normal";
+	} else if (!chg::ts_allows_charge(chg::ts_stat(s.fault0))) {
+		reason = "TS zone blocks charging";
 	} else if (chg::get_th456(s.ntc1) != kTh456Code) {
 		reason = "TS thresholds not set";
 	} else if (board_too_warm) {
@@ -633,7 +639,8 @@ const char *shed_state_name(power::ShedState state)
 uint8_t apply_ceiling();
 
 /* VLED must read near 0 V with LED_EN low before the matrix may run: a rail
- * that cannot be switched off cannot be shed. Retried until a reading succeeds. */
+ * that cannot be switched off cannot be shed. Retried until a reading succeeds
+ * and, after a quick reset, until the rail has drained. */
 void check_vled_off()
 {
 	int pin = 0;
@@ -642,11 +649,29 @@ void check_vled_off()
 		return;
 	}
 	const int vled_mv = power::vled_from_pin_mv(pin);
+	const uint32_t now = k_uptime_get_32();
 
-	vled_checked = true;
-	if (vled_mv > 500) {
+	switch (power::vled_off_verdict(vled_mv, now)) {
+	case power::VledOff::kOff:
+		if (vled_draining) {
+			LOG_INF("Power: VLED drained to %d mV after %u ms; matrix released",
+				vled_mv, static_cast<unsigned>(now));
+		}
+		vled_checked = true;
+		break;
+	case power::VledOff::kDraining:
+		if (!vled_draining) {
+			LOG_WRN("Power: VLED %d mV while LED_EN is low; matrix held until it "
+				"drains",
+				vled_mv);
+			vled_draining = true;
+		}
+		break;
+	case power::VledOff::kStuck:
 		LOG_ERR("Power: FAIL, VLED %d mV while LED_EN is low; matrix held off", vled_mv);
+		vled_checked = true;
 		vled_fault = true;
+		break;
 	}
 	(void)apply_ceiling();
 }
@@ -660,6 +685,41 @@ uint8_t apply_ceiling()
 	atomic_set(&held, ceiling == 0 ? 1 : 0);
 #endif
 	return ceiling;
+}
+
+/* Battery estimate for the app: fed only with near-rest voltages (divider
+ * samples while CHG_EN is low, pack probes under 30 mA while charging). */
+power::BatteryLevel battery_level = power::BatteryLevel::kUnknown;
+int battery_mv;
+bool battery_usb;
+bool battery_charging; /* CHG_EN high and the charger reports a charge phase */
+power::ChargingReport charging_report;
+#if defined(CONFIG_APP_BATTERY_LOG)
+battery_log::Input log_input{0, false, false, false, false, false, -1, -1, false, 0, 0, 0, 0};
+int log_saadc_mv = -1;
+bool log_loaded;
+#endif
+
+void publish_battery()
+{
+	const bool shed = policy.low_power() || policy.state() == power::ShedState::kShed;
+	const power::BatteryLevel level = shed && battery_level != power::BatteryLevel::kUnknown
+						  ? power::BatteryLevel::kEmpty
+						  : battery_level;
+	const uint32_t flags = (battery_usb ? kBatteryUsb : 0U) |
+			       (battery_charging ? kBatteryCharging : 0U) |
+			       (shed ? kBatteryShed : 0U);
+
+	atomic_set(&battery_report,
+		   static_cast<atomic_val_t>(static_cast<uint32_t>(battery_mv) << 16 | flags << 8 |
+					     static_cast<uint32_t>(level)));
+}
+
+void rest_reading(int mv)
+{
+	battery_level = power::next_battery_level(mv, battery_level);
+	battery_mv = mv;
+	publish_battery();
 }
 
 /* One VBAT reading into the load-shed policy; the driver enforces its ceiling. */
@@ -811,6 +871,7 @@ void power_thread(void *, void *, void *)
 	bool vbat_busy = false, vbat_loaded = false, probing = false, pack_ok = false,
 	     probed = false;
 	int policy_limit = 100;
+	power::InputLimitFilter input_filter; /* raises only once a higher limit holds */
 	uint8_t last_vbus_stat = 0xFF;
 	int sw_candidate = -1;
 	unsigned sw_stable = 0;
@@ -936,8 +997,10 @@ void power_thread(void *, void *, void *)
 
 				/* 500 mA only once a host has configured the badge; a
 				 * CDP counts as an SDP. */
-				policy_limit = power::input_limit_ma(cc, chg::vbus_stat(status1),
-								     usb_host());
+				policy_limit = input_filter.update(
+					power::input_limit_ma(cc, chg::vbus_stat(status1),
+							      usb_host()),
+					k_uptime_get_32());
 				if (enforce_input_limit(policy_limit) != 0) {
 					set_charging(false, "input limit access failed");
 				}
@@ -995,6 +1058,19 @@ void power_thread(void *, void *, void *)
 			sample.input_limit_ma = hiz_maybe() ? -1 : input_limit_ma;
 			sample.now_ms = k_uptime_get_32();
 			apply_policy(sample);
+			battery_usb = sample.usb_present;
+#if defined(CONFIG_APP_BATTERY_LOG)
+			if (sample.valid) {
+				log_saadc_mv = sample.vbat_mv;
+				log_loaded = sample.loaded;
+			}
+#endif
+			/* Charge current lifts the reading: the pack probe stands in. */
+			if (sample.valid && !charging) {
+				rest_reading(sample.vbat_mv);
+			} else {
+				publish_battery();
+			}
 		}
 
 		/* ---- pack-presence probe ---- */
@@ -1015,6 +1091,9 @@ void power_thread(void *, void *, void *)
 			} else {
 				pack_ok = mv >= 3000;
 				probed = true;
+				if (pack_ok && mv <= kVbatMaxMv) {
+					rest_reading(mv);
+				}
 				LOG_INF("Charger: pack probe %d mV under 30 mA discharge: %s", mv,
 					pack_ok ? "pack present" : "NO PACK");
 			}
@@ -1109,6 +1188,25 @@ void power_thread(void *, void *, void *)
 					r.vled_mv = power::vled_from_pin_mv(pin);
 				}
 			}
+			battery_charging =
+				charging_report.update(charging && chg::chg_stat(s.status1) != 0,
+						       battery_usb, k_uptime_get_32());
+#if defined(CONFIG_APP_BATTERY_LOG)
+			log_input = {k_uptime_get_32(),
+				     battery_usb,
+				     battery_charging,
+				     log_loaded,
+				     policy.state() == power::ShedState::kShed,
+				     policy.low_power(),
+				     log_saadc_mv,
+				     s.fresh ? s.vbat_mv : -1,
+				     s.fresh && s.ibat_valid,
+				     s.ibat_ma,
+				     s.tdie_decic,
+				     s.ts_permille,
+				     policy.ceiling()};
+			battery_log::tick(log_input);
+#endif
 			if (!verbose) {
 				/* Product: the status LED shows charging in progress. */
 				(void)gpio_pin_set_dt(&status_led,
@@ -1278,6 +1376,14 @@ bool power_low_battery()
 	return atomic_get(&low_battery) != 0;
 }
 
+BatteryReport power_battery_report()
+{
+	const uint32_t packed = static_cast<uint32_t>(atomic_get(&battery_report));
+
+	return {static_cast<uint8_t>(packed), static_cast<uint8_t>(packed >> 8),
+		static_cast<uint16_t>(packed >> 16)};
+}
+
 int power_enter_charging_only()
 {
 	return sleep_imu();
@@ -1381,6 +1487,10 @@ void power_enter_off()
 		k_sem_take(&stopped, K_FOREVER);
 	}
 	/* The manager thread is parked: this context owns the pins and charger. */
+#if defined(CONFIG_APP_BATTERY_LOG)
+	log_input.now_ms = k_uptime_get_32();
+	battery_log::close(log_input);
+#endif
 	set_charging(false, "entering System OFF");
 	(void)gpio_pin_set_dt(&vbat_meas_en, 0);
 	(void)set_force_discharge(false);

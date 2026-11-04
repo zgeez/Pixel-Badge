@@ -16,6 +16,8 @@ MAGIC = 0x424E4643
 PROOF_VERSION = 3
 MAILBOX_VERSION = 4
 PACKAGE = "dev.badge.nfc"
+# J-Link device per board; the mailbox magic and version still guard the image.
+TARGETS = {"prototype": "NRF5340_XXAA_APP", "rev-a": "NRF52840_XXAA"}
 
 
 class NfcOperationError(RuntimeError):
@@ -249,6 +251,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("action", choices=["status", "sync", "set-url", "configure", "provision"])
     parser.add_argument("--elf", default="build/nfc-provisioning/nrf5340_prototype/zephyr/zephyr.elf")
+    parser.add_argument("--target", choices=sorted(TARGETS), default="prototype",
+                        help="prototype: nRF5340 DK application core; rev-a: E73 nRF52840")
     parser.add_argument("--jlink-serial", type=int)
     parser.add_argument("--url")
     parser.add_argument("--android-serial")
@@ -264,7 +268,7 @@ def main():
         with pylink.JLink(log=None, detailed_log=None, error=None, warn=None) as link:
             link.open(serial_no=args.jlink_serial)
             link.set_tif(pylink.enums.JLinkInterfaces.SWD)
-            link.connect("NRF5340_XXAA_APP", speed=1000)
+            link.connect(TARGETS[args.target], speed=1000)
             mailbox = Mailbox(link, elf_mailbox(args.elf))
             if args.action == "configure":
                 configure(mailbox)

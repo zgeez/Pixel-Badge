@@ -12,6 +12,9 @@
 #if defined(CONFIG_APP_AUDIO)
 #include "badge/audio_runtime.hpp"
 #endif
+#if defined(CONFIG_APP_POWER_MANAGER)
+#include "badge/power_manager.hpp"
+#endif
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/conn.h>
 #include <zephyr/bluetooth/gatt.h>
@@ -41,6 +44,7 @@ bt_uuid_128 artwork_uuid = BT_UUID_INIT_128(BADGE_UUID(10));
 bt_uuid_128 nfc_uuid = BT_UUID_INIT_128(BADGE_UUID(11));
 bt_uuid_128 motion_uuid = BT_UUID_INIT_128(BADGE_UUID(12));
 bt_uuid_128 motion_status_uuid = BT_UUID_INIT_128(BADGE_UUID(13));
+bt_uuid_128 battery_uuid = BT_UUID_INIT_128(BADGE_UUID(14));
 K_MUTEX_DEFINE(ble_mutex);
 K_SEM_DEFINE(ble_started, 0, 1);
 K_SEM_DEFINE(main_requested, 0, 1);
@@ -51,7 +55,7 @@ Settings snapshot = kDefaultSettings;
 uint32_t snapshot_art_crc;
 Mode active_mode = Mode::kQr;
 bt_conn *connection;
-bool writable, enabled, job_active;
+bool writable, stageable, enabled, job_active;
 uint64_t pairing_deadline;
 bool passkey_visible;
 uint32_t displayed_passkey;
@@ -94,6 +98,10 @@ int stage_art(void *, uint32_t offset, uint32_t total, const uint8_t *bytes, siz
 	k_sem_give(&artwork_requested);
 	k_sem_take(&artwork_completed, K_FOREVER);
 	*view = art_fragment.view;
+	if (art_fragment.result != 0) {
+		LOG_WRN("BLE artwork fragment at %u of %u rejected (%d)", offset, total,
+			art_fragment.result);
+	}
 	return art_fragment.result;
 }
 
@@ -215,7 +223,7 @@ ssize_t stage_setting(bt_conn *conn, const bt_gatt_attr *attr, const void *buf, 
 		return !allowed ? att_error(-EACCES) : selected ? len : att_error(-EINVAL);
 	}
 	if (field == Field::kArtwork) {
-		if (!secure(conn) || connection != conn || !writable || passkey_visible ||
+		if (!secure(conn) || connection != conn || !stageable || passkey_visible ||
 		    job_active) {
 			k_mutex_unlock(&ble_mutex);
 			return att_error(-EACCES);
@@ -242,8 +250,8 @@ ssize_t stage_setting(bt_conn *conn, const bt_gatt_attr *attr, const void *buf, 
 	}
 	const int rc = job_active ? -EBUSY
 				  : protocol.stage(field, static_cast<const uint8_t *>(buf), len,
-						   secure(conn) && connection == conn && writable &&
-							   !passkey_visible);
+						   secure(conn) && connection == conn &&
+							   stageable && !passkey_visible);
 	if (field == Field::kArtwork && rc != 0) {
 		atomic_clear(&artwork_uploading);
 	}
@@ -312,6 +320,24 @@ ssize_t read_motion_status(bt_conn *conn, const bt_gatt_attr *attr, void *buf, u
 #endif
 	return bt_gatt_attr_read(conn, attr, buf, len, offset, data, sizeof(data));
 }
+/* [version 1, level, flags, 0, mv:u16le]; level 0 (unknown) without a
+ * power manager, as on the DK. */
+ssize_t read_battery(bt_conn *conn, const bt_gatt_attr *attr, void *buf, uint16_t len,
+		     uint16_t offset)
+{
+	if (!secure(conn)) {
+		return att_error(-EACCES);
+	}
+	uint8_t data[6] = {1};
+#if defined(CONFIG_APP_POWER_MANAGER)
+	const BatteryReport report = power_battery_report();
+
+	data[1] = report.level;
+	data[2] = report.flags;
+	sys_put_le16(report.mv, &data[4]);
+#endif
+	return bt_gatt_attr_read(conn, attr, buf, len, offset, data, sizeof(data));
+}
 bt_gatt_ccc_managed_user_data status_ccc{};
 constexpr uint16_t read_permission = BT_GATT_PERM_READ_AUTHEN | BT_GATT_PERM_READ_LESC;
 constexpr uint16_t write_permission = BT_GATT_PERM_WRITE_AUTHEN | BT_GATT_PERM_WRITE_LESC;
@@ -343,7 +369,9 @@ BT_GATT_SERVICE_DEFINE(badge_service, BT_GATT_PRIMARY_SERVICE(&service_uuid),
 		       SETTING_CHARACTERISTIC(motion_uuid, Field::kMotion),
 		       BT_GATT_CHARACTERISTIC(&motion_status_uuid.uuid, BT_GATT_CHRC_READ,
 					      read_permission, read_motion_status, nullptr,
-					      nullptr));
+					      nullptr),
+		       BT_GATT_CHARACTERISTIC(&battery_uuid.uuid, BT_GATT_CHRC_READ,
+					      read_permission, read_battery, nullptr, nullptr));
 #pragma GCC diagnostic pop
 
 void notify_status(k_work *)
@@ -431,8 +459,13 @@ void security_changed(bt_conn *conn, bt_security_t level, bt_security_err error)
 	}
 }
 bt_conn_cb connection_callbacks{};
-bt_security_err pairing_accept(bt_conn *, const bt_conn_pairing_feat *const)
+bt_security_err pairing_accept(bt_conn *, const bt_conn_pairing_feat *const feat)
 {
+	if (IS_ENABLED(CONFIG_APP_BLE_PAIRING_BENCH)) {
+		LOG_WRN("BLE bench pairing request: io %u oob %u auth 0x%02x key %u",
+			feat->io_capability, feat->oob_data_flag, feat->auth_req,
+			feat->max_enc_key_size);
+	}
 	k_mutex_lock(&ble_mutex, K_FOREVER);
 	bool allowed =
 		writable && !job_active && pairing_deadline > static_cast<uint64_t>(k_uptime_get());
@@ -452,6 +485,9 @@ void passkey_display(bt_conn *conn, unsigned key)
 	displayed_passkey = key;
 	passkey_visible = allowed;
 	k_mutex_unlock(&ble_mutex);
+	if (IS_ENABLED(CONFIG_APP_BLE_PAIRING_BENCH) && allowed) {
+		LOG_WRN("BLE bench passkey: %06u", key);
+	}
 	if (!allowed) {
 		bt_conn_auth_cancel(conn);
 		bt_conn_disconnect(conn, BT_HCI_ERR_AUTH_FAIL);
@@ -596,12 +632,13 @@ bool ble_artwork_busy()
 	return atomic_get(&artwork_uploading) != 0 || atomic_get(&artwork_applying) != 0;
 }
 
-void poll_ble(const Settings &settings, Modes &modes, bool allow_writes, ApplyConfig apply,
-	      void *context)
+void poll_ble(const Settings &settings, Modes &modes, bool allow_writes, bool allow_staging,
+	      ApplyConfig apply, void *context)
 {
 	const bool requested = k_sem_take(&main_requested, K_NO_WAIT) == 0;
 	k_mutex_lock(&ble_mutex, K_FOREVER);
 	writable = allow_writes;
+	stageable = allow_writes || allow_staging;
 	if (artwork_upload_deadline <= k_uptime_get()) {
 		atomic_clear(&artwork_uploading);
 	}
@@ -627,6 +664,10 @@ void poll_ble(const Settings &settings, Modes &modes, bool allow_writes, ApplyCo
 	if (requested && main_result == 0 && main_command.field != Field::kUrl &&
 	    main_command.field != kNfcSyncField) {
 		main_result = current && allow_writes ? apply(context, main_command) : -ECANCELED;
+	}
+	if (requested && main_result != 0) {
+		LOG_WRN("BLE change to field %u rejected (%d)",
+			static_cast<unsigned>(main_command.field), main_result);
 	}
 	k_mutex_lock(&ble_mutex, K_FOREVER);
 	/* settings references the live main-owned values, including apply() changes. */

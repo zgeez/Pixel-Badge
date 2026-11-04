@@ -1,4 +1,6 @@
 /* SPDX-License-Identifier: MIT */
+#include "badge/battery_level.hpp"
+#include "badge/battery_log.hpp"
 #include "badge/bq25620.hpp"
 #include "badge/power_sense.hpp"
 #include <zephyr/ztest.h>
@@ -76,6 +78,18 @@ ZTEST(power, test_status_fields)
 	zassert_equal(strcmp(chg::ts_stat_name(0), "normal"), 0);
 }
 
+ZTEST(power, test_ts_zones)
+{
+	/* Board 1 at about 26 degC read TS 48.6 % and TS_STAT prewarm (0x06). */
+	zassert_true(chg::ts_allows_charge(chg::ts_stat(0x06)), "prewarm");
+	zassert_true(chg::ts_allows_charge(0), "normal");
+	zassert_true(chg::ts_allows_charge(5), "precool");
+	const uint8_t blocked[] = {1, 2, 3, 4, 7}; /* cold, hot, cool, warm, bias fault */
+	for (uint8_t zone : blocked) {
+		zassert_false(chg::ts_allows_charge(zone), "zone %u", zone);
+	}
+}
+
 ZTEST(power, test_sense_scaling)
 {
 	zassert_equal(power::vbat_from_pin_mv(2100), 4200);
@@ -83,6 +97,133 @@ ZTEST(power, test_sense_scaling)
 	zassert_within(power::vled_from_pin_mv(110), 4790, 5);
 	/* CC: 12/112. 0.746 V at CC -> 80 mV at the pin. */
 	zassert_within(power::cc_from_pin_mv(80), 746, 1);
+}
+
+ZTEST(power, test_vled_off_verdict)
+{
+	using power::VledOff;
+	zassert_equal(power::vled_off_verdict(0, 100), VledOff::kOff);
+	zassert_equal(power::vled_off_verdict(power::kVledOffMv, 100), VledOff::kOff);
+	/* Still charged just after a quick reset (board 1: 958-2264 mV). */
+	zassert_equal(power::vled_off_verdict(2264, 110), VledOff::kDraining);
+	zassert_equal(power::vled_off_verdict(501, power::kVledDrainMs - 1), VledOff::kDraining);
+	/* Drained late is still a pass; present after the drain time is not. */
+	zassert_equal(power::vled_off_verdict(300, power::kVledDrainMs + 5000), VledOff::kOff);
+	zassert_equal(power::vled_off_verdict(501, power::kVledDrainMs), VledOff::kStuck);
+	zassert_equal(power::vled_off_verdict(4790, 120000), VledOff::kStuck);
+}
+
+ZTEST(power, test_battery_level)
+{
+	using power::BatteryLevel;
+	using power::next_battery_level;
+	zassert_equal(power::battery_band(4200), BatteryLevel::kFull);
+	zassert_equal(power::battery_band(power::kLevelFullMv - 1), BatteryLevel::kHigh);
+	zassert_equal(power::battery_band(3800), BatteryLevel::kHigh);
+	zassert_equal(power::battery_band(3600), BatteryLevel::kHalf);
+	zassert_equal(power::battery_band(3500), BatteryLevel::kLow);
+	zassert_equal(power::battery_band(3450), BatteryLevel::kEmpty);
+	/* The first reading sets the level directly. */
+	zassert_equal(next_battery_level(3800, BatteryLevel::kUnknown), BatteryLevel::kHigh);
+	/* Just past an edge, either way, keeps the shown level. */
+	zassert_equal(next_battery_level(3700, BatteryLevel::kHalf), BatteryLevel::kHalf);
+	zassert_equal(next_battery_level(3680, BatteryLevel::kHigh), BatteryLevel::kHigh);
+	/* Past the edge by the hysteresis, it moves. */
+	zassert_equal(next_battery_level(3720, BatteryLevel::kHalf), BatteryLevel::kHigh);
+	zassert_equal(next_battery_level(3659, BatteryLevel::kHigh), BatteryLevel::kHalf);
+	/* A large step (charger attached, pack replaced) moves several bands. */
+	zassert_equal(next_battery_level(4180, BatteryLevel::kLow), BatteryLevel::kFull);
+	zassert_equal(next_battery_level(3400, BatteryLevel::kFull), BatteryLevel::kEmpty);
+}
+
+ZTEST(power, test_battery_log_record)
+{
+	namespace blog = badge::battery_log;
+	const blog::Record in{86399, 3987, 3992, -142, 255, blog::kLoaded | blog::kStart, -51, 512};
+	uint8_t bytes[blog::kRecordSize];
+
+	blog::encode(in, bytes);
+	/* Little-endian words: seconds 0x0001517F, IBAT -142 = 0xFF72. */
+	zassert_equal(bytes[0], 0x7F);
+	zassert_equal(bytes[2], 0x01);
+	zassert_equal(bytes[8], 0x72);
+	zassert_equal(bytes[9], 0xFF);
+	zassert_false(blog::erased(bytes));
+	const blog::Record out = blog::decode(bytes);
+	zassert_equal(out.seconds, in.seconds);
+	zassert_equal(out.saadc_mv, in.saadc_mv);
+	zassert_equal(out.charger_mv, in.charger_mv);
+	zassert_equal(out.ibat_ma, in.ibat_ma);
+	zassert_equal(out.ceiling, in.ceiling);
+	zassert_equal(out.flags, in.flags);
+	zassert_equal(out.tdie_decic, in.tdie_decic);
+	zassert_equal(out.ts_permille, in.ts_permille);
+	memset(bytes, 0xFF, sizeof(bytes));
+	zassert_true(blog::erased(bytes));
+	zassert_equal(blog::mean_ma(-1000, 7), -142);
+	zassert_equal(blog::mean_ma(500, 0), 0);
+}
+
+ZTEST(power, test_battery_log_boot)
+{
+	namespace blog = badge::battery_log;
+	using blog::Boot;
+	/* Empty log, closed session or full log: wait for an unplug. */
+	zassert_equal(blog::boot_action(false, 0, false, false), Boot::kIdle);
+	zassert_equal(blog::boot_action(true, blog::kEnd, false, false), Boot::kIdle);
+	zassert_equal(blog::boot_action(true, 0, true, false), Boot::kIdle);
+	/* Reset mid-session: resume on battery, close if USB is back. */
+	zassert_equal(blog::boot_action(true, blog::kLoaded, false, false), Boot::kResume);
+	zassert_equal(blog::boot_action(true, blog::kStart, false, true), Boot::kClose);
+}
+
+ZTEST(power, test_battery_log_close_keeps_time)
+{
+	namespace blog = badge::battery_log;
+	/* The boot-time end record repeats the last recorded time, also when
+	 * the new uptime is shorter than the session. */
+	const uint32_t now = 250;
+	const uint32_t base = blog::close_base_ms(now, 3600);
+	zassert_equal((now - base) / 1000U, 3600U);
+	zassert_equal((now - blog::close_base_ms(now, 0)) / 1000U, 0U);
+}
+
+ZTEST(power, test_charging_report_holds_through_probe)
+{
+	power::ChargingReport report;
+	zassert_false(report.update(false, true, 0));
+	zassert_true(report.update(true, true, 1000));
+	/* A half-second probe pause keeps showing charging. */
+	zassert_true(report.update(false, true, 1500));
+	zassert_true(report.update(true, true, 1600));
+	/* A real stop shows once it has lasted the hold time. */
+	zassert_true(report.update(false, true, 3599));
+	zassert_false(report.update(false, true, 3600));
+	/* Unplugging shows at once. */
+	zassert_true(report.update(true, true, 5000));
+	zassert_false(report.update(true, false, 5100));
+}
+
+ZTEST(power, test_input_limit_filter)
+{
+	power::InputLimitFilter filter;
+	/* Attach transient seen on board 1: 1500/500 alternating every 20 ms. */
+	uint32_t t = 0;
+	zassert_equal(filter.update(500, t), 100);
+	for (int i = 0; i < 6; ++i) {
+		zassert_true(filter.update(i % 2 ? 500 : 1500, t += 20) <= 500);
+	}
+	/* 500 mA (host configured) held 200 ms applies. */
+	zassert_equal(filter.update(500, t += 20), 100);
+	zassert_equal(filter.update(500, t += 100), 100);
+	zassert_equal(filter.update(500, t += 100), 500);
+	/* A DCP must hold too; a brief 1500 never applies. */
+	zassert_equal(filter.update(1500, t += 20), 500);
+	zassert_equal(filter.update(500, t += 20), 500);
+	zassert_equal(filter.update(1500, t += 20), 500);
+	zassert_equal(filter.update(1500, t += power::kInputRaiseHoldMs), 1500);
+	/* Lowering is immediate (unplug, or the source lowers its CC level). */
+	zassert_equal(filter.update(100, t += 20), 100);
 }
 
 /* TS as a fraction of REGN for the board NTC network at t degC. */

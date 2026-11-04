@@ -41,6 +41,10 @@ namespace
 {
 const gpio_dt_spec buttons[] = {GPIO_DT_SPEC_GET(DT_ALIAS(sw0), gpios),
 				GPIO_DT_SPEC_GET(DT_ALIAS(sw1), gpios)};
+/* Visibility needs two completed scans after a frame swap. The Rev A scan
+ * runs at about 30 frames/s (slower at high brightness), so two scans can
+ * take over 60 ms; the wait returns as soon as they complete. */
+constexpr unsigned kVisibleTimeoutMs = 250;
 // Single main-loop owner. Bounded settings/particles live in BSS, not on its stack.
 Modes modes;
 SettingsService prototype_settings, prototype_candidate;
@@ -56,8 +60,17 @@ int present(const device *display, const Frame &frame)
 	descriptor.buf_size = frame.grayscale ? sizeof(frame.levels) : sizeof(frame.bytes);
 	descriptor.width = descriptor.pitch = kMatrixSize;
 	descriptor.height = kMatrixSize;
-	return display_write(display, 0, 0, &descriptor,
-			     frame.grayscale ? frame.levels : frame.bytes);
+	/* -EBUSY: the previous frame still waits for its swap at the next scan
+	 * start. Wait for it instead of treating it as a display fault, so
+	 * rendering is paced by the scan. */
+	const int64_t deadline = k_uptime_get() + kVisibleTimeoutMs;
+	int rc;
+	while ((rc = display_write(display, 0, 0, &descriptor,
+				   frame.grayscale ? frame.levels : frame.bytes)) == -EBUSY &&
+	       k_uptime_get() < deadline) {
+		k_msleep(1);
+	}
+	return rc;
 }
 
 int initialize_display(const device *display, const Frame &frame, uint8_t brightness)
@@ -213,6 +226,9 @@ void run_prototype()
 	const bool display_disarmed = IS_ENABLED(CONFIG_REVA_MATRIX) &&
 				      !IS_ENABLED(CONFIG_REVA_MATRIX_OUTPUT) &&
 				      display_rc == -EPERM;
+	/* Bench only: BLE treats a disarmed matrix as ready and logs the passkey. */
+	[[maybe_unused]] const bool bench_pairing =
+		IS_ENABLED(CONFIG_APP_BLE_PAIRING_BENCH) && display_disarmed;
 	DisplayHealth display_health;
 	display_health.report(display_rc, 0, display_disarmed);
 	if (display_disarmed) {
@@ -309,14 +325,14 @@ void run_prototype()
 #endif
 #if defined(CONFIG_APP_BLE)
 		config_context.now = now;
-		poll_ble(settings.values(), modes,
-			 !safe && load_rc == 0 && display_ready && !display_health.recovering() &&
-				 !nfc_update_busy()
+		const bool stageable = !safe && load_rc == 0 && (display_ready || bench_pairing) &&
+				       !nfc_update_busy()
 #if defined(CONFIG_APP_AUDIO)
-				 && !audio_ui_busy()
+				       && !audio_ui_busy()
 #endif
-				 ,
-			 apply_config, &config_context);
+			;
+		poll_ble(settings.values(), modes, stageable && !display_health.recovering(),
+			 stageable, apply_config, &config_context);
 #endif
 		for (unsigned i = 0; buttons_ready && i < 2; ++i) {
 			const int level = gpio_pin_get_dt(&buttons[i]);
@@ -339,7 +355,7 @@ void run_prototype()
 #endif
 			if (event == Press::kLong) {
 #if defined(CONFIG_APP_BLE)
-				if (i == 1 && !safe && display_ready) {
+				if (i == 1 && !safe && (display_ready || bench_pairing)) {
 					open_ble_pairing();
 				}
 #else
@@ -355,6 +371,13 @@ void run_prototype()
 					LOG_INF("mode %s",
 						modes.active() == Mode::kQr ? "QR" : "name");
 					changed = true;
+#if defined(CONFIG_APP_QR_POLARITY_BENCH)
+				} else if (modes.active() == Mode::kQr) {
+					modes.toggle_qr_polarity();
+					LOG_INF("QR polarity %s",
+						modes.qr_inverted() ? "inverted" : "normal");
+					changed = true;
+#endif
 				} else if (load_rc == 0 && display_ready) {
 					const uint8_t previous = settings.values().brightness;
 					const uint8_t brightness = next_brightness(previous);
@@ -448,7 +471,8 @@ void run_prototype()
 				};
 				auto confirm_visible = [&]() {
 #if defined(CONFIG_BADGE_DISPLAY_SYNC)
-					return badge_display_wait_visible(display, 50);
+					return badge_display_wait_visible(display,
+									  kVisibleTimeoutMs);
 #else
 					return 0;
 #endif
@@ -458,10 +482,12 @@ void run_prototype()
 #if defined(CONFIG_APP_AUDIO)
 			/* Recovery already confirmed the submitted frame above. */
 			if (rc == 0 && audio_ui_busy() && !display_health.recovering()) {
-				rc = badge_display_wait_visible(display, 50);
+				rc = badge_display_wait_visible(display, kVisibleTimeoutMs);
 			}
+			/* Bench pairing: a disarmed matrix must not close the pairing window. */
+			const int audio_rc = bench_pairing && rc == -EPERM ? 0 : rc;
 			audio_display_result(audio_recording() && !recording_indicator ? -EAGAIN
-										       : rc);
+										       : audio_rc);
 #endif
 			const uint32_t completed =
 				static_cast<uint32_t>(k_uptime_get() - started_at);

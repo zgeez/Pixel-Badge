@@ -129,6 +129,29 @@ ZTEST(motion, test_fluid_conserves_pixels_and_follows_gravity)
 	zassert_equal(pixels(above), 96);
 	zassert_true(y_sum(below) > y_sum(above) + 96 * 10);
 }
+ZTEST(motion, test_fluid_leaves_the_edge_it_rested_on)
+{
+	// Rev A board 1 (2026-11-03): tilted sideways and slightly up, part of the
+	// pile stayed on the bottom edge; the nudge sign was fixed per particle.
+	Fluid fluid;
+	fluid.reset(Fluid::kMaximum);
+	fluid.tick(0, 9807, 3, 0, true);
+	for (uint32_t t = 20; t <= 8000; t += 20) {
+		fluid.tick(0, 9807, 3, t, true);
+	}
+	for (uint32_t t = 8020; t <= 11000; t += 20) {
+		fluid.tick(-9208, -3351, 3, t, true);
+		zassert_true(fluid.valid());
+	}
+	Frame frame;
+	fluid.render(frame);
+	zassert_equal(pixels(frame), Fluid::kMaximum);
+	unsigned bottom = 0;
+	for (int x = 0; x < 32; ++x) {
+		bottom += frame.get(x, 31);
+	}
+	zassert_true(bottom <= 2, "%u pixels left on the bottom edge", bottom);
+}
 ZTEST(motion, test_maximum_stress_and_bounded_stall_recovery)
 {
 	Fluid fluid;

@@ -92,7 +92,11 @@ The 10 kΩ NTC (B=3380 K) and 10 kΩ REGN pull-up measure board temperature,
 not cell temperature. Calculated reset COLD/HOT limits span −1.5–1.1 °C and
 41.7–44.5 °C. Firmware sets `TS_TH4_TH5_TH6=011` and adds a stricter hot gate:
 CHG_EN stays low below TS 38.4% of REGN (about 38 °C), released at 40.0%
-(about 36.1 °C). These are circuit estimates, not cell-temperature accuracy.
+(about 36.1 °C). With this network the same code places the charger's
+PREWARM threshold at 48.4% of REGN, near 26 °C; PREWARM and PRECOOL keep the
+reset ICHG and VREG, so firmware lets the charger run in them and blocks
+only COLD, COOL, WARM, HOT and a bias fault. These are circuit estimates, not
+cell-temperature accuracy.
 Cold-cell/warm-board, transitions, and hot-cell/cool-board tests are required.
 Charging stays off by default.
 
@@ -115,6 +119,18 @@ Proposed firmware defaults, pending pack characterization:
 | USB limit ≥ 500 mA and unloaded ≥ 3.50 V, outside HIZ | Input-qualified recovery |
 | Unloaded < 3.30 V for three readings | System OFF |
 | Missing/stale/invalid sample | Keep the matrix off |
+
+The app shows a coarse battery level from divider samples while charging is
+off, and from the 30 mA pack-presence probe while charging. Bands start at
+3.485 (running low), 3.56 (about half), 3.69 (mostly full) and 3.92 V (full),
+with 30 mV hysteresis; below 3.485 V or after a shed it reads almost empty.
+The edges come from one board 1 discharge of the LP785060 pack with the
+matrix lit at about 140 mA (QR code, 50 % brightness): about 12, 35, 60 and
+85 % of the charge drawn before the matrix shed. Brighter content sags the
+reading and shows a lower band. Measured on that run: the brightness cap
+engaged after about 13.4 h and the shed after about 22 h; the
+integrated charge (about 3,060 mAh from the charger's IBAT ADC) exceeds
+the 2,500 mAh label and is not confirmed with a meter.
 
 Recovery starts at 13, then 64/127/255 in 5 s steps. Input-qualified brightness
 uses a worst-case total-system current estimate with a proposed 20% margin.

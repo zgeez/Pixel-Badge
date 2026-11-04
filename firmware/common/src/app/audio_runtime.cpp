@@ -541,6 +541,7 @@ AudioOverlay audio_overlay(Frame &frame)
 						       unavailable_deadline > k_uptime_get());
 	if (result == AudioOverlay::kRecording) {
 		render_recording_audio(frame, analysis);
+		draw_label(frame, "REC", 1);
 	} else if (result == AudioOverlay::kUnavailable) {
 		draw_name(frame, "NO REC", 0);
 	}
