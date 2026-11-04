@@ -255,6 +255,25 @@ static int icm42688_i2c_configure(const struct device *dev)
 	if (cfg->accel_pwr_mode || cfg->gyro_pwr_mode) {
 		k_msleep(STARTUP_DELAY_MS);
 	}
+	/* Read the configuration back: a write that did not take shows here
+	 * instead of as a wrong sample rate later. */
+	uint8_t now[ARRAY_SIZE(seq)];
+
+	for (size_t i = 0; i < ARRAY_SIZE(seq); i++) {
+		ret = reg_read(dev, seq[i].bank, seq[i].reg, &now[i], 1);
+		if (ret) {
+			LOG_ERR("read back bank %u reg 0x%02x failed (%d)", seq[i].bank, seq[i].reg,
+				ret);
+			return ret;
+		}
+		if ((now[i] & seq[i].mask) != (seq[i].val & seq[i].mask)) {
+			LOG_WRN("bank %u reg 0x%02x reads 0x%02x, wrote 0x%02x", seq[i].bank,
+				seq[i].reg, now[i], seq[i].val);
+		}
+	}
+	LOG_INF("ACCEL_CONFIG0 0x%02x GYRO_CONFIG0 0x%02x PWR_MGMT0 0x%02x INT_CONFIG1 0x%02x",
+		now[ARRAY_SIZE(seq) - 3], now[ARRAY_SIZE(seq) - 2], now[ARRAY_SIZE(seq) - 1],
+		now[ARRAY_SIZE(seq) - 4]);
 	return 0;
 }
 
