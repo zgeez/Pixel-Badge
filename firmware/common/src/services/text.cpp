@@ -123,6 +123,33 @@ void draw_passkey(Frame &frame, uint32_t passkey)
 	}
 }
 
+void draw_label(Frame &frame, const char *label, int top)
+{
+	if (label == nullptr || label[0] == '\0') {
+		return;
+	}
+	const size_t length = strlen(label);
+	const int scale = length <= 4 ? 2 : 1;
+	const int start = (kMatrixSize - static_cast<int>(length * 4 - 1) * scale) / 2;
+	for (size_t i = 0; i < length; ++i) {
+		const uint16_t pixels = glyph(label[i]);
+		for (int y = 0; y < 5; ++y) {
+			for (int x = 0; x < 3; ++x) {
+				if ((pixels & (1U << (14 - y * 3 - x))) == 0) {
+					continue;
+				}
+				for (int dy = 0; dy < scale; ++dy) {
+					for (int dx = 0; dx < scale; ++dx) {
+						frame.set(start + static_cast<int>(i) * 4 * scale +
+								  x * scale + dx,
+							  top + y * scale + dy);
+					}
+				}
+			}
+		}
+	}
+}
+
 void draw_name(Frame &frame, const char *name, uint32_t elapsed_ms)
 {
 	frame.clear();

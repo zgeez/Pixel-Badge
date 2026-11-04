@@ -12,8 +12,8 @@ Recording uses independent 10 ms IMA ADPCM blocks, a rumble filter, gain control
 and peak limiting. These meters are not calibrated sound-pressure measurements.
 
 Recording requires an authenticated bond, app subscription/session proof, and
-a confirmed display frame. The recording view shows spectrum/level with lit
-corners in silence. Audio stays in volatile badge buffers; the phone stores
+a confirmed display frame. The recording view shows REC across the top and the
+audio level as a bar below it; REC stays lit in silence. Audio stays in volatile badge buffers; the phone stores
 encrypted files outside backups. WAV export is explicit.
 
 ## Build

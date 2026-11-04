@@ -216,24 +216,13 @@ void render_audio(Frame &output, const AudioAnalysis &analysis, bool spectrum)
 void render_recording_audio(Frame &output, const AudioAnalysis &analysis)
 {
 	output.clear();
-	for (unsigned band = 0; band < kAudioBands; ++band) {
-		const unsigned rows = height(analysis.bands[band]) * 28 / 32;
-		for (unsigned y = 0; y < rows; ++y) {
-			for (unsigned x = 0; x < 3; ++x) {
-				output.set(band * 4 + x, 27 - y);
-			}
+	/* The caller draws REC in rows 1-10; the level fills rows 13-31 upward. */
+	constexpr unsigned kLevelRows = 19;
+	const unsigned rows = height(analysis.rms) * kLevelRows / 32;
+	for (unsigned y = 0; y < rows; ++y) {
+		for (int x = 4; x < 28; ++x) {
+			output.set(x, 31 - static_cast<int>(y));
 		}
-	}
-	const unsigned columns = height(analysis.rms);
-	for (unsigned x = 0; x < columns; ++x) {
-		output.set(x, 30);
-		output.set(x, 31);
-	}
-	// Fixed frame corners distinguish the active recording view even in silence.
-	output.set(0, 0);
-	output.set(31, 0);
-	if (analysis.clipped) {
-		output.set(31, 1);
 	}
 }
 } // namespace badge

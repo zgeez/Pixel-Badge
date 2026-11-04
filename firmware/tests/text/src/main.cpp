@@ -36,4 +36,25 @@ ZTEST(text, test_centered_name_and_scroll_wrap)
 	zassert_mem_equal(frame.bytes, shifted.bytes, sizeof(frame.bytes));
 }
 
+ZTEST(text, test_label_drawn_at_top_without_clearing)
+{
+	Frame frame;
+	frame.clear();
+	frame.set(0, 31);
+	draw_label(frame, "REC", 1);
+	zassert_true(frame.get(0, 31));
+	unsigned lit = 0;
+	for (int y = 0; y < 32; ++y) {
+		for (int x = 0; x < 32; ++x) {
+			if (!frame.get(x, y) || (x == 0 && y == 31)) {
+				continue;
+			}
+			/* Three scale-2 glyphs: columns 5-26, rows 1-10. */
+			zassert_true(x >= 5 && x <= 26 && y >= 1 && y <= 10, "pixel %d,%d", x, y);
+			++lit;
+		}
+	}
+	zassert_true(lit > 0);
+}
+
 ZTEST_SUITE(text, nullptr, nullptr, nullptr, nullptr, nullptr);
