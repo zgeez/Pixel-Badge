@@ -22,6 +22,7 @@ target_sources(app PRIVATE
 add_subdirectory(${BADGE_COMMON_DIR}/lib/qrcodegen ${CMAKE_CURRENT_BINARY_DIR}/qrcodegen)
 target_link_libraries(app PRIVATE badge_qrcodegen)
 target_sources_ifdef(CONFIG_APP_POWER_STATES app PRIVATE ${BADGE_COMMON_DIR}/src/app/charging_only.cpp)
+target_sources_ifdef(CONFIG_APP_BATTERY_LOG app PRIVATE ${BADGE_COMMON_DIR}/src/app/battery_log.cpp)
 target_sources_ifdef(CONFIG_APP_USB_DEVICE app PRIVATE ${BADGE_COMMON_DIR}/src/platform/usb_device.c)
 target_sources_ifdef(CONFIG_APP_NFC app PRIVATE ${BADGE_COMMON_DIR}/src/app/nfc.cpp)
 target_sources_ifdef(CONFIG_APP_NFC app PRIVATE ${BADGE_COMMON_DIR}/src/services/url_update.cpp)

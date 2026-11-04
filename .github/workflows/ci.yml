@@ -119,6 +119,9 @@ jobs:
       - name: Test Pro Micro USB public-status parser
         run: python scripts/bench/test_promicro_console.py
 
+      - name: Test bench battery log decoder
+        run: python scripts/bench/test_battery_log.py
+
       - name: Test NFC provisioning host protocol
         run: python scripts/nfc/test_badge_nfc.py
 

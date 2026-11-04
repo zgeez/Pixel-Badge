@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: MIT */
 #include "badge/battery_level.hpp"
+#include "badge/battery_log.hpp"
 #include "badge/bq25620.hpp"
 #include "badge/power_sense.hpp"
 #include <zephyr/ztest.h>
@@ -133,6 +134,47 @@ ZTEST(power, test_battery_level)
 	/* A large step (charger attached, pack replaced) moves several bands. */
 	zassert_equal(next_battery_level(4180, BatteryLevel::kLow), BatteryLevel::kFull);
 	zassert_equal(next_battery_level(3400, BatteryLevel::kFull), BatteryLevel::kEmpty);
+}
+
+ZTEST(power, test_battery_log_record)
+{
+	namespace blog = badge::battery_log;
+	const blog::Record in{86399, 3987, 3992, -142, 255, blog::kLoaded | blog::kStart, -51, 512};
+	uint8_t bytes[blog::kRecordSize];
+
+	blog::encode(in, bytes);
+	/* Little-endian words: seconds 0x0001517F, IBAT -142 = 0xFF72. */
+	zassert_equal(bytes[0], 0x7F);
+	zassert_equal(bytes[2], 0x01);
+	zassert_equal(bytes[8], 0x72);
+	zassert_equal(bytes[9], 0xFF);
+	zassert_false(blog::erased(bytes));
+	const blog::Record out = blog::decode(bytes);
+	zassert_equal(out.seconds, in.seconds);
+	zassert_equal(out.saadc_mv, in.saadc_mv);
+	zassert_equal(out.charger_mv, in.charger_mv);
+	zassert_equal(out.ibat_ma, in.ibat_ma);
+	zassert_equal(out.ceiling, in.ceiling);
+	zassert_equal(out.flags, in.flags);
+	zassert_equal(out.tdie_decic, in.tdie_decic);
+	zassert_equal(out.ts_permille, in.ts_permille);
+	memset(bytes, 0xFF, sizeof(bytes));
+	zassert_true(blog::erased(bytes));
+	zassert_equal(blog::mean_ma(-1000, 7), -142);
+	zassert_equal(blog::mean_ma(500, 0), 0);
+}
+
+ZTEST(power, test_battery_log_boot)
+{
+	namespace blog = badge::battery_log;
+	using blog::Boot;
+	/* Empty log, closed session or full log: wait for an unplug. */
+	zassert_equal(blog::boot_action(false, 0, false, false), Boot::kIdle);
+	zassert_equal(blog::boot_action(true, blog::kEnd, false, false), Boot::kIdle);
+	zassert_equal(blog::boot_action(true, 0, true, false), Boot::kIdle);
+	/* Reset mid-session: resume on battery, close if USB is back. */
+	zassert_equal(blog::boot_action(true, blog::kLoaded, false, false), Boot::kResume);
+	zassert_equal(blog::boot_action(true, blog::kStart, false, true), Boot::kClose);
 }
 
 ZTEST(power, test_charging_report_holds_through_probe)

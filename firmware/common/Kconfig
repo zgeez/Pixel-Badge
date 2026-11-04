@@ -173,6 +173,24 @@ config APP_CHARGE_ICHG_MA
 	  BQ25620 ICHG in 80 mA steps (rounded down). 480 mA for the first
 	  charge; the pack allows up to 1.2 A.
 
+config APP_BATTERY_LOG
+	bool "Bench battery discharge logger"
+	depends on APP_POWER_MANAGER && FLASH_MAP
+	help
+	  Records battery voltage (SAADC and charger ADC), mean battery
+	  current, matrix ceiling, temperatures and power flags into the
+	  flash reserve partition after USB is unplugged, for discharge
+	  characterization. Read and clear it over SWD with
+	  scripts/bench/battery_log.py. Firmware never erases the log.
+
+config APP_BATTERY_LOG_PERIOD_S
+	int "Battery log record period (s)"
+	depends on APP_BATTERY_LOG
+	default 120
+	range 10 3600
+	help
+	  1536 records fit the 24 KiB reserve: about 51 h at 120 s.
+
 config APP_MATRIX_BENCH
 	bool "Rev A matrix bench: button-stepped staged LED tests"
 	depends on APP_BRINGUP_CHECKS && DISPLAY && REVA_MATRIX_OUTPUT

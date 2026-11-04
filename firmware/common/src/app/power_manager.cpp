@@ -22,6 +22,9 @@
 #if defined(CONFIG_APP_POWER_MANAGER)
 
 #include "badge/battery_level.hpp"
+#if defined(CONFIG_APP_BATTERY_LOG)
+#include "badge/battery_log.hpp"
+#endif
 #include "badge/bq25620.hpp"
 #include "badge/nfc_platform.hpp"
 #include "badge/power_policy.hpp"
@@ -691,6 +694,11 @@ int battery_mv;
 bool battery_usb;
 bool battery_charging; /* CHG_EN high and the charger reports a charge phase */
 power::ChargingReport charging_report;
+#if defined(CONFIG_APP_BATTERY_LOG)
+battery_log::Input log_input{0, false, false, false, false, false, -1, -1, false, 0, 0, 0, 0};
+int log_saadc_mv = -1;
+bool log_loaded;
+#endif
 
 void publish_battery()
 {
@@ -1051,6 +1059,12 @@ void power_thread(void *, void *, void *)
 			sample.now_ms = k_uptime_get_32();
 			apply_policy(sample);
 			battery_usb = sample.usb_present;
+#if defined(CONFIG_APP_BATTERY_LOG)
+			if (sample.valid) {
+				log_saadc_mv = sample.vbat_mv;
+				log_loaded = sample.loaded;
+			}
+#endif
 			/* Charge current lifts the reading: the pack probe stands in. */
 			if (sample.valid && !charging) {
 				rest_reading(sample.vbat_mv);
@@ -1177,6 +1191,22 @@ void power_thread(void *, void *, void *)
 			battery_charging =
 				charging_report.update(charging && chg::chg_stat(s.status1) != 0,
 						       battery_usb, k_uptime_get_32());
+#if defined(CONFIG_APP_BATTERY_LOG)
+			log_input = {k_uptime_get_32(),
+				     battery_usb,
+				     battery_charging,
+				     log_loaded,
+				     policy.state() == power::ShedState::kShed,
+				     policy.low_power(),
+				     log_saadc_mv,
+				     s.fresh ? s.vbat_mv : -1,
+				     s.fresh && s.ibat_valid,
+				     s.ibat_ma,
+				     s.tdie_decic,
+				     s.ts_permille,
+				     policy.ceiling()};
+			battery_log::tick(log_input);
+#endif
 			if (!verbose) {
 				/* Product: the status LED shows charging in progress. */
 				(void)gpio_pin_set_dt(&status_led,
@@ -1457,6 +1487,10 @@ void power_enter_off()
 		k_sem_take(&stopped, K_FOREVER);
 	}
 	/* The manager thread is parked: this context owns the pins and charger. */
+#if defined(CONFIG_APP_BATTERY_LOG)
+	log_input.now_ms = k_uptime_get_32();
+	battery_log::close(log_input);
+#endif
 	set_charging(false, "entering System OFF");
 	(void)gpio_pin_set_dt(&vbat_meas_en, 0);
 	(void)set_force_discharge(false);
