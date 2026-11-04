@@ -322,14 +322,14 @@ void run_prototype()
 #endif
 #if defined(CONFIG_APP_BLE)
 		config_context.now = now;
-		poll_ble(settings.values(), modes,
-			 !safe && load_rc == 0 && display_ready && !display_health.recovering() &&
-				 !nfc_update_busy()
+		const bool stageable = !safe && load_rc == 0 && display_ready &&
+				       !nfc_update_busy()
 #if defined(CONFIG_APP_AUDIO)
-				 && !audio_ui_busy()
+				       && !audio_ui_busy()
 #endif
-				 ,
-			 apply_config, &config_context);
+			;
+		poll_ble(settings.values(), modes, stageable && !display_health.recovering(),
+			 stageable, apply_config, &config_context);
 #endif
 		for (unsigned i = 0; buttons_ready && i < 2; ++i) {
 			const int level = gpio_pin_get_dt(&buttons[i]);

@@ -93,7 +93,8 @@ int main()
 	badge::start_nfc(settings.values().url, load_result == 0);
 	badge::start_ble();
 	while (true) {
-		badge::poll_ble(settings.values(), modes, load_result == 0, apply, nullptr);
+		badge::poll_ble(settings.values(), modes, load_result == 0, load_result == 0, apply,
+				nullptr);
 		// Exercise the actual renderer and URL rollback state without physical IO.
 		if (badge::poll_nfc(settings, modes)) {
 			modes.render(frame, k_uptime_get_32());

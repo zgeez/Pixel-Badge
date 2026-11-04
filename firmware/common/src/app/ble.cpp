@@ -55,7 +55,7 @@ Settings snapshot = kDefaultSettings;
 uint32_t snapshot_art_crc;
 Mode active_mode = Mode::kQr;
 bt_conn *connection;
-bool writable, enabled, job_active;
+bool writable, stageable, enabled, job_active;
 uint64_t pairing_deadline;
 bool passkey_visible;
 uint32_t displayed_passkey;
@@ -98,6 +98,10 @@ int stage_art(void *, uint32_t offset, uint32_t total, const uint8_t *bytes, siz
 	k_sem_give(&artwork_requested);
 	k_sem_take(&artwork_completed, K_FOREVER);
 	*view = art_fragment.view;
+	if (art_fragment.result != 0) {
+		LOG_WRN("BLE artwork fragment at %u of %u rejected (%d)", offset, total,
+			art_fragment.result);
+	}
 	return art_fragment.result;
 }
 
@@ -219,7 +223,7 @@ ssize_t stage_setting(bt_conn *conn, const bt_gatt_attr *attr, const void *buf, 
 		return !allowed ? att_error(-EACCES) : selected ? len : att_error(-EINVAL);
 	}
 	if (field == Field::kArtwork) {
-		if (!secure(conn) || connection != conn || !writable || passkey_visible ||
+		if (!secure(conn) || connection != conn || !stageable || passkey_visible ||
 		    job_active) {
 			k_mutex_unlock(&ble_mutex);
 			return att_error(-EACCES);
@@ -246,8 +250,8 @@ ssize_t stage_setting(bt_conn *conn, const bt_gatt_attr *attr, const void *buf, 
 	}
 	const int rc = job_active ? -EBUSY
 				  : protocol.stage(field, static_cast<const uint8_t *>(buf), len,
-						   secure(conn) && connection == conn && writable &&
-							   !passkey_visible);
+						   secure(conn) && connection == conn &&
+							   stageable && !passkey_visible);
 	if (field == Field::kArtwork && rc != 0) {
 		atomic_clear(&artwork_uploading);
 	}
@@ -620,12 +624,13 @@ bool ble_artwork_busy()
 	return atomic_get(&artwork_uploading) != 0 || atomic_get(&artwork_applying) != 0;
 }
 
-void poll_ble(const Settings &settings, Modes &modes, bool allow_writes, ApplyConfig apply,
-	      void *context)
+void poll_ble(const Settings &settings, Modes &modes, bool allow_writes, bool allow_staging,
+	      ApplyConfig apply, void *context)
 {
 	const bool requested = k_sem_take(&main_requested, K_NO_WAIT) == 0;
 	k_mutex_lock(&ble_mutex, K_FOREVER);
 	writable = allow_writes;
+	stageable = allow_writes || allow_staging;
 	if (artwork_upload_deadline <= k_uptime_get()) {
 		atomic_clear(&artwork_uploading);
 	}
@@ -651,6 +656,10 @@ void poll_ble(const Settings &settings, Modes &modes, bool allow_writes, ApplyCo
 	if (requested && main_result == 0 && main_command.field != Field::kUrl &&
 	    main_command.field != kNfcSyncField) {
 		main_result = current && allow_writes ? apply(context, main_command) : -ECANCELED;
+	}
+	if (requested && main_result != 0) {
+		LOG_WRN("BLE change to field %u rejected (%d)",
+			static_cast<unsigned>(main_command.field), main_result);
 	}
 	k_mutex_lock(&ble_mutex, K_FOREVER);
 	/* settings references the live main-owned values, including apply() changes. */
