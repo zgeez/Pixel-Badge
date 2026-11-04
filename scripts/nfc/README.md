@@ -1,9 +1,16 @@
 # NFC tools
 
 `badge_nfc.py` controls the development mailbox over J-Link SWD on the
-**nRF5340 DK**. Run in the NCS Python environment with `pylink-square` and
-`pyelftools` available. The supplied ELF must match the flashed setup image.
-The helper does not target Rev A yet.
+**nRF5340 DK** (default) or a **Rev A** badge (`--target rev-a`). Run in the
+NCS Python environment with `pylink-square` and `pyelftools` available. The
+supplied ELF must match the flashed setup image.
+
+Rev A setup image: Main plus `firmware/rev_a_nrf52840/configs/nfc-provisioning.conf`
+(for example `dev.ps1 build -Image Main -BuildDir build/reva-nfc-setup -ExtraConfFile
+firmware/rev_a_nrf52840/configs/nfc-provisioning.conf`), then the commands below with
+`--target rev-a --elf build/reva-nfc-setup/rev_a_nrf52840/zephyr/zephyr.elf`.
+A new board's tag answers at the factory address and fails the boot sync
+(`NFC boot result -13`) until `configure` has run once.
 
 ## Commands
 
