@@ -97,6 +97,20 @@ ZTEST(power, test_sense_scaling)
 	zassert_within(power::cc_from_pin_mv(80), 746, 1);
 }
 
+ZTEST(power, test_vled_off_verdict)
+{
+	using power::VledOff;
+	zassert_equal(power::vled_off_verdict(0, 100), VledOff::kOff);
+	zassert_equal(power::vled_off_verdict(power::kVledOffMv, 100), VledOff::kOff);
+	/* Still charged just after a quick reset (board 1: 958-2264 mV). */
+	zassert_equal(power::vled_off_verdict(2264, 110), VledOff::kDraining);
+	zassert_equal(power::vled_off_verdict(501, power::kVledDrainMs - 1), VledOff::kDraining);
+	/* Drained late is still a pass; present after the drain time is not. */
+	zassert_equal(power::vled_off_verdict(300, power::kVledDrainMs + 5000), VledOff::kOff);
+	zassert_equal(power::vled_off_verdict(501, power::kVledDrainMs), VledOff::kStuck);
+	zassert_equal(power::vled_off_verdict(4790, 120000), VledOff::kStuck);
+}
+
 ZTEST(power, test_input_limit_filter)
 {
 	power::InputLimitFilter filter;

@@ -126,7 +126,8 @@ bool charger_present;
 bool vled_checked;      /* VLED read with the rail off at least once this boot */
 bool hiz_confirmed;     /* EN_HIZ known set: a set_hiz(true) succeeded since */
 bool hiz_pending;       /* HIZ wanted (host suspended) but not confirmed */
-bool vled_fault;        /* VLED present with LED_EN low at start: matrix held for this boot */
+bool vled_draining;     /* VLED still charged from before a reset: rechecked until it drains */
+bool vled_fault;        /* VLED present with LED_EN low after the drain time: held this boot */
 bool configure_pending; /* configure_charger() failed: retried every 240 ms */
 bool charging;
 int input_limit_ma = -1;
@@ -633,7 +634,8 @@ const char *shed_state_name(power::ShedState state)
 uint8_t apply_ceiling();
 
 /* VLED must read near 0 V with LED_EN low before the matrix may run: a rail
- * that cannot be switched off cannot be shed. Retried until a reading succeeds. */
+ * that cannot be switched off cannot be shed. Retried until a reading succeeds
+ * and, after a quick reset, until the rail has drained. */
 void check_vled_off()
 {
 	int pin = 0;
@@ -642,11 +644,29 @@ void check_vled_off()
 		return;
 	}
 	const int vled_mv = power::vled_from_pin_mv(pin);
+	const uint32_t now = k_uptime_get_32();
 
-	vled_checked = true;
-	if (vled_mv > 500) {
+	switch (power::vled_off_verdict(vled_mv, now)) {
+	case power::VledOff::kOff:
+		if (vled_draining) {
+			LOG_INF("Power: VLED drained to %d mV after %u ms; matrix released",
+				vled_mv, static_cast<unsigned>(now));
+		}
+		vled_checked = true;
+		break;
+	case power::VledOff::kDraining:
+		if (!vled_draining) {
+			LOG_WRN("Power: VLED %d mV while LED_EN is low; matrix held until it "
+				"drains",
+				vled_mv);
+			vled_draining = true;
+		}
+		break;
+	case power::VledOff::kStuck:
 		LOG_ERR("Power: FAIL, VLED %d mV while LED_EN is low; matrix held off", vled_mv);
+		vled_checked = true;
 		vled_fault = true;
+		break;
 	}
 	(void)apply_ceiling();
 }
