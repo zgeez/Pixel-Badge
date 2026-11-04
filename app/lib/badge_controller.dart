@@ -2,6 +2,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'battery_model.dart';
 import 'protocol.dart';
 import 'motion_model.dart';
 import 'qr_capacity.dart';
@@ -50,6 +51,9 @@ class BadgeController extends ChangeNotifier {
   int nfcResult = 0;
   bool nfcBusy = false;
   MotionStatus? motionStatus;
+  BatteryStatus? battery;
+  Timer? _batteryTimer;
+  static const batteryInterval = Duration(seconds: 30);
   bool connected = false,
       busy = false,
       confirmed = false,
@@ -109,6 +113,10 @@ class BadgeController extends ChangeNotifier {
       await disconnect();
       rethrow;
     }
+    _batteryTimer = Timer.periodic(
+      batteryInterval,
+      (_) => unawaited(refreshBattery()),
+    );
   }
 
   Future<void> refresh() async {
@@ -128,6 +136,27 @@ class BadgeController extends ChangeNotifier {
       busy = false;
       notifyListeners();
     }
+    await refreshBattery();
+  }
+
+  /// Reads the battery estimate when the link is idle. Badges without the
+  /// Battery characteristic (older firmware) and dropped reads leave the last
+  /// value; the next poll tries again.
+  Future<void> refreshBattery() async {
+    final link = _link;
+    final generation = _generation;
+    if (link == null || !connected || busy) return;
+    try {
+      final next = BatteryStatus.decode(await link.read(batteryUuid));
+      if (!connected || generation != _generation) return;
+      battery = next;
+    } on FormatException {
+      if (generation != _generation) return;
+      battery = null;
+    } catch (_) {
+      return;
+    }
+    if (!_disposed) notifyListeners();
   }
 
   Future<void> _refresh() async {
@@ -406,6 +435,9 @@ class BadgeController extends ChangeNotifier {
     nfcVerified = nfcBusy = false;
     nfcResult = 0;
     motionStatus = null;
+    battery = null;
+    _batteryTimer?.cancel();
+    _batteryTimer = null;
     await _statusSub?.cancel();
     await _connectionSub?.cancel();
     final previous = _link;
@@ -424,6 +456,7 @@ class BadgeController extends ChangeNotifier {
     _disposed = true;
     ++_generation;
     connected = false;
+    _batteryTimer?.cancel();
     unawaited(_statusSub?.cancel());
     unawaited(_connectionSub?.cancel());
     unawaited(_link?.close());

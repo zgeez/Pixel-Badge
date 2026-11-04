@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:universal_ble/universal_ble.dart';
 import 'badge_controller.dart';
+import 'battery_model.dart';
 import 'ble_link.dart';
 import 'draft_store.dart';
 import 'matrix_widgets.dart';
